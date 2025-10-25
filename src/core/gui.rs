@@ -1067,7 +1067,7 @@ impl ConfigEditor {
 
                 ui.label(t!("config_editor.hide_ingame_ui_hotkey"));
                 if ui.checkbox(&mut config.hide_ingame_ui_hotkey, "").clicked() {
-                    if config.disable_gui {
+                    if config.hide_ingame_ui_hotkey {
                         thread::spawn(|| {
                             Gui::instance().unwrap()
                             .lock().unwrap()
