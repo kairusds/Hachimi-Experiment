@@ -95,7 +95,7 @@ jobs:
       - name: Get release version
         id: get_info
         run: |
-          wget "https://raw.githubusercontent.com/kairusds/Hachimi-Experiment/refs/heads/main/Cargo.toml"
+          wget "https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/main/Cargo.toml"
           VERSION=$(awk '/^\[package\]/{flag=1} flag && /^version/{print $3; exit}' Cargo.toml | tr -d '"')
           echo "release_version=$VERSION" >> $GITHUB_OUTPUT
 
