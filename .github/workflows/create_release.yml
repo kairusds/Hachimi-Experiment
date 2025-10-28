@@ -85,9 +85,17 @@ jobs:
             build/hachimi_installer.exe
 
   create-release:
-    needs: [build-android]
+    needs: [build-android, build-windows]
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[ci skip]')"
+    if: |
+      !contains(github.event.head_commit.message, '[ci skip]') &&
+      (
+        always() &&
+        (
+          needs.build-windows.result == 'success' ||
+          (needs.build-windows.result == 'skipped' && github.event.inputs.skip_windows == 'true')
+        )
+      )
     steps:
       - name: Get latest release info from official
         id: get_info
