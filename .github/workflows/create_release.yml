@@ -79,35 +79,18 @@ jobs:
             build/hachimi.dll
             build/hachimi_installer.exe
 
-  create-release-no-windows:
-    needs: [build-android]
-    runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.skip_windows == 'true' && !contains(github.event.head_commit.message, '[ci skip]') }}
-    steps:
-      - name: Get release version
-        id: get_info
-        run: |
-          VERSION=$(curl -sL "https://raw.githubusercontent.com/${{ github.repository }}/main/Cargo.toml" | \
-            awk '/^\[package\]/{flag=1} flag && /^version/{print $3; exit}' | \
-            tr -d '"')
-          echo "release_version=v$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v5
-        with:
-          path: artifacts
-
-      - name: Upload binaries to a release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          files: artifacts/android/*
-          tag_name: ${{ steps.get_info.outputs.release_version }}
-
-  create-release-windows:
+  create-release:
     needs: [build-android, build-windows]
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.skip_windows == 'false' && !contains(github.event.head_commit.message, '[ci skip]') }}
+    if: |
+      !contains(github.event.head_commit.message, '[ci skip]') &&
+      (
+        always() &&
+        (
+          needs.build-windows.result == 'success' ||
+          (needs.build-windows.result == 'skipped' && github.event.inputs.skip_windows == 'true')
+        )
+      )
     steps:
       - name: Get release version
         id: get_info
@@ -121,12 +104,14 @@ jobs:
         uses: actions/download-artifact@v5
         with:
           path: artifacts
+
+      - run: tree -a -I '.*' -P '*.so|*.json|*.dll|*.exe' --prune
 
       - name: Upload binaries to a release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: |
-            artifacts/android/*
-            artifacts/windows/*
+            artifacts/android/**
+            ${{ github.event.inputs.skip_windows == 'false' && 'artifacts/windows/**' || '' }}
           tag_name: ${{ steps.get_info.outputs.release_version }}
