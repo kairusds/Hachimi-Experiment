@@ -3,11 +3,6 @@ name: Create Release
 on:
   workflow_dispatch:
     inputs:
-      relver:
-        description: "Release version"
-        type: string
-        default: "v0.14.2"
-        required: true
       skip_windows:
         description: "Check to skip the Windows build job."
         type: boolean
@@ -97,12 +92,12 @@ jobs:
         )
       )
     steps:
-      - name: Get latest release info from official
+      - name: Get release version
         id: get_info
         run: |
-          release_info=$(curl -sL "https://api.github.com/repos/Hachimi-Hachimi/Hachimi/releases/latest" | jq -r '{tag: .tag_name, url: .html_url}')
-          echo "latest_tag=$(echo $release_info | jq -r .tag)" >> $GITHUB_OUTPUT
-          echo "release_url=$(echo $release_info | jq -r .url)" >> $GITHUB_OUTPUT
+          wget "https://raw.githubusercontent.com/kairusds/Hachimi-Experiment/refs/heads/main/Cargo.toml"
+          VERSION=$(awk '/^\[package\]/{flag=1} flag && /^version/{print $3; exit}' Cargo.toml | tr -d '"')
+          echo "release_version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v5
@@ -112,10 +107,8 @@ jobs:
       - name: Upload binaries to a release
         uses: softprops/action-gh-release@v2
         with:
-          body: |
-            ${{ github.event.inputs.relver == '' && steps.get_info.outputs.release_url || '' }}
-          generate_release_notes: ${{ github.event.inputs.relver != '' && true || false }}
+          generate_release_notes: true
           files: |
             artifacts/android/*
             ${{ github.event.inputs.skip_windows == 'false' && 'artifacts/windows/*' || '' }}
-          tag_name: ${{ github.event.inputs.relver || steps.get_info.outputs.latest_tag }}
+          tag_name: ${{ steps.get_info.outputs.release_version }}
