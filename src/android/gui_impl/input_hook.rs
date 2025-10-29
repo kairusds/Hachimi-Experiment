@@ -37,7 +37,7 @@ static SCROLL_AXIS_SCALE: f32 = 10.0;
 
 type NativeInjectEventFn = extern "C" fn(env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean;
 extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean {
-    match handle_event_internal(unsafe { env.unsafe_clone() }, obj, input_event){
+    match handle_event_internal(unsafe { env.unsafe_clone() }, &obj, &input_event){
         Ok(result) => result,
         Err(e) => {
             error!("JNI error in nativeInjectEvent hook: {:?}", e);
@@ -51,7 +51,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
     }
 }
 
-fn handle_event_internal(mut env: JNIEnv, obj: JObject, input_event: JObject) -> jni::errors::Result<jboolean> {
+fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) -> jni::errors::Result<jboolean> {
     let motion_event_class = env.find_class("android/view/MotionEvent")?;
     let key_event_class = env.find_class("android/view/KeyEvent")?;
 
@@ -252,7 +252,7 @@ fn get_view(mut env: JNIEnv) -> jni::errors::Result<JObject<'_>> {
     // Get the first activity in the map
     let mut iter = activities_map.iter(&mut env)?;
     let (_, activity_record) = iter.next(&mut env)?.ok_or_else(|| {
-        jni::errors::Error::from(jni::errors::ErrorKind::Msg("Activities map was empty".into()))
+        jni::errors::Error::from("Activities map was empty")
     })?;
     let activity = env.get_field(activity_record, "activity", "Landroid/app/Activity;")?.l()?;
 
