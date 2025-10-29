@@ -246,27 +246,41 @@ fn get_view(mut env: JNIEnv) -> JObject<'_> {
     let mut main_activity = JObject::null();
     let mut activity_record_class = None;
 
-    for (token, activity_record) in activities_map.iter(&mut env).unwrap() {
+    for (_token, activity_record) in activities_map.iter(&mut env).unwrap() {
         if activity_record.is_null() { continue; }
 
         if activity_record_class.is_none() {
             activity_record_class = Some(env.get_object_class(&activity_record).unwrap());
         }
         let record_class = activity_record_class.as_ref().unwrap();
+        let paused_field_id = env.get_field_id(record_class, "paused", "Z").unwrap();
 
-        let paused_field = env.get_field_id(record_class, "paused", "Z").unwrap();
-        let is_paused = env.get_field(activity_record, paused_field).unwrap().z().unwrap();
+        let is_paused = env.get_field_unchecked(
+            &activity_record,
+            paused_field_id,
+            jni::signature::JavaType::Primitive(jni::signature::Primitive::Boolean),
+        )
+        .unwrap()
+        .z()
+        .unwrap();
 
         if !is_paused {
-            let activity_field = env.get_field_id(record_class, "activity", "Landroid/app/Activity;").unwrap();
-            main_activity = env.get_field(activity_record, activity_field).unwrap().l().unwrap();
+            let activity_field_id = env.get_field_id(record_class, "activity", "Landroid/app/Activity;").unwrap();
+            main_activity = env.get_field_unchecked(
+                &activity_record,
+                activity_field_id,
+                jni::signature::JavaType::Object("android/app/Activity".into()),
+            )
+            .unwrap()
+            .l()
+            .unwrap();
+            
             break;
         }
     }
 
     if main_activity.is_null() {
-        error!("Could not find any resumed activity!");
-        return main_activity;
+        error!("Hachimi: Could not find any resumed activity!");
     }
 
     let jni_window = env
