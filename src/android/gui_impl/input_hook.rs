@@ -63,7 +63,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                 Some(poisoned.into_inner())
             }
         }) else {
-            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event))
+            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, env.new_local_ref(obj)?, env.new_local_ref(input_event)?))
         };
 
         let get_action_res = env.call_method(&input_event, "getAction", "()I", &[])?;
@@ -73,7 +73,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
 
         // hmmmmm
         if !Gui::is_consuming_input_atomic() {
-            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event));
+            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, env.new_local_ref(obj)?, env.new_local_ref(input_event)?));
         } else if pointer_index != 0 && Gui::is_consuming_input_atomic() {
             return Ok(JNI_TRUE);
         }
@@ -166,7 +166,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                             Some(poisoned.into_inner())
                         }
                     }) else {
-                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event));
+                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, env.new_local_ref(obj)?, env.new_local_ref(input_event)?));
                     };
                     gui.toggle_menu();
                 }
@@ -182,7 +182,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                             Some(poisoned.into_inner())
                         }
                     }) else {
-                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event));
+                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, env.new_local_ref(obj)?, env.new_local_ref(input_event)?));
                     };
 
                     if let Some(key) = keymap::get_key(key_code) {
@@ -205,7 +205,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                     }
                     return Ok(JNI_TRUE);
                 }
-                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event));
+                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, env.new_local_ref(obj)?, env.new_local_ref(input_event)?));
             }
         };
 
@@ -217,13 +217,13 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                     Some(poisoned.into_inner())
                 }
             }) else {
-                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event));
+                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, env.new_local_ref(obj)?, env.new_local_ref(input_event)?));
             };
             gui.toggle_menu();
         }
     }
 
-    Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event))
+    Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, env.new_local_ref(obj)?, env.new_local_ref(input_event)?))
 }
 
 fn get_ppp(mut env: JNIEnv, gui: &Gui) -> jni::errors::Result<f32> {
