@@ -179,10 +179,12 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
                         return Err(jni::errors::Error::NullPtr("GUI instance not available when input was expected"));
                     };
                     gui.toggle_menu();
+                    return Ok(HookResult::Consumed);
                 }
                 if Hachimi::instance().config.load().hide_ingame_ui_hotkey && pressed
                     && key_code == Hachimi::instance().config.load().android.hide_ingame_ui_hotkey_bind {
                     Thread::main_thread().schedule(Gui::toggle_game_ui);
+                    return Ok(HookResult::Consumed);
                 }
                 if Gui::is_consuming_input_atomic() {
                     let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
