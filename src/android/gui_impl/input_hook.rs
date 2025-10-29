@@ -63,7 +63,9 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                 Some(poisoned.into_inner())
             }
         }) else {
-            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, env.new_local_ref(obj)?, env.new_local_ref(input_event)?))
+            let obj_ref = env.new_local_ref(obj)?;
+            let input_event_ref = env.new_local_ref(input_event)?;
+            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj_ref, input_event_ref));
         };
 
         let get_action_res = env.call_method(&input_event, "getAction", "()I", &[])?;
