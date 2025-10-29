@@ -35,40 +35,41 @@ static VOLUME_UP_LAST_TAP: once_cell::sync::Lazy<Arc<Mutex<Option<Instant>>>> =
 
 static SCROLL_AXIS_SCALE: f32 = 10.0;
 
-enum HookResult {
-    Consumed,
-    Passthrough,
-}
-
 type NativeInjectEventFn = extern "C" fn(env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean;
 extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean {
-    let result = handle_event_internal(unsafe { env.unsafe_clone() }, &input_event);
+    if !Gui::is_consuming_input_atomic() && !Hachimi::instance().config.load().disable_gui {
+        let key_event_class = env.find_class("android/view/KeyEvent")?;
+        let is_key_event = match env.is_instance_of(&input_event, key_event_class){
+            Ok(is_instance) => is_instance,
+            Err(_) => {
+                return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+            }
+        };
 
-    if let Ok(true) = env.exception_check() {
-        error!("A Java exception was thrown by the hook logic:");
-        let _ = env.exception_describe();
-        let _ = env.exception_clear();
+        if !is_key_event {
+            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+        }
     }
 
-    match result {
-        Ok(HookResult::Consumed) => JNI_TRUE,
-        Ok(HookResult::Passthrough) => get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event),
+    match handle_event_internal(unsafe { env.unsafe_clone() }, &input_event) {
+        Ok(_) => JNI_TRUE,
         Err(e) => {
             error!("JNI hook returned an error: {:?}", e);
+            if let Ok(true) = env.exception_check() {
+                error!("A Java exception was thrown:");
+                let _ = env.exception_describe();
+                let _ = env.exception_clear();
+            }
             get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event)
         }
     }
 }
 
-fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors::Result<HookResult> {
+fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors::Result<()> {
     let motion_event_class = env.find_class("android/view/MotionEvent")?;
     let key_event_class = env.find_class("android/view/KeyEvent")?;
 
     if env.is_instance_of(&input_event, &motion_event_class)? {
-        if !Gui::is_consuming_input_atomic(){
-            return Ok(HookResult::Passthrough);
-        }
-
         let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
             Ok(guard) => Some(guard),
             Err(poisoned) => {
@@ -85,7 +86,7 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
         let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
 
         if pointer_index != 0 {
-            return Ok(HookResult::Consumed);
+            return Ok(());
         }
 
         if action_masked == ACTION_SCROLL {
@@ -99,7 +100,7 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
                 ACTION_DOWN | ACTION_POINTER_DOWN => egui::TouchPhase::Start,
                 ACTION_MOVE | ACTION_HOVER_MOVE => egui::TouchPhase::Move,
                 ACTION_UP | ACTION_POINTER_UP => egui::TouchPhase::End,
-                _ => return Ok(HookResult::Consumed)
+                _ => return Ok(())
             };
 
             // dumb and simple, no multi touch
@@ -139,7 +140,7 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
             }
         }
 
-        return Ok(HookResult::Consumed);
+        return Ok(());
     }
     else if env.is_instance_of(&input_event, &key_event_class)? {
         let action = env.call_method(&input_event, "getAction", "()I", &[])?.i()?;
@@ -154,7 +155,7 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
 
                 if pressed && repeat_count == 0 {
                     if Hachimi::instance().config.load().hide_ingame_ui_hotkey && check_volume_up_double_tap(now) {
-                        return Ok(HookResult::Consumed);
+                        return Ok(()); 
                     }
                 }
                 &VOLUME_DOWN_PRESSED
@@ -179,12 +180,10 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
                         return Err(jni::errors::Error::NullPtr("GUI instance not available when input was expected"));
                     };
                     gui.toggle_menu();
-                    return Ok(HookResult::Consumed);
                 }
                 if Hachimi::instance().config.load().hide_ingame_ui_hotkey && pressed
                     && key_code == Hachimi::instance().config.load().android.hide_ingame_ui_hotkey_bind {
                     Thread::main_thread().schedule(Gui::toggle_game_ui);
-                    return Ok(HookResult::Consumed);
                 }
                 if Gui::is_consuming_input_atomic() {
                     let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
@@ -215,9 +214,9 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
                             }
                         }
                     }
-                    return Ok(HookResult::Consumed);
+                    return Ok(());
                 }
-                return Ok(HookResult::Passthrough);
+                return Ok(())
             }
         };
 
@@ -232,11 +231,10 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
                 return Err(jni::errors::Error::NullPtr("GUI instance not available when input was expected"));
             };
             gui.toggle_menu();
-            return Ok(HookResult::Consumed);
         }
     }
 
-    return Ok(HookResult::Passthrough);
+    Ok(())
 }
 
 fn get_ppp(mut env: JNIEnv, gui: &Gui) -> jni::errors::Result<f32> {
