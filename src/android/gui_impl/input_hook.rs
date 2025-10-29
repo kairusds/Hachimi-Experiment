@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 
 use egui::Vec2;
-use jni::{objects::{JMap, JObject}, sys::{jboolean, jint, JNI_TRUE}, JNIEnv, signature::{Primitive, ReturnType}};
+use jni::{objects::{JMap, JObject}, sys::{jboolean, jint, JNI_TRUE}, JNIEnv};
 
 use crate::{core::{Error, Gui, Hachimi}, il2cpp::symbols::Thread};
 
@@ -41,10 +41,6 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
     let key_event_class = env.find_class("android/view/KeyEvent").unwrap();
 
     if env.is_instance_of(&input_event, &motion_event_class).unwrap() {
-        if !Gui::is_consuming_input_atomic() {
-            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
-        }
-
         let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
             return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
         };
@@ -54,7 +50,10 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
         let action_masked = action & ACTION_MASK;
         let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
 
-        if pointer_index != 0 {
+        // hmmmmm
+        if !Gui::is_consuming_input_atomic() {
+            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+        } else if pointer_index != 0 && Gui::is_consuming_input_atomic() {
             return JNI_TRUE;
         }
 
@@ -232,7 +231,7 @@ fn get_view(mut env: JNIEnv) -> JObject<'_> {
             activity_thread_class,
             "currentActivityThread",
             "()Landroid/app/ActivityThread;",
-            &[],
+            &[]
         )
         .unwrap()
         .l()
@@ -244,56 +243,16 @@ fn get_view(mut env: JNIEnv) -> JObject<'_> {
         .unwrap();
     let activities_map = JMap::from_env(&mut env, &activities).unwrap();
 
-    let mut main_activity = JObject::null();
-    let mut activity_record_class = None;
-
-    let mut iter = activities_map.iter(&mut env).unwrap();
-    while let Some((_token, activity_record)) = iter.next(&mut env).unwrap() {
-        if activity_record.is_null() { continue; }
-
-        if activity_record_class.is_none() {
-            activity_record_class = Some(env.get_object_class(&activity_record).unwrap());
-        }
-        let record_class = activity_record_class.as_ref().unwrap();
-        let paused_field_id = env.get_field_id(record_class, "paused", "Z").unwrap();
-
-        let is_paused = env.get_field_unchecked(
-            &activity_record,
-            paused_field_id,
-            ReturnType::Primitive(Primitive::Boolean)
-        )
+    // Get the first activity in the map
+    let (_, activity_record) = activities_map.iter(&mut env).unwrap().next(&mut env).unwrap().unwrap();
+    let activity = env
+        .get_field(activity_record, "activity", "Landroid/app/Activity;")
         .unwrap()
-        .z()
+        .l()
         .unwrap();
 
-        if !is_paused {
-            let activity_field_id = env.get_field_id(record_class, "activity", "Landroid/app/Activity;").unwrap();
-            main_activity = env.get_field_unchecked(
-                &activity_record,
-                activity_field_id,
-                ReturnType::Object
-            )
-            .unwrap()
-            .l()
-            .unwrap();
-            
-            break;
-        }
-    }
-
-    if main_activity.is_null() {
-        error!("Could not find a resumed activity. Falling back to first activity.");
-        if let Some((_token, activity_record)) = activities_map.iter(&mut env).unwrap().next(&mut env).unwrap() {
-             let record_class = env.get_object_class(&activity_record).unwrap();
-             let activity_field_id = env.get_field_id(record_class, "activity", "Landroid/app/Activity;").unwrap();
-             main_activity = env.get_field_unchecked(&activity_record, activity_field_id, ReturnType::Object).unwrap().l().unwrap();
-        } else {
-            panic!("Could not find any activities at all!");
-        }
-    }
-
     let jni_window = env
-        .call_method(main_activity, "getWindow", "()Landroid/view/Window;", &[])
+        .call_method(activity, "getWindow", "()Landroid/view/Window;", &[])
         .unwrap()
         .l()
         .unwrap();
