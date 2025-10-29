@@ -38,7 +38,7 @@ static SCROLL_AXIS_SCALE: f32 = 10.0;
 type NativeInjectEventFn = extern "C" fn(env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean;
 extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean {
     if !Gui::is_consuming_input_atomic() && !Hachimi::instance().config.load().disable_gui {
-        let key_event_class = env.find_class("android/view/KeyEvent")?;
+        let key_event_class = env.find_class("android/view/KeyEvent").unwrap();
         let is_key_event = match env.is_instance_of(&input_event, key_event_class){
             Ok(is_instance) => is_instance,
             Err(_) => {
