@@ -37,12 +37,16 @@ static SCROLL_AXIS_SCALE: f32 = 10.0;
 
 type NativeInjectEventFn = extern "C" fn(env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean;
 extern "C" fn nativeInjectEvent(env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean {
-    match handle_event_internal(unsafe { env.unsafe_clone() }, &obj, &input_event){
-        Ok(result) => result,
+    if !Gui::is_consuming_input_atomic() {
+        return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+    }
+
+    match handle_event_internal(unsafe { env.unsafe_clone() }, &obj, &input_event) {
+        Ok(_) => JNI_TRUE,
         Err(e) => {
-            info!("JNI error in nativeInjectEvent hook: {:?}", e);
-            if let Ok(true) = env.exception_check(){
-                info!("A Java exception was thrown:");
+            error!("JNI error in nativeInjectEvent hook: {:?}", e);
+            if let Ok(true) = env.exception_check() {
+                error!("A Java exception was thrown:");
                 let _ = env.exception_describe();
                 let _ = env.exception_clear();
             }
@@ -51,21 +55,19 @@ extern "C" fn nativeInjectEvent(env: JNIEnv, obj: JObject, input_event: JObject)
     }
 }
 
-fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) -> jni::errors::Result<jboolean> {
+fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors::Result<()> {
     let motion_event_class = env.find_class("android/view/MotionEvent")?;
     let key_event_class = env.find_class("android/view/KeyEvent")?;
 
     if env.is_instance_of(&input_event, &motion_event_class)? {
-        let Some(mut gui) = Gui::instance().and_then(|m| match m.lock(){
+        let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
             Ok(guard) => Some(guard),
             Err(poisoned) => {
-                info!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
                 Some(poisoned.into_inner())
             }
         }) else {
-            let obj_ref = env.new_local_ref(obj)?;
-            let input_event_ref = env.new_local_ref(input_event)?;
-            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj_ref, input_event_ref));
+            return Err(jni::errors::Error::NullPtr("GUI instance not available when input was expected"));
         };
 
         let get_action_res = env.call_method(&input_event, "getAction", "()I", &[])?;
@@ -73,13 +75,8 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
         let action_masked = action & ACTION_MASK;
         let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
 
-        // hmmmmm
-        if !Gui::is_consuming_input_atomic() {
-            let obj_ref = env.new_local_ref(obj)?;
-            let input_event_ref = env.new_local_ref(input_event)?;
-            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj_ref, input_event_ref));
-        } else if pointer_index != 0 && Gui::is_consuming_input_atomic() {
-            return Ok(JNI_TRUE);
+        if pointer_index != 0 {
+            return Ok(());
         }
 
         if action_masked == ACTION_SCROLL {
@@ -93,7 +90,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                 ACTION_DOWN | ACTION_POINTER_DOWN => egui::TouchPhase::Start,
                 ACTION_MOVE | ACTION_HOVER_MOVE => egui::TouchPhase::Move,
                 ACTION_UP | ACTION_POINTER_UP => egui::TouchPhase::End,
-                _ => return Ok(JNI_TRUE)
+                _ => return Ok()
             };
 
             // dumb and simple, no multi touch
@@ -101,7 +98,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
             let real_y = env.call_method(&input_event, "getY", "()F", &[])?.f()?;
             let tool_type = env.call_method(&input_event, "getToolType", "(I)I", &[0.into()])?.i()?;
 
-            let ppp = get_ppp(env, &gui)?;
+            let ppp = get_ppp(unsafe { env.unsafe_clone() }, &gui)?;
             let x = real_x / ppp;
             let y = real_y / ppp;
             let pos = egui::Pos2 { x, y };
@@ -133,7 +130,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
             }
         }
 
-        return Ok(JNI_TRUE);
+        return Ok(());
     }
     else if env.is_instance_of(&input_event, &key_event_class)? {
         let action = env.call_method(&input_event, "getAction", "()I", &[])?.i()?;
@@ -148,7 +145,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
 
                 if pressed && repeat_count == 0 {
                     if Hachimi::instance().config.load().hide_ingame_ui_hotkey && check_volume_up_double_tap(now) {
-                        return Ok(JNI_TRUE); 
+                        return Ok(()); 
                     }
                 }
                 &VOLUME_DOWN_PRESSED
@@ -166,13 +163,11 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                     let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
                         Ok(guard) => Some(guard),
                         Err(poisoned) => {
-                            info!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                            error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
                             Some(poisoned.into_inner())
                         }
                     }) else {
-                        let obj_ref = env.new_local_ref(obj)?;
-                        let input_event_ref = env.new_local_ref(input_event)?;
-                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj_ref, input_event_ref));
+                        return Err(jni::errors::Error::NullPtr("GUI instance not available when input was expected"));
                     };
                     gui.toggle_menu();
                 }
@@ -184,13 +179,11 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                     let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
                         Ok(guard) => Some(guard),
                         Err(poisoned) => {
-                            info!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                            error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
                             Some(poisoned.into_inner())
                         }
                     }) else {
-                        let obj_ref = env.new_local_ref(obj)?;
-                        let input_event_ref = env.new_local_ref(input_event)?;
-                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj_ref, input_event_ref));
+                        return Err(jni::errors::Error::NullPtr("GUI instance not available when input was expected"));
                     };
 
                     if let Some(key) = keymap::get_key(key_code) {
@@ -211,11 +204,11 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                             }
                         }
                     }
-                    return Ok(JNI_TRUE);
+                    return Ok(());
                 }
                 let obj_ref = env.new_local_ref(obj)?;
                 let input_event_ref = env.new_local_ref(input_event)?;
-                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj_ref, input_event_ref));
+                return Ok(())
             }
         };
 
@@ -223,13 +216,11 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
             let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
                 Ok(guard) => Some(guard),
                 Err(poisoned) => {
-                    info!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                    error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
                     Some(poisoned.into_inner())
                 }
             }) else {
-                let obj_ref = env.new_local_ref(obj)?;
-                let input_event_ref = env.new_local_ref(input_event)?;
-                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj_ref, input_event_ref));
+                return Err(jni::errors::Error::NullPtr("GUI instance not available when input was expected"));
             };
             gui.toggle_menu();
         }
@@ -237,7 +228,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
 
     let obj_ref = env.new_local_ref(obj)?;
     let input_event_ref = env.new_local_ref(input_event)?;
-    Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj_ref, input_event_ref))
+    Ok(())
 }
 
 fn get_ppp(mut env: JNIEnv, gui: &Gui) -> jni::errors::Result<f32> {
@@ -320,7 +311,7 @@ fn init_internal() -> Result<(), Error> {
         Hachimi::instance().interceptor.hook(unsafe { NATIVE_INJECT_EVENT_ADDR }, nativeInjectEvent as usize)?;
     }
     else {
-        info!("native_inject_event_addr is null");
+        error!("native_inject_event_addr is null");
     }
 
     Ok(())
@@ -328,6 +319,6 @@ fn init_internal() -> Result<(), Error> {
 
 pub fn init() {
     init_internal().unwrap_or_else(|e| {
-        info!("Init failed: {}", e);
+        error!("Init failed: {}", e);
     });
 }
