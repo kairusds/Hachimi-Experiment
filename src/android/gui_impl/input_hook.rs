@@ -35,12 +35,13 @@ static VOLUME_UP_LAST_TAP: once_cell::sync::Lazy<Arc<Mutex<Option<Instant>>>> =
 
 static SCROLL_AXIS_SCALE: f32 = 10.0;
 
+enum HookResult {
+    Consumed,
+    Passthrough,
+}
+
 type NativeInjectEventFn = extern "C" fn(env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean;
 extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean {
-    if !Gui::is_consuming_input_atomic() {
-        return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
-    }
-
     let result = handle_event_internal(unsafe { env.unsafe_clone() }, &input_event);
 
     if let Ok(true) = env.exception_check() {
@@ -50,7 +51,8 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
     }
 
     match result {
-        Ok(_) => JNI_TRUE,
+        Ok(HookResult::Consumed) => JNI_TRUE,
+        Ok(HookResult::Passthrough) => get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event),
         Err(e) => {
             error!("JNI hook returned an error: {:?}", e);
             get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event)
@@ -58,11 +60,15 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
     }
 }
 
-fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors::Result<()> {
+fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors::Result<HookResult> {
     let motion_event_class = env.find_class("android/view/MotionEvent")?;
     let key_event_class = env.find_class("android/view/KeyEvent")?;
 
     if env.is_instance_of(&input_event, &motion_event_class)? {
+        if !Gui::is_consuming_input_atomic(){
+            return Ok(HookResult::Passthrough);
+        }
+
         let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
             Ok(guard) => Some(guard),
             Err(poisoned) => {
@@ -79,7 +85,7 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
         let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
 
         if pointer_index != 0 {
-            return Ok(());
+            return Ok(HookResult::Consumed);
         }
 
         if action_masked == ACTION_SCROLL {
@@ -93,7 +99,7 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
                 ACTION_DOWN | ACTION_POINTER_DOWN => egui::TouchPhase::Start,
                 ACTION_MOVE | ACTION_HOVER_MOVE => egui::TouchPhase::Move,
                 ACTION_UP | ACTION_POINTER_UP => egui::TouchPhase::End,
-                _ => return Ok(())
+                _ => return Ok(HookResult::Consumed)
             };
 
             // dumb and simple, no multi touch
@@ -133,7 +139,7 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
             }
         }
 
-        return Ok(());
+        return Ok(HookResult::Consumed);
     }
     else if env.is_instance_of(&input_event, &key_event_class)? {
         let action = env.call_method(&input_event, "getAction", "()I", &[])?.i()?;
@@ -148,7 +154,7 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
 
                 if pressed && repeat_count == 0 {
                     if Hachimi::instance().config.load().hide_ingame_ui_hotkey && check_volume_up_double_tap(now) {
-                        return Ok(()); 
+                        return Ok(HookResult::Consumed);
                     }
                 }
                 &VOLUME_DOWN_PRESSED
@@ -207,9 +213,9 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
                             }
                         }
                     }
-                    return Ok(());
+                    return Ok(HookResult::Consumed);
                 }
-                return Ok(())
+                return Ok(HookResult::Passthrough);
             }
         };
 
@@ -224,10 +230,11 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
                 return Err(jni::errors::Error::NullPtr("GUI instance not available when input was expected"));
             };
             gui.toggle_menu();
+            return Ok(HookResult::Consumed);
         }
     }
 
-    Ok(())
+    return Ok(HookResult::Passthrough);
 }
 
 fn get_ppp(mut env: JNIEnv, gui: &Gui) -> jni::errors::Result<f32> {
