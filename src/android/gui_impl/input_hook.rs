@@ -37,36 +37,31 @@ static SCROLL_AXIS_SCALE: f32 = 10.0;
 
 type NativeInjectEventFn = extern "C" fn(env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean;
 extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean {
-    let was_consuming = Gui::is_consuming_input_atomic();
-    let mut event_was_handled = false;
+    if !Gui::is_consuming_input_atomic() {
+        let is_key_event = {
+            let key_event_class = env.find_class("android/view/KeyEvent").unwrap();
+            env.is_instance_of(&input_event, &key_event_class).unwrap_or(false)
+        };
 
-    let is_key_event = if !was_consuming {
-        let key_event_class = env.find_class("android/view/KeyEvent").unwrap();
-        env.is_instance_of(&input_event, &key_event_class).unwrap_or(false)
-    }else{
-        false
-    };
-
-    if was_consuming || is_key_event {
-        let result = handle_event_internal(unsafe { env.unsafe_clone() }, &input_event);
-        
-        if let Ok(true) = env.exception_check() {
-            error!("A Java exception was thrown by the hook logic:");
-            let _ = env.exception_describe();
-            let _ = env.exception_clear();
-        }
-
-        if let Err(e) = result {
-            error!("JNI hook returned an error: {:?}", e);
-        } else {
-            event_was_handled = true;
+        if !is_key_event {
+            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
         }
     }
 
-    if event_was_handled {
-        JNI_TRUE
-    } else {
-        get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event)
+    let result = handle_event_internal(unsafe { env.unsafe_clone() }, &input_event);
+
+    if let Ok(true) = env.exception_check() {
+        error!("A Java exception was thrown by the hook logic:");
+        let _ = env.exception_describe();
+        let _ = env.exception_clear();
+    }
+
+    match result {
+        Ok(_) => JNI_TRUE,
+        Err(e) => {
+            error!("JNI hook returned an error: {:?}", e);
+            get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event)
+        }
     }
 }
 
