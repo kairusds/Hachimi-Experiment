@@ -37,35 +37,50 @@ static SCROLL_AXIS_SCALE: f32 = 10.0;
 
 type NativeInjectEventFn = extern "C" fn(env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean;
 extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean {
-    let motion_event_class = env.find_class("android/view/MotionEvent").unwrap();
-    let key_event_class = env.find_class("android/view/KeyEvent").unwrap();
+    match handle_event_internal(unsafe { env.unsafe_clone() }, obj, input_event){
+        Ok(result) => result,
+        Err(e) => {
+            error!("JNI error in nativeInjectEvent hook: {:?}", e);
+            if let Ok(true) = env.exception_check(){
+                error!("A Java exception was thrown:");
+                let _ = env.exception_describe();
+                let _ = env.exception_clear();
+            }
+            get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event)
+        }
+    }
+}
 
-    if env.is_instance_of(&input_event, &motion_event_class).unwrap() {
-        let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
-            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+fn handle_event_internal(mut env: JNIEnv, obj: JObject, input_event: JObject) -> jni::errors::Result<jboolean> {
+    let motion_event_class = env.find_class("android/view/MotionEvent")?;
+    let key_event_class = env.find_class("android/view/KeyEvent")?;
+
+    if env.is_instance_of(&input_event, &motion_event_class)? {
+        let Some(mut gui) = Gui::instance().and_then(|m| match m.lock(){
+            Ok(guard) => Some(guard),
+            Err(poisoned) => {
+                error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                Some(poisoned.into_inner())
+            }
+        }) else {
+            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event))
         };
 
-        let get_action_res = env.call_method(&input_event, "getAction", "()I", &[]).unwrap();
-        let action = get_action_res.i().unwrap();
+        let get_action_res = env.call_method(&input_event, "getAction", "()I", &[])?;
+        let action = get_action_res.i()?;
         let action_masked = action & ACTION_MASK;
         let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
 
         // hmmmmm
         if !Gui::is_consuming_input_atomic() {
-            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event));
         } else if pointer_index != 0 && Gui::is_consuming_input_atomic() {
-            return JNI_TRUE;
+            return Ok(JNI_TRUE);
         }
 
         if action_masked == ACTION_SCROLL {
-            let x = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_HSCROLL.into()])
-                .unwrap()
-                .f()
-                .unwrap();
-            let y = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_VSCROLL.into()])
-                .unwrap()
-                .f()
-                .unwrap();
+            let x = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_HSCROLL.into()])?.f()?;
+            let y = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_VSCROLL.into()])?.f()?;
             gui.input.events.push(egui::Event::Scroll(Vec2::new(x, y) * SCROLL_AXIS_SCALE));
         }
         else {
@@ -74,24 +89,15 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                 ACTION_DOWN | ACTION_POINTER_DOWN => egui::TouchPhase::Start,
                 ACTION_MOVE | ACTION_HOVER_MOVE => egui::TouchPhase::Move,
                 ACTION_UP | ACTION_POINTER_UP => egui::TouchPhase::End,
-                _ => return JNI_TRUE
+                _ => return Ok(JNI_TRUE)
             };
 
             // dumb and simple, no multi touch
-            let real_x = env.call_method(&input_event, "getX", "()F", &[])
-                .unwrap()
-                .f()
-                .unwrap();
-            let real_y = env.call_method(&input_event, "getY", "()F", &[])
-                .unwrap()
-                .f()
-                .unwrap();
-            let tool_type = env.call_method(&input_event, "getToolType", "(I)I", &[0.into()])
-                .unwrap()
-                .i()
-                .unwrap();
+            let real_x = env.call_method(&input_event, "getX", "()F", &[])?.f()?;
+            let real_y = env.call_method(&input_event, "getY", "()F", &[])?.f()?;
+            let tool_type = env.call_method(&input_event, "getToolType", "(I)I", &[0.into()])?.i()?;
 
-            let ppp = get_ppp(env, &gui);
+            let ppp = get_ppp(env, &gui)?;
             let x = real_x / ppp;
             let y = real_y / ppp;
             let pos = egui::Pos2 { x, y };
@@ -123,21 +129,12 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
             }
         }
 
-        return JNI_TRUE;
+        return Ok(JNI_TRUE);
     }
-    else if env.is_instance_of(&input_event, &key_event_class).unwrap() {
-        let action = env.call_method(&input_event, "getAction", "()I", &[])
-            .unwrap()
-            .i()
-            .unwrap();
-        let key_code = env.call_method(&input_event, "getKeyCode", "()I", &[])
-            .unwrap()
-            .i()
-            .unwrap();
-        let repeat_count = env.call_method(&input_event, "getRepeatCount", "()I", &[])
-            .unwrap()
-            .i()
-            .unwrap();
+    else if env.is_instance_of(&input_event, &key_event_class)? {
+        let action = env.call_method(&input_event, "getAction", "()I", &[])?.i()?;
+        let key_code = env.call_method(&input_event, "getKeyCode", "()I", &[])?.i()?;
+        let repeat_count = env.call_method(&input_event, "getRepeatCount", "()I", &[])?.i()?;
 
         let pressed = action == ACTION_DOWN;
         let now = Instant::now();
@@ -147,7 +144,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
 
                 if pressed && repeat_count == 0 {
                     if Hachimi::instance().config.load().hide_ingame_ui_hotkey && check_volume_up_double_tap(now) {
-                        return JNI_TRUE; 
+                        return Ok(JNI_TRUE); 
                     }
                 }
                 &VOLUME_DOWN_PRESSED
@@ -162,8 +159,14 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
             }
             _ => {
                 if pressed && key_code == Hachimi::instance().config.load().android.menu_open_key {
-                    let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
-                        return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+                    let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
+                        Ok(guard) => Some(guard),
+                        Err(poisoned) => {
+                            error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                            Some(poisoned.into_inner())
+                        }
+                    }) else {
+                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event));
                     };
                     gui.toggle_menu();
                 }
@@ -172,8 +175,14 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     Thread::main_thread().schedule(Gui::toggle_game_ui);
                 }
                 if Gui::is_consuming_input_atomic() {
-                    let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
-                        return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+                    let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
+                        Ok(guard) => Some(guard),
+                        Err(poisoned) => {
+                            error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                            Some(poisoned.into_inner())
+                        }
+                    }) else {
+                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event));
                     };
 
                     if let Some(key) = keymap::get_key(key_code) {
@@ -187,81 +196,69 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     }
 
                     if pressed {
-                        let c = env.call_method(&input_event, "getUnicodeChar", "()I", &[])
-                            .unwrap()
-                            .i()
-                            .unwrap();
+                        let c = env.call_method(&input_event, "getUnicodeChar", "()I", &[])?.i()?;
                         if c != 0 {
                             if let Some(c) = char::from_u32(c as _) {
                                 gui.input.events.push(egui::Event::Text(c.to_string()));
                             }
                         }
                     }
-                    return JNI_TRUE;
+                    return Ok(JNI_TRUE);
                 }
-                return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event));
             }
         };
 
         if pressed && other_atomic.load(Ordering::Relaxed) {
-            let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
-                return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+            let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
+                Ok(guard) => Some(guard),
+                Err(poisoned) => {
+                    error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                    Some(poisoned.into_inner())
+                }
+            }) else {
+                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event));
             };
             gui.toggle_menu();
         }
     }
 
-    get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event)
+    Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event))
 }
 
-fn get_ppp(mut env: JNIEnv, gui: &Gui) -> f32 {
+fn get_ppp(mut env: JNIEnv, gui: &Gui) -> jni::errors::Result<f32> {
     // SAFETY: view doesn't live past the lifetime of this function
-    let view = get_view(unsafe { env.unsafe_clone() });
-    let view_width = env.call_method(&view, "getWidth", "()I", &[]).unwrap().i().unwrap();
-    let view_height = env.call_method(&view, "getHeight", "()I", &[]).unwrap().i().unwrap();
+    let view = get_view(unsafe { env.unsafe_clone() })?;
+    let view_width = env.call_method(&view, "getWidth", "()I", &[])?.i()?;
+    let view_height = env.call_method(&view, "getHeight", "()I", &[])?.i()?;
     let view_main_axis_size = if view_width < view_height { view_width } else { view_height };
 
-    gui.context.zoom_factor() * (view_main_axis_size as f32 / gui.prev_main_axis_size as f32)
+    Ok(gui.context.zoom_factor() * (view_main_axis_size as f32 / gui.prev_main_axis_size as f32))
 }
 
-fn get_view(mut env: JNIEnv) -> JObject<'_> {
-    let activity_thread_class = env.find_class("android/app/ActivityThread").unwrap();
+fn get_view(mut env: JNIEnv) -> jni::errors::Result<JObject<'_>> {
+    let activity_thread_class = env.find_class("android/app/ActivityThread")?;
     let activity_thread = env
         .call_static_method(
             activity_thread_class,
             "currentActivityThread",
             "()Landroid/app/ActivityThread;",
             &[]
-        )
-        .unwrap()
-        .l()
-        .unwrap();
-    let activities = env
-        .get_field(activity_thread, "mActivities", "Landroid/util/ArrayMap;")
-        .unwrap()
-        .l()
-        .unwrap();
-    let activities_map = JMap::from_env(&mut env, &activities).unwrap();
+        )?
+    .l()?;
+    let activities = env.get_field(activity_thread, "mActivities", "Landroid/util/ArrayMap;")?.l()?;
+    let activities_map = JMap::from_env(&mut env, &activities)?;
 
     // Get the first activity in the map
-    let (_, activity_record) = activities_map.iter(&mut env).unwrap().next(&mut env).unwrap().unwrap();
-    let activity = env
-        .get_field(activity_record, "activity", "Landroid/app/Activity;")
-        .unwrap()
-        .l()
-        .unwrap();
+    let mut iter = activities_map.iter(&mut env)?;
+    let (_, activity_record) = iter.next(&mut env)?.ok_or_else(|| {
+        jni::errors::Error::from(jni::errors::ErrorKind::Msg("Activities map was empty".into()))
+    })?;
+    let activity = env.get_field(activity_record, "activity", "Landroid/app/Activity;")?.l()?;
 
-    let jni_window = env
-        .call_method(activity, "getWindow", "()Landroid/view/Window;", &[])
-        .unwrap()
-        .l()
-        .unwrap();
+    let jni_window = env.call_method(activity, "getWindow", "()Landroid/view/Window;", &[])?.l()?;
 
-    env
-        .call_method(jni_window, "getDecorView", "()Landroid/view/View;", &[])
-        .unwrap()
-        .l()
-        .unwrap()
+    Ok(env.call_method(jni_window, "getDecorView", "()Landroid/view/View;", &[])?.l()?)
 }
 
 fn reset_volume_up_tap_state() {
