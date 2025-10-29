@@ -36,20 +36,23 @@ static VOLUME_UP_LAST_TAP: once_cell::sync::Lazy<Arc<Mutex<Option<Instant>>>> =
 static SCROLL_AXIS_SCALE: f32 = 10.0;
 
 type NativeInjectEventFn = extern "C" fn(env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean;
-extern "C" fn nativeInjectEvent(env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean {
+extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObject) -> jboolean {
     if !Gui::is_consuming_input_atomic() {
         return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
     }
 
-    match handle_event_internal(unsafe { env.unsafe_clone() }, &input_event) {
+    let result = handle_event_internal(unsafe { env.unsafe_clone() }, &input_event);
+
+    if let Ok(true) = env.exception_check() {
+        error!("A Java exception was thrown by the hook logic:");
+        let _ = env.exception_describe();
+        let _ = env.exception_clear();
+    }
+
+    match result {
         Ok(_) => JNI_TRUE,
         Err(e) => {
-            error!("JNI error in nativeInjectEvent hook: {:?}", e);
-            if let Ok(true) = env.exception_check() {
-                error!("A Java exception was thrown:");
-                let _ = env.exception_describe();
-                let _ = env.exception_clear();
-            }
+            error!("JNI hook returned an error: {:?}", e);
             get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event)
         }
     }
