@@ -46,7 +46,7 @@ extern "C" fn nativeInjectEvent(env: JNIEnv, obj: JObject, input_event: JObject)
                 let _ = env.exception_describe();
                 let _ = env.exception_clear();
             }
-            get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj.clone(), input_event.clone())
+            get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event)
         }
     }
 }
@@ -63,7 +63,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                 Some(poisoned.into_inner())
             }
         }) else {
-            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj.clone(), input_event.clone()))
+            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event))
         };
 
         let get_action_res = env.call_method(&input_event, "getAction", "()I", &[])?;
@@ -73,7 +73,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
 
         // hmmmmm
         if !Gui::is_consuming_input_atomic() {
-            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj.clone(), input_event.clone()));
+            return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event));
         } else if pointer_index != 0 && Gui::is_consuming_input_atomic() {
             return Ok(JNI_TRUE);
         }
@@ -166,7 +166,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                             Some(poisoned.into_inner())
                         }
                     }) else {
-                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj.clone(), input_event.clone()));
+                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event));
                     };
                     gui.toggle_menu();
                 }
@@ -182,7 +182,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                             Some(poisoned.into_inner())
                         }
                     }) else {
-                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj.clone(), input_event.clone()));
+                        return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event));
                     };
 
                     if let Some(key) = keymap::get_key(key_code) {
@@ -205,7 +205,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                     }
                     return Ok(JNI_TRUE);
                 }
-                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj.clone(), input_event.clone()));
+                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event));
             }
         };
 
@@ -217,13 +217,13 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                     Some(poisoned.into_inner())
                 }
             }) else {
-                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj.clone(), input_event.clone()));
+                return Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event));
             };
             gui.toggle_menu();
         }
     }
 
-    Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj.clone(), input_event.clone()))
+    Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event))
 }
 
 fn get_ppp(mut env: JNIEnv, gui: &Gui) -> jni::errors::Result<f32> {
@@ -252,7 +252,7 @@ fn get_view(mut env: JNIEnv) -> jni::errors::Result<JObject<'_>> {
     // Get the first activity in the map
     let mut iter = activities_map.iter(&mut env)?;
     let (_, activity_record) = iter.next(&mut env)?.ok_or_else(|| {
-        jni::errors::Error::Msg("Activities map was empty".to_string())
+        jni::errors::Error::from(jni::errors::ErrorKind::Msg("Activities map was empty".to_string()))
     })?;
     let activity = env.get_field(activity_record, "activity", "Landroid/app/Activity;")?.l()?;
 
