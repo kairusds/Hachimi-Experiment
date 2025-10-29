@@ -243,16 +243,34 @@ fn get_view(mut env: JNIEnv) -> JObject<'_> {
         .unwrap();
     let activities_map = JMap::from_env(&mut env, &activities).unwrap();
 
-    // Get the first activity in the map
-    let (_, activity_record) = activities_map.iter(&mut env).unwrap().next(&mut env).unwrap().unwrap();
-    let activity = env
-        .get_field(activity_record, "activity", "Landroid/app/Activity;")
-        .unwrap()
-        .l()
-        .unwrap();
+    let mut main_activity = JObject::null();
+    let mut activity_record_class = None;
+
+    for (token, activity_record) in activities_map.iter(&mut env).unwrap() {
+        if activity_record.is_null() { continue; }
+
+        if activity_record_class.is_none() {
+            activity_record_class = Some(env.get_object_class(&activity_record).unwrap());
+        }
+        let record_class = activity_record_class.as_ref().unwrap();
+
+        let paused_field = env.get_field_id(record_class, "paused", "Z").unwrap();
+        let is_paused = env.get_field(activity_record, paused_field).unwrap().z().unwrap();
+
+        if !is_paused {
+            let activity_field = env.get_field_id(record_class, "activity", "Landroid/app/Activity;").unwrap();
+            main_activity = env.get_field(activity_record, activity_field).unwrap().l().unwrap();
+            break;
+        }
+    }
+
+    if main_activity.is_null() {
+        error!("Could not find any resumed activity!");
+        return main_activity;
+    }
 
     let jni_window = env
-        .call_method(activity, "getWindow", "()Landroid/view/Window;", &[])
+        .call_method(main_activity, "getWindow", "()Landroid/view/Window;", &[])
         .unwrap()
         .l()
         .unwrap();
