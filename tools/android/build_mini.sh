@@ -47,11 +47,10 @@ pushd build
 cp "aarch64-linux-android/$BUILD_TYPE/libhachimi.so" libmain-arm64-v8a.so
 cp "armv7-linux-androideabi/$BUILD_TYPE/libhachimi.so" libmain-armeabi-v7a.so
 
-if [ "$RELEASE" = "1" ]; then
-    ARM64_V8A_SHA1=($(sha1sum libmain-arm64-v8a.so))
-    ARMEABI_V7A_SHA1=($(sha1sum libmain-armeabi-v7a.so))
+ARM64_V8A_SHA1=($(sha1sum libmain-arm64-v8a.so))
+ARMEABI_V7A_SHA1=($(sha1sum libmain-armeabi-v7a.so))
 
-    cat << EOF > sha1.json
+cat << EOF > sha1.json
 {
     "libmain-arm64-v8a.so": "$ARM64_V8A_SHA1",
     "libmain-armeabi-v7a.so": "$ARMEABI_V7A_SHA1",
@@ -59,6 +58,5 @@ if [ "$RELEASE" = "1" ]; then
     "libmain-x86.so": "0"
 }
 EOF
-fi
 
 popd
