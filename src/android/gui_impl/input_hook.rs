@@ -223,7 +223,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
         }
     }
 
-    Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event))
+    Ok(get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, *obj, *input_event))
 }
 
 fn get_ppp(mut env: JNIEnv, gui: &Gui) -> jni::errors::Result<f32> {
@@ -252,7 +252,7 @@ fn get_view(mut env: JNIEnv) -> jni::errors::Result<JObject<'_>> {
     // Get the first activity in the map
     let mut iter = activities_map.iter(&mut env)?;
     let (_, activity_record) = iter.next(&mut env)?.ok_or_else(|| {
-        jni::errors::Error::from(jni::errors::ErrorKind::Msg("Activities map was empty".to_string()))
+        jni::errors::Error::NullPtr("Activities map iterator was empty")
     })?;
     let activity = env.get_field(activity_record, "activity", "Landroid/app/Activity;")?.l()?;
 
