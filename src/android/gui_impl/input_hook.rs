@@ -40,9 +40,9 @@ extern "C" fn nativeInjectEvent(env: JNIEnv, obj: JObject, input_event: JObject)
     match handle_event_internal(unsafe { env.unsafe_clone() }, &obj, &input_event){
         Ok(result) => result,
         Err(e) => {
-            error!("JNI error in nativeInjectEvent hook: {:?}", e);
+            info!("JNI error in nativeInjectEvent hook: {:?}", e);
             if let Ok(true) = env.exception_check(){
-                error!("A Java exception was thrown:");
+                info!("A Java exception was thrown:");
                 let _ = env.exception_describe();
                 let _ = env.exception_clear();
             }
@@ -59,7 +59,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
         let Some(mut gui) = Gui::instance().and_then(|m| match m.lock(){
             Ok(guard) => Some(guard),
             Err(poisoned) => {
-                error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                info!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
                 Some(poisoned.into_inner())
             }
         }) else {
@@ -166,7 +166,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                     let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
                         Ok(guard) => Some(guard),
                         Err(poisoned) => {
-                            error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                            info!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
                             Some(poisoned.into_inner())
                         }
                     }) else {
@@ -184,7 +184,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
                     let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
                         Ok(guard) => Some(guard),
                         Err(poisoned) => {
-                            error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                            info!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
                             Some(poisoned.into_inner())
                         }
                     }) else {
@@ -223,7 +223,7 @@ fn handle_event_internal(mut env: JNIEnv, obj: &JObject, input_event: &JObject) 
             let Some(mut gui) = Gui::instance().and_then(|m| match m.lock() {
                 Ok(guard) => Some(guard),
                 Err(poisoned) => {
-                    error!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
+                    info!("GUI mutex was poisoned, recovering. Error: {:?}", poisoned);
                     Some(poisoned.into_inner())
                 }
             }) else {
@@ -320,7 +320,7 @@ fn init_internal() -> Result<(), Error> {
         Hachimi::instance().interceptor.hook(unsafe { NATIVE_INJECT_EVENT_ADDR }, nativeInjectEvent as usize)?;
     }
     else {
-        error!("native_inject_event_addr is null");
+        info!("native_inject_event_addr is null");
     }
 
     Ok(())
@@ -328,6 +328,6 @@ fn init_internal() -> Result<(), Error> {
 
 pub fn init() {
     init_internal().unwrap_or_else(|e| {
-        error!("Init failed: {}", e);
+        info!("Init failed: {}", e);
     });
 }
