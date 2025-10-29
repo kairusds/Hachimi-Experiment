@@ -5,7 +5,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Instant, Duration};
 
 use egui::Vec2;
-use jni::{objects::{JMap, JObject}, sys::{jboolean, jint, JNI_TRUE}, JNIEnv};
+use jni::{objects::{JMap, JObject}, sys::{jboolean, jint, JNI_TRUE}, JNIEnv, signature::{Primitive, ReturnType}};
 
 use crate::{core::{Error, Gui, Hachimi}, il2cpp::symbols::Thread};
 
@@ -231,7 +231,7 @@ fn get_view(mut env: JNIEnv) -> JObject<'_> {
             activity_thread_class,
             "currentActivityThread",
             "()Landroid/app/ActivityThread;",
-            &[]
+            &[],
         )
         .unwrap()
         .l()
@@ -246,7 +246,8 @@ fn get_view(mut env: JNIEnv) -> JObject<'_> {
     let mut main_activity = JObject::null();
     let mut activity_record_class = None;
 
-    for (_token, activity_record) in activities_map.iter(&mut env).unwrap() {
+    let mut iter = activities_map.iter(&mut env).unwrap();
+    while let Some((_token, activity_record)) = iter.next(&mut env).unwrap() {
         if activity_record.is_null() { continue; }
 
         if activity_record_class.is_none() {
@@ -258,7 +259,7 @@ fn get_view(mut env: JNIEnv) -> JObject<'_> {
         let is_paused = env.get_field_unchecked(
             &activity_record,
             paused_field_id,
-            jni::signature::JavaType::Primitive(jni::signature::Primitive::Boolean),
+            ReturnType::Primitive(Primitive::Boolean)
         )
         .unwrap()
         .z()
@@ -269,7 +270,7 @@ fn get_view(mut env: JNIEnv) -> JObject<'_> {
             main_activity = env.get_field_unchecked(
                 &activity_record,
                 activity_field_id,
-                jni::signature::JavaType::Object("android/app/Activity".into()),
+                ReturnType::Object
             )
             .unwrap()
             .l()
@@ -280,7 +281,14 @@ fn get_view(mut env: JNIEnv) -> JObject<'_> {
     }
 
     if main_activity.is_null() {
-        error!("Hachimi: Could not find any resumed activity!");
+        error!("Could not find a resumed activity. Falling back to first activity.");
+        if let Some((_token, activity_record)) = activities_map.iter(&mut env).unwrap().next(&mut env).unwrap() {
+             let record_class = env.get_object_class(&activity_record).unwrap();
+             let activity_field_id = env.get_field_id(record_class, "activity", "Landroid/app/Activity;").unwrap();
+             main_activity = env.get_field_unchecked(&activity_record, activity_field_id, ReturnType::Object).unwrap().l().unwrap();
+        } else {
+            panic!("Could not find any activities at all!");
+        }
     }
 
     let jni_window = env
