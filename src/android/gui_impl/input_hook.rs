@@ -41,7 +41,7 @@ extern "C" fn nativeInjectEvent(env: JNIEnv, obj: JObject, input_event: JObject)
         return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
     }
 
-    match handle_event_internal(unsafe { env.unsafe_clone() }, &obj, &input_event) {
+    match handle_event_internal(unsafe { env.unsafe_clone() }, &input_event) {
         Ok(_) => JNI_TRUE,
         Err(e) => {
             error!("JNI error in nativeInjectEvent hook: {:?}", e);
@@ -90,7 +90,7 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
                 ACTION_DOWN | ACTION_POINTER_DOWN => egui::TouchPhase::Start,
                 ACTION_MOVE | ACTION_HOVER_MOVE => egui::TouchPhase::Move,
                 ACTION_UP | ACTION_POINTER_UP => egui::TouchPhase::End,
-                _ => return Ok()
+                _ => return Ok(())
             };
 
             // dumb and simple, no multi touch
@@ -98,7 +98,7 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
             let real_y = env.call_method(&input_event, "getY", "()F", &[])?.f()?;
             let tool_type = env.call_method(&input_event, "getToolType", "(I)I", &[0.into()])?.i()?;
 
-            let ppp = get_ppp(unsafe { env.unsafe_clone() }, &gui)?;
+            let ppp = get_ppp(env, &gui)?;
             let x = real_x / ppp;
             let y = real_y / ppp;
             let pos = egui::Pos2 { x, y };
@@ -206,8 +206,6 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
                     }
                     return Ok(());
                 }
-                let obj_ref = env.new_local_ref(obj)?;
-                let input_event_ref = env.new_local_ref(input_event)?;
                 return Ok(())
             }
         };
@@ -226,8 +224,6 @@ fn handle_event_internal(mut env: JNIEnv, input_event: &JObject) -> jni::errors:
         }
     }
 
-    let obj_ref = env.new_local_ref(obj)?;
-    let input_event_ref = env.new_local_ref(input_event)?;
     Ok(())
 }
 
