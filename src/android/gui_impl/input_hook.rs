@@ -41,34 +41,34 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
     let key_event_class = env.find_class("android/view/KeyEvent").unwrap();
 
     if env.is_instance_of(&input_event, &motion_event_class).unwrap() {
-        if Gui::is_consuming_input_atomic() {
-            let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
-                return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
-            };
+        let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
+            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+        };
 
-            let get_action_res = env.call_method(&input_event, "getAction", "()I", &[]).unwrap();
-            let action = get_action_res.i().unwrap();
-            let action_masked = action & ACTION_MASK;
-            let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
-        
-            if action_masked == ACTION_SCROLL {
-                let x = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_HSCROLL.into()])
-                    .unwrap()
-                    .f()
-                    .unwrap();
-                let y = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_VSCROLL.into()])
-                    .unwrap()
-                    .f()
-                    .unwrap();
-                gui.input.events.push(egui::Event::Scroll(Vec2::new(x, y) * SCROLL_AXIS_SCALE));
+        let get_action_res = env.call_method(&input_event, "getAction", "()I", &[]).unwrap();
+        let action = get_action_res.i().unwrap();
+        let action_masked = action & ACTION_MASK;
+        let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
 
-                return JNI_TRUE;
-            }
+        // hmmmmm
+        if !Gui::is_consuming_input_atomic() {
+            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+        } else if pointer_index != 0 && Gui::is_consuming_input_atomic() {
+            return JNI_TRUE;
+        }
 
-            if pointer_index != 0 {
-                return JNI_TRUE;
-            }
-
+        if action_masked == ACTION_SCROLL {
+            let x = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_HSCROLL.into()])
+                .unwrap()
+                .f()
+                .unwrap();
+            let y = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_VSCROLL.into()])
+                .unwrap()
+                .f()
+                .unwrap();
+            gui.input.events.push(egui::Event::Scroll(Vec2::new(x, y) * SCROLL_AXIS_SCALE));
+        }
+        else {
             // borrowing egui's touch phase enum
             let phase = match action_masked {
                 ACTION_DOWN | ACTION_POINTER_DOWN => egui::TouchPhase::Start,
@@ -121,11 +121,9 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     }
                 }
             }
-    
-            return JNI_TRUE;
-        }else {
-            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
         }
+
+        return JNI_TRUE;
     }
     else if env.is_instance_of(&input_event, &key_event_class).unwrap() {
         let action = env.call_method(&input_event, "getAction", "()I", &[])

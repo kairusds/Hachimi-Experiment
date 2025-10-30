@@ -205,7 +205,7 @@ impl Gui {
         if self.splash_visible { self.run_splash(); }
 
         // Store this as an atomic value so the input thread can check it without locking the gui
-        IS_CONSUMING_INPUT.store(self.is_consuming_input(), atomic::Ordering::Relaxed);
+        IS_CONSUMING_INPUT.store(self.is_consuming_input(), atomic::Ordering::SeqCst);
 
         self.context.end_frame()
     }
@@ -550,7 +550,7 @@ impl Gui {
     }
 
     pub fn is_consuming_input_atomic() -> bool {
-        IS_CONSUMING_INPUT.load(atomic::Ordering::Relaxed)
+        IS_CONSUMING_INPUT.load(atomic::Ordering::SeqCst)
     }
 
     pub fn toggle_menu(&mut self) {
