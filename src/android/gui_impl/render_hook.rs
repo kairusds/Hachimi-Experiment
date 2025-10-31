@@ -7,7 +7,7 @@ use std::sync::Arc;
 use glow::HasContext;
 use once_cell::unsync::OnceCell;
 
-use crate::core::{Error, Gui, Hachimi};
+use crate::core::{Error, Gui, Hachimi}, il2cpp::symbols::Thread};
 
 type EGLBoolean = c_uint;
 type EGLDisplay = *mut c_void;
@@ -68,9 +68,6 @@ extern "C" fn eglSwapBuffers(display: EGLDisplay, surface: EGLSurface) -> EGLBoo
     let clipped_primitives = gui.context.tessellate(output.shapes, output.pixels_per_point);
     let dimensions: [u32; 2] = [width as u32, height as u32];
 
-    info!("[RenderHook] DEBUG: SKIPPING PAINTER AND STATE RESTORE");
-    return orig_fn(display, surface);
-
     // Backup state
     let gl = painter.gl().clone();
     let prev_vbo = get_binding_parameter(&gl, glow::ARRAY_BUFFER_BINDING, glow::NativeBuffer);
@@ -106,6 +103,10 @@ extern "C" fn eglSwapBuffers(display: EGLDisplay, surface: EGLSurface) -> EGLBoo
         }
         gl.bind_texture(glow::TEXTURE_2D, prev_texture);
         gl.active_texture(prev_active_texture);
+    }
+
+    if !Gui::is_consuming_input_atomic() {
+        Thread::main_thread().schedule(Gui::ensure_game_ui_is_enabled);
     }
 
     orig_fn(display, surface)

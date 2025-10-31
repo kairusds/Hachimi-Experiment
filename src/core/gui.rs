@@ -456,6 +456,40 @@ impl Gui {
         }
     }
 
+    pub fn ensure_game_ui_is_enabled() {
+        use crate::il2cpp::hook::{
+            UnityEngine_CoreModule::{Object, Behaviour, GameObject},
+            UnityEngine_UIModule::Canvas,
+            Plugins::AnimateToUnity::AnRoot
+        };
+
+        if unsafe { DISABLED_GAME_UIS.is_empty() } {
+            return;
+        }
+
+        debug!("[GUI] Forcibly re-enabling game UI.");
+
+        let canvas_array = Object::FindObjectsOfType(Canvas::type_object(), true);
+        let an_root_array = Object::FindObjectsOfType(AnRoot::type_object(), true);
+        let canvas_iter = unsafe { canvas_array.as_slice().iter() };
+        let an_root_iter = unsafe { an_root_array.as_slice().iter() };
+
+        for canvas in canvas_iter {
+            if unsafe { DISABLED_GAME_UIS.contains(canvas) } {
+                Behaviour::set_enabled(*canvas, true);
+            }
+        }
+
+        for an_root in an_root_iter {
+            let top_object = AnRoot::get__topObject(*an_root);
+            if unsafe { DISABLED_GAME_UIS.contains(&top_object) } {
+                GameObject::SetActive(top_object, true);
+            }
+        }
+
+        unsafe { DISABLED_GAME_UIS.clear(); }
+    }
+
     #[cfg(target_os = "windows")]
     fn run_vsync_combo(ui: &mut egui::Ui, value: &mut i32) {
         Self::run_combo(ui, "vsync_combo", value, &[
