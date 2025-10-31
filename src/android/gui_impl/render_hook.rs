@@ -7,7 +7,7 @@ use std::sync::Arc;
 use glow::HasContext;
 use once_cell::unsync::OnceCell;
 
-use crate::core::{Error, Gui, Hachimi}, il2cpp::symbols::Thread};
+use crate::{core::{Error, Gui, Hachimi}, il2cpp::symbols::Thread};
 
 type EGLBoolean = c_uint;
 type EGLDisplay = *mut c_void;
