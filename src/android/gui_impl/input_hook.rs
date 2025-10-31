@@ -41,7 +41,9 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
     let key_event_class = env.find_class("android/view/KeyEvent").unwrap();
 
     if env.is_instance_of(&input_event, &motion_event_class).unwrap() {
+        debug!("[InputHook] MotionEvent received. GUI consuming input? {}", Gui::is_consuming_input_atomic());
         let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
+            debug!("[InputHook] GUI not ready. Passing event to game.");
             return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
         };
 
@@ -95,6 +97,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
             let x = real_x / ppp;
             let y = real_y / ppp;
             let pos = egui::Pos2 { x, y };
+            debug!("[InputHook] Pushing to egui: phase={:?}, pos=({:.1}, {:.1}), raw=({:.1}, {:.1}), ppp={:.2}", phase, pos.x, pos.y, real_x, real_y, ppp);
 
             match phase {
                 egui::TouchPhase::Start => {
@@ -220,6 +223,14 @@ fn get_ppp(mut env: JNIEnv, gui: &Gui) -> f32 {
     let view_width = env.call_method(&view, "getWidth", "()I", &[]).unwrap().i().unwrap();
     let view_height = env.call_method(&view, "getHeight", "()I", &[]).unwrap().i().unwrap();
     let view_main_axis_size = if view_width < view_height { view_width } else { view_height };
+
+    debug!("[InputHook] get_ppp: width={}, height={}, prev_axis_size={}", view_width, view_height, gui.prev_main_axis_size);
+    let result = gui.context.zoom_factor() * (view_main_axis_size as f32 / gui.prev_main_axis_size as f32);
+    if !result.is_finite() || result <= 0.0 {
+        error!("[InputHook] get_ppp: CRITICAL FAILURE! Calculated ppp is invalid: {}. Falling back to 1.0", result);
+        return 1.0;
+    }
+    debug!("[InputHook] get_ppp: Final ppp = {}", result);
 
     gui.context.zoom_factor() * (view_main_axis_size as f32 / gui.prev_main_axis_size as f32)
 }
