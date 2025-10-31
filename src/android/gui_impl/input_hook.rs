@@ -42,91 +42,88 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
 
     if env.is_instance_of(&input_event, &motion_event_class).unwrap() {
         debug!("[InputHook] MotionEvent received. GUI consuming input? {}", Gui::is_consuming_input_atomic());
-        let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
-            debug!("[InputHook] GUI not ready. Passing event to game.");
-            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
-        };
-
-        let get_action_res = env.call_method(&input_event, "getAction", "()I", &[]).unwrap();
-        let action = get_action_res.i().unwrap();
-        let action_masked = action & ACTION_MASK;
-        let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
-
-        // hmmmmm
-        if !Gui::is_consuming_input_atomic() {
-            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
-        } else if pointer_index != 0 && Gui::is_consuming_input_atomic() {
-            return JNI_TRUE;
-        }
-
-        if action_masked == ACTION_SCROLL {
-            let x = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_HSCROLL.into()])
-                .unwrap()
-                .f()
-                .unwrap();
-            let y = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_VSCROLL.into()])
-                .unwrap()
-                .f()
-                .unwrap();
-            gui.input.events.push(egui::Event::Scroll(Vec2::new(x, y) * SCROLL_AXIS_SCALE));
-        }
-        else {
-            // borrowing egui's touch phase enum
-            let phase = match action_masked {
-                ACTION_DOWN | ACTION_POINTER_DOWN => egui::TouchPhase::Start,
-                ACTION_MOVE | ACTION_HOVER_MOVE => egui::TouchPhase::Move,
-                ACTION_UP | ACTION_POINTER_UP => egui::TouchPhase::End,
-                _ => return JNI_TRUE
+        if Gui::is_consuming_input_atomic() {
+            let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
+                debug!("[InputHook] GUI not ready. Passing event to game.");
+                return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
             };
-
-            // dumb and simple, no multi touch
-            let real_x = env.call_method(&input_event, "getX", "()F", &[])
-                .unwrap()
-                .f()
-                .unwrap();
-            let real_y = env.call_method(&input_event, "getY", "()F", &[])
-                .unwrap()
-                .f()
-                .unwrap();
-            let tool_type = env.call_method(&input_event, "getToolType", "(I)I", &[0.into()])
-                .unwrap()
-                .i()
-                .unwrap();
-
-            let ppp = get_ppp(env, &gui);
-            let x = real_x / ppp;
-            let y = real_y / ppp;
-            let pos = egui::Pos2 { x, y };
-            debug!("[InputHook] Pushing to egui: phase={:?}, pos=({:.1}, {:.1}), raw=({:.1}, {:.1}), ppp={:.2}", phase, pos.x, pos.y, real_x, real_y, ppp);
-
-            match phase {
-                egui::TouchPhase::Start => {
-                    gui.input.events.push(egui::Event::PointerMoved(pos));
-                    gui.input.events.push(egui::Event::PointerButton {
-                        pos,
-                        button: egui::PointerButton::Primary,
-                        pressed: true,
-                        modifiers: Default::default()
-                    });
-                },
-                egui::TouchPhase::Move => {
-                    gui.input.events.push(egui::Event::PointerMoved(pos));
-                },
-                egui::TouchPhase::End | egui::TouchPhase::Cancel => {
-                    gui.input.events.push(egui::Event::PointerButton {
-                        pos,
-                        button: egui::PointerButton::Primary,
-                        pressed: false,
-                        modifiers: Default::default()
-                    });
-                    if tool_type != TOOL_TYPE_MOUSE {
-                        gui.input.events.push(egui::Event::PointerGone);
+    
+            let get_action_res = env.call_method(&input_event, "getAction", "()I", &[]).unwrap();
+            let action = get_action_res.i().unwrap();
+            let action_masked = action & ACTION_MASK;
+            let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
+    
+            if pointer_index == 0 {
+                if action_masked == ACTION_SCROLL {
+                    let x = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_HSCROLL.into()])
+                        .unwrap()
+                        .f()
+                        .unwrap();
+                    let y = env.call_method(&input_event, "getAxisValue", "(I)F", &[AXIS_VSCROLL.into()])
+                        .unwrap()
+                        .f()
+                        .unwrap();
+                    gui.input.events.push(egui::Event::Scroll(Vec2::new(x, y) * SCROLL_AXIS_SCALE));
+                }
+                else {
+                    // borrowing egui's touch phase enum
+                    let phase = match action_masked {
+                        ACTION_DOWN | ACTION_POINTER_DOWN => egui::TouchPhase::Start,
+                        ACTION_MOVE | ACTION_HOVER_MOVE => egui::TouchPhase::Move,
+                        ACTION_UP | ACTION_POINTER_UP => egui::TouchPhase::End,
+                        _ => return JNI_TRUE
+                    };
+        
+                    // dumb and simple, no multi touch
+                    let real_x = env.call_method(&input_event, "getX", "()F", &[])
+                        .unwrap()
+                        .f()
+                        .unwrap();
+                    let real_y = env.call_method(&input_event, "getY", "()F", &[])
+                        .unwrap()
+                        .f()
+                        .unwrap();
+                    let tool_type = env.call_method(&input_event, "getToolType", "(I)I", &[0.into()])
+                        .unwrap()
+                        .i()
+                        .unwrap();
+        
+                    let ppp = get_ppp(env, &gui);
+                    let x = real_x / ppp;
+                    let y = real_y / ppp;
+                    let pos = egui::Pos2 { x, y };
+                    debug!("[InputHook] Pushing to egui: phase={:?}, pos=({:.1}, {:.1}), raw=({:.1}, {:.1}), ppp={:.2}", phase, pos.x, pos.y, real_x, real_y, ppp);
+        
+                    match phase {
+                        egui::TouchPhase::Start => {
+                            gui.input.events.push(egui::Event::PointerMoved(pos));
+                            gui.input.events.push(egui::Event::PointerButton {
+                                pos,
+                                button: egui::PointerButton::Primary,
+                                pressed: true,
+                                modifiers: Default::default()
+                            });
+                        },
+                        egui::TouchPhase::Move => {
+                            gui.input.events.push(egui::Event::PointerMoved(pos));
+                        },
+                        egui::TouchPhase::End | egui::TouchPhase::Cancel => {
+                            gui.input.events.push(egui::Event::PointerButton {
+                                pos,
+                                button: egui::PointerButton::Primary,
+                                pressed: false,
+                                modifiers: Default::default()
+                            });
+                            if tool_type != TOOL_TYPE_MOUSE {
+                                gui.input.events.push(egui::Event::PointerGone);
+                            }
+                        }
                     }
                 }
+        
+                return JNI_TRUE;
             }
         }
-
-        return JNI_TRUE;
     }
     else if env.is_instance_of(&input_event, &key_event_class).unwrap() {
         let action = env.call_method(&input_event, "getAction", "()I", &[])
