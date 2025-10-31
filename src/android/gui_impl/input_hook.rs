@@ -42,6 +42,8 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
 
     if env.is_instance_of(&input_event, &motion_event_class).unwrap() {
         debug!("[InputHook] MotionEvent received. GUI consuming input? {}", Gui::is_consuming_input_atomic());
+        return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event);
+        /*
         if let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) {
             if gui.is_consuming_input() {
                 debug!("[InputHook] GUI consuming.");
@@ -123,6 +125,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                 }
             }
         }
+        */
     }
     else if env.is_instance_of(&input_event, &key_event_class).unwrap() {
         let action = env.call_method(&input_event, "getAction", "()I", &[])
