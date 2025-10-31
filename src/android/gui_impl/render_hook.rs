@@ -7,7 +7,7 @@ use std::sync::Arc;
 use glow::HasContext;
 use once_cell::unsync::OnceCell;
 
-use crate::{core::{Error, Gui, Hachimi}, il2cpp::symbols::Thread};
+use crate::core::{Error, Gui, Hachimi};
 
 type EGLBoolean = c_uint;
 type EGLDisplay = *mut c_void;
@@ -103,10 +103,6 @@ extern "C" fn eglSwapBuffers(display: EGLDisplay, surface: EGLSurface) -> EGLBoo
         }
         gl.bind_texture(glow::TEXTURE_2D, prev_texture);
         gl.active_texture(prev_active_texture);
-    }
-
-    if !Gui::is_consuming_input_atomic() {
-        Thread::main_thread().schedule(Gui::ensure_game_ui_is_enabled);
     }
 
     orig_fn(display, surface)
