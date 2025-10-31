@@ -68,6 +68,9 @@ extern "C" fn eglSwapBuffers(display: EGLDisplay, surface: EGLSurface) -> EGLBoo
     let clipped_primitives = gui.context.tessellate(output.shapes, output.pixels_per_point);
     let dimensions: [u32; 2] = [width as u32, height as u32];
 
+    info!("[RenderHook] DEBUG: SKIPPING PAINTER AND STATE RESTORE");
+    return orig_fn(display, surface);
+
     // Backup state
     let gl = painter.gl().clone();
     let prev_vbo = get_binding_parameter(&gl, glow::ARRAY_BUFFER_BINDING, glow::NativeBuffer);
