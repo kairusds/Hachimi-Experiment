@@ -37,6 +37,7 @@ fn eglQuerySurface(display: EGLDisplay, surface: EGLSurface, attribute: EGLint, 
 static mut EGLSWAPBUFFERS_ADDR: usize = 0;
 type EGLSwapBuffersFn = extern "C" fn(display: EGLDisplay, surface: EGLSurface) -> EGLBoolean;
 extern "C" fn eglSwapBuffers(display: EGLDisplay, surface: EGLSurface) -> EGLBoolean {
+    debug!("[RenderHook] eglSwapBuffers START");
     let orig_fn: EGLSwapBuffersFn = unsafe { std::mem::transmute(EGLSWAPBUFFERS_ADDR) };
     let mut gui = Gui::instance_or_init("android.menu_open_key").lock().unwrap();
     // Big fat state destroyer, initialize it as soon as possible
@@ -61,6 +62,11 @@ extern "C" fn eglSwapBuffers(display: EGLDisplay, surface: EGLSurface) -> EGLBoo
     let mut height = 0;
     eglQuerySurface(display, surface, EGL_WIDTH, &mut width);
     eglQuerySurface(display, surface, EGL_HEIGHT, &mut height);
+
+    info!("[RenderHook] Surface Query: width={}, height={}", width, height);
+    if width <= 0 || height <= 0 {
+        return orig_fn(display, surface);
+    }
 
     gui.set_screen_size(width, height);
     let output = gui.run();
@@ -105,6 +111,7 @@ extern "C" fn eglSwapBuffers(display: EGLDisplay, surface: EGLSurface) -> EGLBoo
         gl.active_texture(prev_active_texture);
     }
 
+    debug!("[RenderHook] eglSwapBuffers END");
     orig_fn(display, surface)
 }
 
