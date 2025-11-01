@@ -65,6 +65,7 @@ notification:
   errors_during_update: "%{count} errors occurred during update. Check logs for more info."
   checking_for_updates: "Checking for updates..."
   no_updates: "No updates available."
+  ipc_softreset_exec: "IPC remote soft-reset executed"
 
 first_time_setup:
   title: "First Time Setup"

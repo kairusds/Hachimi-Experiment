@@ -65,6 +65,7 @@ notification:
   errors_during_update: "更新过程中出现 %{count} 个错误，详情请参阅日志"
   checking_for_updates: "正在检查更新..."
   no_updates: "无可用更新"
+  ipc_softreset_exec: "已远程软重启（IPC）"
 
 first_time_setup:
   title: "初始化设置"
