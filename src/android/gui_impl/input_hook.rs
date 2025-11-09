@@ -212,7 +212,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
         }
     }
 
-    get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event)
+    get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param)
 }
 
 fn get_ppp(mut env: JNIEnv, gui: &Gui) -> f32 {
