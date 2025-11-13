@@ -1,4 +1,4 @@
-use std::{fs, io::{Read, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::max};
+use std::{fs, io::{Read, Write, Seek, SeekFrom}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::max};
 
 use arc_swap::ArcSwap;
 use fnv::FnvHashMap;
@@ -294,6 +294,122 @@ impl Updater {
         Ok(())
     }
 
+    // thanks for the idea aria2
+    fn download_parallel(
+        &self,
+        url: &str,
+        zip_file: &mut fs::File,
+        progress_bar: Arc<dyn Fn(usize) + Send + Sync>
+    ) -> Result<(), Error> {
+        const MIN_CHUNK_SIZE: u64 = 1024 * 1024 * 5; // 5MB minimum per thread
+        let agent = ureq::Agent::new();
+        let res = agent.head(url).call()?;
+        let content_length = res.header("Content-Length").and_then(|s| s.parse::<u64>().ok());
+        let accepts_ranges = res.header("Accept-Ranges").map_or(false, |v| v == "bytes");
+    
+        if let (Some(length), true) = (content_length, accepts_ranges) {
+            if length == 0 { return Ok(()); }
+            zip_file.set_len(length)?;
+
+            let num_threads = *NUM_THREADS;
+            let chunk_size = (length / num_threads as u64).max(MIN_CHUNK_SIZE);
+            let num_chunks = (length + chunk_size - 1) / chunk_size;
+
+            let file = Arc::new(Mutex::new(zip_file));
+            let fatal_error = Arc::new(Mutex::new(None::<Error>));
+            let stop_signal = Arc::new(AtomicBool::new(false));
+
+            let (sender, receiver) = mpsc::channel::<(u64, u64)>();
+            let receiver = Arc::new(Mutex::new(receiver));
+
+            let mut handles = Vec::with_capacity(num_threads);
+            for _ in 0..num_threads {
+                let agent_clone = agent.clone();
+                let url_clone = url.to_string();
+                let file_clone = Arc::clone(&file);
+                let receiver_clone = Arc::clone(&receiver);
+                let progress_bar_clone = Arc::clone(&progress_bar);
+                let fatal_error_clone = Arc::clone(&fatal_error);
+                let stop_signal_clone = Arc::clone(&stop_signal);
+
+                let handle = thread::Builder::new()
+                    .name("downloader_chunk".into())
+                    .spawn_with_priority(ThreadPriority::Min, move |result| {
+                        if result.is_err() { warn!("Failed to set downloader thread priority."); }
+
+                        let mut buffer = vec![0u8; CHUNK_SIZE];
+
+                        while let Ok((start, end)) = receiver_clone.lock().unwrap().recv() {
+                            if stop_signal_clone.load(atomic::Ordering::Relaxed) { break; }
+
+                            let range_header = format!("bytes={}-{}", start, end);
+                            let result: Result<(), Error> = (|| {
+                                let res = agent_clone.get(&url_clone).set("Range", &range_header).call()?;
+                                let mut reader = res.into_reader();
+                                let mut current_pos = start;
+
+                                loop {
+                                    let bytes_read = reader.read(&mut buffer)?;
+                                    if bytes_read == 0 { break; }
+    
+                                    let data_slice = &buffer[..bytes_read];
+                                    let mut file_guard = file_clone.lock().unwrap();
+                                    file_guard.seek(SeekFrom::Start(current_pos))?;
+                                    file_guard.write_all(data_slice)?;
+
+                                    drop(file_guard);
+
+                                    progress_bar_clone(bytes_read);
+                                    current_pos += bytes_read as u64;
+
+                                    if stop_signal_clone.load(atomic::Ordering::Relaxed) {
+                                        return Err(Error::Cancelled);
+                                    }
+                                }
+                                Ok(())
+                            })();
+
+                            if let Err(e) = result {
+                                *fatal_error_clone.lock().unwrap() = Some(e);
+                                stop_signal_clone.store(true, atomic::Ordering::Relaxed);
+                                break;
+                            }
+                        }
+                    }).unwrap();
+                handles.push(handle);
+            }
+
+            for i in 0..num_chunks {
+                let start = i * chunk_size;
+                let end = (start + chunk_size - 1).min(length - 1);
+                if sender.send((start, end)).is_err() { break; }
+            }
+            drop(sender);
+
+            for handle in handles {
+                handle.join().unwrap();
+            }
+
+            if let Some(e) = fatal_error.lock().unwrap().take() {
+                return Err(e);
+            }
+
+        } else {
+            warn!("Server does not support range requests; falling back to single-threaded download.");
+            let res = agent.get(url).call()?;
+            let mut reader = res.into_reader();
+            let mut buffer = [0u8; CHUNK_SIZE];
+            loop {
+                let bytes_read = reader.read(&mut buffer)?;
+                if bytes_read == 0 { break; }
+                let data_slice = &buffer[..bytes_read];
+                zip_file.write_all(data_slice)?;
+                progress_bar(bytes_read);
+            }
+        }
+        Ok(())
+    }
+
     fn download_incremental(
         self: Arc<Self>,
         update_info: &UpdateInfo,
@@ -407,20 +523,27 @@ impl Updater {
                 .read(true).write(true).create(true).truncate(true)
                 .open(&zip_path)?;
 
-            let res = ureq::get(&update_info.zip_url).call()?;
-            let content_length = res.header("Content-Length").and_then(|s| s.parse::<usize>().ok());
-            let mut buffer = [0u8; CHUNK_SIZE];
-            let mut downloaded = 0;
-            http::download_file_buffered(res, &mut zip_file, &mut buffer, |bytes| {
-                let progress = if let Some(len) = content_length {
-                    downloaded += bytes.len();
-                    UpdateProgress::new(downloaded, len)
-                } else {
-                    downloaded = (downloaded + 1) % 100000;
-                    UpdateProgress::new(downloaded, 100000)
-                };
-                self.progress.store(Arc::new(Some(progress)));
-            })?;
+            let downloaded = Arc::new(AtomicUsize::new(0));
+            let total_size = Arc::new(AtomicUsize::new(0));
+
+            let progress_bar = Arc::new(|bytes_read: usize| {
+                let prev_size = downloaded.fetch_add(bytes_read, atomic::Ordering::Relaxed);
+                let total = total_size.load(atomic::Ordering::Relaxed);
+                self.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + bytes_read, total))));
+            });
+
+            let head_res = ureq::get(&update_info.zip_url).call()?;
+            if let Some(len_str) = head_res.header("Content-Length") {
+                if let Ok(len) = len_str.parse::<usize>() {
+                    total_size.store(len, atomic::Ordering::Relaxed);
+                }
+            }
+
+            self.clone().download_parallel(
+                &update_info.zip_url,
+                &mut zip_file,
+                progress_bar,
+            )?;
             zip_file.sync_data()?;
 
             let files_to_extract = Arc::new(
