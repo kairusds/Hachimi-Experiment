@@ -410,8 +410,8 @@ impl Updater {
                 downloaded_file.write_all(&buffer[..bytes_read])?;
                 progress_bar(bytes_read);
             }
+            downloaded_file.sync_data()?;
         }
-        downloaded_file.sync_data()?;
         Ok(())
     }
 
@@ -550,6 +550,7 @@ impl Updater {
                     .collect::<FnvHashMap<_, _>>()
             );
 
+            let zip_file = fs::File::open(&zip_path)?;
             let zip_archive = Arc::new(Mutex::new(zip::ZipArchive::new(zip_file)?));
             let total_size = update_info.size;
             let current_bytes = Arc::new(AtomicUsize::new(0));
