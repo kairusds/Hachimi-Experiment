@@ -522,7 +522,8 @@ impl Updater {
             let head_res = ureq::agent().head(&update_info.zip_url).call()?;
             let total_size = head_res.header("Content-Length")
                 .and_then(|s| s.parse::<usize>().ok())
-                .unwrap_or(0); // Default to 0 if header is missing
+                .unwrap_or(0);
+            debug!("HEAD request for '{}' completed. Content-Length found: {}", &update_info.zip_url, total_size);
 
             let downloaded = Arc::new(AtomicUsize::new(0));
             let self_clone = self.clone();
