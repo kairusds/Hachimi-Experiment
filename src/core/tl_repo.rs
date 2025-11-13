@@ -519,11 +519,20 @@ impl Updater {
         let mut error_count = 0;
 
         {
-            let head_res = ureq::agent().head(&update_info.zip_url).call()?;
-            let total_size = head_res.header("Content-Length")
-                .and_then(|s| s.parse::<usize>().ok())
-                .unwrap_or(0);
-            debug!("HEAD request for '{}' completed. Content-Length found: {}", &update_info.zip_url, total_size);
+            let total_size_header = ureq::agent().head(&update_info.zip_url).call()
+                .ok()
+                .and_then(|res| res.header("Content-Length").and_then(|s| s.parse::<usize>().ok()));
+
+            let progress_total = match total_size_header {
+                Some(size) if size > 0 => {
+                    debug!("Using Content-Length from header for progress bar: {}", size);
+                    size
+                },
+                _ => {
+                    debug!("Server did not provide a valid Content-Length. Using fallback size from index: {}", update_info.size);
+                    update_info.size
+                }
+            };
 
             let downloaded = Arc::new(AtomicUsize::new(0));
             let self_clone = self.clone();
@@ -531,7 +540,8 @@ impl Updater {
 
             let progress_bar = Arc::new(move |bytes_read: usize| {
                 let prev_size = downloaded_clone.fetch_add(bytes_read, atomic::Ordering::Relaxed);
-                self_clone.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + bytes_read, total_size))));
+                let current = prev_size + bytes_read;
+                self_clone.progress.store(Arc::new(Some(UpdateProgress::new(current, progress_total))));
             });
 
             self.download_parallel(
