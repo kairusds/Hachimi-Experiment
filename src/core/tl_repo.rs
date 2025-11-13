@@ -515,7 +515,6 @@ impl Updater {
         localized_data_dir: &Path,
         cached_files: Arc<Mutex<FnvHashMap<String, String>>>
     ) -> Result<usize, Error> {
-        let mut error_count = 0;
         let zip_path = localized_data_dir.join(".tmp.zip");
 
         {
@@ -526,24 +525,28 @@ impl Updater {
             let downloaded = Arc::new(AtomicUsize::new(0));
             let total_size = Arc::new(AtomicUsize::new(0));
 
-            let progress_bar = Arc::new(|bytes_read: usize| {
-                let prev_size = downloaded.fetch_add(bytes_read, atomic::Ordering::Relaxed);
-                let total = total_size.load(atomic::Ordering::Relaxed);
-                self.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + bytes_read, total))));
-            });
-
-            let head_res = ureq::get(&update_info.zip_url).call()?;
+            let head_res = ureq::agent().head(&update_info.zip_url).call()?;
             if let Some(len_str) = head_res.header("Content-Length") {
                 if let Ok(len) = len_str.parse::<usize>() {
                     total_size.store(len, atomic::Ordering::Relaxed);
                 }
             }
 
-            self.clone().download_parallel(
+            let self_clone = self.clone();
+            let downloaded_clone = downloaded.clone();
+            let total_size_clone = total_size.clone();
+            let progress_bar = Arc::new(move |bytes_read: usize| {
+                let prev_size = downloaded_clone.fetch_add(bytes_read, atomic::Ordering::Relaxed);
+                let total = total_size_clone.load(atomic::Ordering::Relaxed);
+                self_clone.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + bytes_read, total))));
+            });
+
+            self.download_parallel(
                 &update_info.zip_url,
                 &mut zip_file,
                 progress_bar,
             )?;
+
             zip_file.sync_data()?;
 
             let files_to_extract = Arc::new(
