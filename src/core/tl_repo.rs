@@ -109,30 +109,6 @@ impl DownloadJob {
             buffer: [0u8; CHUNK_SIZE]
         }
     }
-
-    fn execute(&mut self, file_path: &Path, url: &str, file_hash: &str, add_bytes: impl Fn(usize)) -> Result<String, Error> {
-        if let Some(parent) = Path::new(file_path).parent() {
-            fs::create_dir_all(parent)?;
-        }
-        let mut file = fs::File::create(file_path)?;
-
-        let res = self.agent.get(url).call()?;
-        http::download_file_buffered(res, &mut file, &mut self.buffer, |bytes| {
-            self.hasher.update(bytes);
-            add_bytes(bytes.len());
-        })?;
-        file.sync_data()?;
-
-        // Hash the file
-        let hash = self.hasher.finalize().to_hex().to_string();
-        if hash != file_hash {
-            return Err(Error::FileHashMismatch(file_path.to_str().unwrap_or("").to_string()));
-        }
-
-        self.hasher.reset();
-
-        Ok(hash)
-    }
 }
 
 impl Updater {
@@ -502,8 +478,6 @@ impl Updater {
                                 Some(file) => file.clone(),
                                 None => continue,
                             };
-
-                            drop(archive_guard);
                         
                             let path = repo_file.get_fs_path(&localized_data_dir_clone);
                             if let Some(parent) = path.parent() {
