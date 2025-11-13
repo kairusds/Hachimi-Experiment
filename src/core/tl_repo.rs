@@ -5,7 +5,6 @@ use fnv::FnvHashMap;
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use size::Size;
-use threadpool::ThreadPool;
 use thread_priority::{ThreadBuilderExt, ThreadPriority};
 use super::{gui::SimpleYesNoDialog, hachimi::LocalizedData, http::{self, AsyncRequest}, utils, Error, Gui, Hachimi};
 use once_cell::sync::Lazy;
@@ -489,30 +488,39 @@ impl Updater {
 
                         while let Ok(i) = receiver_clone.lock().unwrap().recv() {
                             if stop_signal_clone.load(atomic::Ordering::Relaxed) { break; }
-
-                            let mut zip_entry = {
-                                let mut archive_guard = zip_archive_clone.lock().unwrap();
-                                match archive_guard.by_index(i) {
-                                    Ok(entry) => entry,
-                                    Err(_) => { non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst); continue; }
+                            let mut archive_guard = zip_archive_clone.lock().unwrap();
+                            
+                            let mut zip_entry = match archive_guard.by_index(i) {
+                                Ok(entry) => entry,
+                                Err(_) => {
+                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst);
+                                    continue;
                                 }
                             };
                             
                             let repo_file = match files_to_extract_clone.get(zip_entry.name()) {
-                                Some(file) => file,
+                                Some(file) => file.clone(),
                                 None => continue,
                             };
 
+                            drop(archive_guard);
+                        
                             let path = repo_file.get_fs_path(&localized_data_dir_clone);
                             if let Some(parent) = path.parent() {
-                                if fs::create_dir_all(parent).is_err() { non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst); continue; }
+                                if fs::create_dir_all(parent).is_err() {
+                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst);
+                                    continue;
+                                }
                             }
-
+                        
                             let mut out_file = match fs::File::create(&path) {
                                 Ok(file) => file,
-                                Err(_) => { non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst); continue; }
+                                Err(_) => {
+                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst);
+                                    continue;
+                                }
                             };
-                            
+
                             loop {
                                 match zip_entry.read(&mut buffer) {
                                     Ok(0) => break,
@@ -521,22 +529,25 @@ impl Updater {
                                         if out_file.write_all(data_slice).is_err() {
                                             *fatal_error_clone.lock().unwrap() = Some(Error::OutOfDiskSpace);
                                             stop_signal_clone.store(true, atomic::Ordering::Relaxed);
-                                            return;
+                                            return; // Exit the thread
                                         }
                                         hasher.update(data_slice);
                                         let prev_size = current_bytes_clone.fetch_add(read_bytes, atomic::Ordering::SeqCst);
                                         updater.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + read_bytes, total_size))));
                                     }
-                                    Err(_) => { non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst); break; }
+                                    Err(_) => {
+                                        non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst);
+                                        break;
+                                    }
                                 }
                             }
-
+                        
                             let hash = hasher.finalize().to_hex().to_string();
                             if hash != repo_file.hash {
                                 let path_str = path.to_str().unwrap_or("").to_string();
                                 *fatal_error_clone.lock().unwrap() = Some(Error::FileHashMismatch(path_str));
                                 stop_signal_clone.store(true, atomic::Ordering::Relaxed);
-                                return;
+                                return; // Exit the thread
                             }
                             
                             cached_files_clone.lock().unwrap().insert(repo_file.path.clone(), hash);
