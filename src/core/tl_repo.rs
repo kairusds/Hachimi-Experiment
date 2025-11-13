@@ -1,4 +1,4 @@
-use std::{fs, io::{Read, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize}, mpsc, Arc, Mutex}, thread, cmp::max};
+use std::{fs, io::{Read, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::max};
 
 use arc_swap::ArcSwap;
 use fnv::FnvHashMap;
@@ -348,7 +348,7 @@ impl Updater {
 
             let handle = thread::Builder::new()
                 .name("incremental_downloader".into())
-                .spawn_with_priority(ThreadPriority::Background, move |result| {
+                .spawn_with_priority(ThreadPriority::Min, move |result| {
                     if result.is_err() {
                         warn!("Failed to set background thread priority for incremental downloader.");
                     }
@@ -479,7 +479,7 @@ impl Updater {
 
                 let handle = thread::Builder::new()
                     .name("zip_extractor".into())
-                    .spawn_with_priority(ThreadPriority::Background, move |result| {
+                    .spawn_with_priority(ThreadPriority::Min, move |result| {
                         if result.is_err() {
                             warn!("Failed to set background thread priority for zip extractor.");
                         }
