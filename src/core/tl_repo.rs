@@ -343,7 +343,7 @@ impl Updater {
                             if stop_signal_clone.load(atomic::Ordering::Relaxed) { break; }
 
                             let range_header = format!("bytes={}-{}", start, end);
-                            let result: Result<(), Error> = (|| {
+                            let result = (|| -> Result<(), Error> {
                                 let res = agent_clone.get(&url_clone).set("Range", &range_header).call()?;
                                 let mut reader = res.into_reader();
                                 let mut current_pos = start;
@@ -363,7 +363,7 @@ impl Updater {
                                     current_pos += bytes_read as u64;
 
                                     if stop_signal_clone.load(atomic::Ordering::Relaxed) {
-                                        return Err(Error::Cancelled);
+                                        return Err(Error::RuntimeError("Download cancelled by other thread".into()));
                                     }
                                 }
                                 Ok(())
@@ -516,6 +516,7 @@ impl Updater {
         cached_files: Arc<Mutex<FnvHashMap<String, String>>>
     ) -> Result<usize, Error> {
         let zip_path = localized_data_dir.join(".tmp.zip");
+        let mut error_count = 0;
 
         {
             let mut zip_file = fs::File::options()
