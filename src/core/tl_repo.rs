@@ -1,4 +1,4 @@
-use std::{fs, io::{Read, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize}, Arc, Mutex}};
+use std::{fs, io::{Read, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize}, mpsc, Arc, Mutex}, thread, cmp::max};
 
 use arc_swap::ArcSwap;
 use fnv::FnvHashMap;
@@ -6,8 +6,9 @@ use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use size::Size;
 use threadpool::ThreadPool;
-
+use thread_priority::{ThreadBuilderExt, ThreadPriority};
 use super::{gui::SimpleYesNoDialog, hachimi::LocalizedData, http::{self, AsyncRequest}, utils, Error, Gui, Hachimi};
+use once_cell::sync::Lazy;
 
 #[derive(Deserialize)]
 pub struct RepoInfo {
@@ -89,7 +90,10 @@ pub struct Updater {
 
 const LOCALIZED_DATA_DIR: &str = "localized_data";
 const CHUNK_SIZE: usize = 8192; // 8KiB
-const NUM_THREADS: usize = 8;
+static NUM_THREADS: Lazy<usize> = Lazy::new(|| {
+    let parallelism = thread::available_parallelism().unwrap().get();
+    max(1, parallelism / 2)
+});
 const INCREMENTAL_UPDATE_LIMIT: usize = 200;
 
 struct DownloadJob {
@@ -317,166 +321,247 @@ impl Updater {
 
     fn download_incremental(
         self: Arc<Self>,
-        update_info: &UpdateInfo, localized_data_dir: &Path, cached_files: Arc<Mutex<FnvHashMap<String, String>>>
+        update_info: &UpdateInfo,
+        localized_data_dir: &Path,
+        cached_files: Arc<Mutex<FnvHashMap<String, String>>>
     ) -> Result<usize, Error> {
-        let mut jobs_vec = Vec::with_capacity(NUM_THREADS);
-        for _ in 0..NUM_THREADS {
-            jobs_vec.push(DownloadJob::new());
-        }
-        let jobs = Arc::new(Mutex::new(jobs_vec));
-        let pool = ThreadPool::new(NUM_THREADS);
-        let current_size = Arc::new(AtomicUsize::new(0));
-        let error_count = Arc::new(AtomicUsize::new(0));
         let total_size = update_info.size;
-        for repo_file in update_info.files.iter() {
-            let repo_file_path = repo_file.path.clone();
-            let file_path = repo_file.get_fs_path(localized_data_dir);
-            let url = utils::concat_unix_path(&update_info.base_url, &repo_file.path);
+        let current_bytes = Arc::new(AtomicUsize::new(0));
+        let non_fatal_error_count = Arc::new(AtomicUsize::new(0));
+        let fatal_error = Arc::new(Mutex::new(None::<Error>));
+        let stop_signal = Arc::new(AtomicBool::new(false));
 
-            // Clone the Arcs for the closure
-            let jobs = jobs.clone();
-            let file_hash = repo_file.hash.clone();
+        let (sender, receiver) = mpsc::channel::<RepoFile>();
+        let receiver = Arc::new(Mutex::new(receiver));
+
+        let mut handles = Vec::with_capacity(*NUM_THREADS);
+        for _ in 0..*NUM_THREADS {
             let updater = self.clone();
-            let current_size = current_size.clone();
-            let cached_files = cached_files.clone();
-            let error_count = error_count.clone();
+            let localized_data_dir_clone = localized_data_dir.to_path_buf();
+            let base_url_clone = update_info.base_url.clone();
+            let cached_files_clone = Arc::clone(&cached_files);
+            let current_bytes_clone = Arc::clone(&current_bytes);
+            let non_fatal_error_count_clone = Arc::clone(&non_fatal_error_count);
+            let fatal_error_clone = Arc::clone(&fatal_error);
+            let stop_signal_clone = Arc::clone(&stop_signal);
+            let receiver_clone = Arc::clone(&receiver);
 
-            pool.execute(move || {
-                let mut job = { jobs.lock().unwrap().pop().expect("vacant job in job pool") };
-                
-                let res = job.execute(&file_path, &url, &file_hash, |read_bytes| {
-                    let prev_size = current_size.fetch_add(read_bytes, atomic::Ordering::SeqCst);
-                    updater.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + read_bytes, total_size))));
-                });
-
-                match res {
-                    Ok(hash) => { cached_files.lock().unwrap().insert(repo_file_path, hash); },
-                    Err(e) => {
-                        error!("{}", e);
-                        error_count.fetch_add(1, atomic::Ordering::SeqCst);
+            let handle = thread::Builder::new()
+                .name("incremental_downloader".into())
+                .spawn_with_priority(ThreadPriority::Background, move |result| {
+                    if result.is_err() {
+                        warn!("Failed to set background thread priority for incremental downloader.");
                     }
-                }
+                    let mut job = DownloadJob::new();
 
-                // Return the job back to the pool
-                jobs.lock().unwrap().push(job);
-            });
+                    while let Ok(repo_file) = receiver_clone.lock().unwrap().recv() {
+                        if stop_signal_clone.load(atomic::Ordering::Relaxed) { break; }
+                        
+                        let file_path = repo_file.get_fs_path(&localized_data_dir_clone);
+                        let url = utils::concat_unix_path(&base_url_clone, &repo_file.path);
+
+                        let execute_result = (|| -> Result<String, Error> {
+                            if let Some(parent) = Path::new(&file_path).parent() {
+                                fs::create_dir_all(parent)?;
+                            }
+                            let mut file = fs::File::create(&file_path)?;
+                            let res = job.agent.get(&url).call()?;
+                            
+                            http::download_file_buffered(res, &mut file, &mut job.buffer, |bytes| {
+                                job.hasher.update(bytes);
+                                let prev_size = current_bytes_clone.fetch_add(bytes.len(), atomic::Ordering::SeqCst);
+                                updater.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + bytes.len(), total_size))));
+                            })?;
+
+                            let hash = job.hasher.finalize().to_hex().to_string();
+                            if hash != repo_file.hash {
+                                return Err(Error::FileHashMismatch(file_path.to_str().unwrap_or("").to_string()));
+                            }
+                            job.hasher.reset();
+                            Ok(hash)
+                        })();
+
+                        match execute_result {
+                            Ok(hash) => {
+                                cached_files_clone.lock().unwrap().insert(repo_file.path.clone(), hash);
+                            },
+                            Err(e) => {
+                                if matches!(e, Error::OutOfDiskSpace | Error::FileHashMismatch(_)) {
+                                    error!("Fatal error during incremental download: {}", e);
+                                    *fatal_error_clone.lock().unwrap() = Some(e);
+                                    stop_signal_clone.store(true, atomic::Ordering::Relaxed);
+                                    return;
+                                } else {
+                                    error!("Non-fatal error during incremental download: {}", e);
+                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst);
+                                }
+                            }
+                        }
+                    }
+                }).unwrap();
+            handles.push(handle);
         }
 
-        // Wait for the thread pool to finish
-        pool.join();
+        for repo_file in update_info.files.iter() {
+            if sender.send(repo_file.clone()).is_err() { break; }
+        }
+        drop(sender);
 
-        Ok(error_count.load(atomic::Ordering::Relaxed))
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        if let Some(err) = fatal_error.lock().unwrap().take() {
+            return Err(err);
+        }
+
+        Ok(non_fatal_error_count.load(atomic::Ordering::Relaxed))
     }
 
     fn download_zip(
         self: Arc<Self>,
-        update_info: &UpdateInfo, localized_data_dir: &Path, cached_files: Arc<Mutex<FnvHashMap<String, String>>>
+        update_info: &UpdateInfo,
+        localized_data_dir: &Path,
+        cached_files: Arc<Mutex<FnvHashMap<String, String>>>
     ) -> Result<usize, Error> {
-        let mut cached_files = cached_files.lock().unwrap();
         let mut error_count = 0;
         let zip_path = localized_data_dir.join(".tmp.zip");
-        let sync_pool = ThreadPool::new(NUM_THREADS);
 
-        { // block that drops the file objects so we can delete the temp file later
+        {
             let mut zip_file = fs::File::options()
-                .read(true)
-                .write(true)
-                .create(true)
-                .truncate(true)
+                .read(true).write(true).create(true).truncate(true)
                 .open(&zip_path)?;
 
             let res = ureq::get(&update_info.zip_url).call()?;
-            let content_length = res.header("Content-Length")
-                .map(|s| s.parse::<usize>().ok())
-                .unwrap_or_default();
+            let content_length = res.header("Content-Length").and_then(|s| s.parse::<usize>().ok());
             let mut buffer = [0u8; CHUNK_SIZE];
             let mut downloaded = 0;
             http::download_file_buffered(res, &mut zip_file, &mut buffer, |bytes| {
-                let progress = if let Some(len) = &content_length {
+                let progress = if let Some(len) = content_length {
                     downloaded += bytes.len();
-                    UpdateProgress::new(downloaded, *len)
-                }
-                else {
-                    // fake progress
-                    downloaded += 1;
+                    UpdateProgress::new(downloaded, len)
+                } else {
+                    downloaded = (downloaded + 1) % 100000;
                     UpdateProgress::new(downloaded, 100000)
                 };
                 self.progress.store(Arc::new(Some(progress)));
             })?;
             zip_file.sync_data()?;
 
-            let mut zip_archive = zip::ZipArchive::new(zip_file)?;
-            let mut hasher = blake3::Hasher::new();
-            let mut current_bytes = 0;
-            for repo_file in update_info.files.iter() {
-                let archive_path = utils::concat_unix_path(&update_info.zip_dir, &repo_file.path);
-                let mut archive_file = match zip_archive.by_name(&archive_path) {
-                    Ok(v) => v,
-                    Err(_) => {
-                        error!("File not found in zip: {}", archive_path);
-                        continue;
-                    }
-                };
+            let files_to_extract = Arc::new(
+                update_info.files.iter()
+                    .map(|f| (utils::concat_unix_path(&update_info.zip_dir, &f.path), f.clone()))
+                    .collect::<FnvHashMap<_, _>>()
+            );
 
-                let path = repo_file.get_fs_path(localized_data_dir);
-                if let Some(parent) = Path::new(&path).parent() {
-                    fs::create_dir_all(parent)?;
-                }
-                let mut file = fs::File::create(&path)?;
+            let zip_archive = Arc::new(Mutex::new(zip::ZipArchive::new(zip_file)?));
+            let total_size = update_info.size;
+            let current_bytes = Arc::new(AtomicUsize::new(0));
+            let non_fatal_error_count = Arc::new(AtomicUsize::new(0));
+            let fatal_error = Arc::new(Mutex::new(None::<Error>));
+            let stop_signal = Arc::new(AtomicBool::new(false));
 
-                let mut buffer_pos = 0usize;
-                loop {
-                    let read_bytes = archive_file.read(&mut buffer[buffer_pos..])?;
+            let (sender, receiver) = mpsc::channel::<usize>();
+            let receiver = Arc::new(Mutex::new(receiver));
             
-                    let prev_buffer_pos = buffer_pos;
-                    buffer_pos += read_bytes;
-                    hasher.update(&buffer[prev_buffer_pos..buffer_pos]);
+            let mut handles = Vec::with_capacity(*NUM_THREADS);
+            for _ in 0..*NUM_THREADS {
+                let updater = self.clone();
+                let zip_archive_clone = Arc::clone(&zip_archive);
+                let files_to_extract_clone = Arc::clone(&files_to_extract);
+                let localized_data_dir_clone = localized_data_dir.to_path_buf();
+                let cached_files_clone = Arc::clone(&cached_files);
+                let current_bytes_clone = Arc::clone(&current_bytes);
+                let non_fatal_error_count_clone = Arc::clone(&non_fatal_error_count);
+                let fatal_error_clone = Arc::clone(&fatal_error);
+                let stop_signal_clone = Arc::clone(&stop_signal);
+                let receiver_clone = Arc::clone(&receiver);
 
-                    current_bytes += read_bytes;
-                    self.progress.store(Arc::new(Some(UpdateProgress::new(current_bytes, update_info.size))));
-            
-                    if buffer_pos == buffer.len() {
-                        buffer_pos = 0;
-                        let written = file.write(&buffer)?;
-                        if written != buffer.len() {
-                            return Err(Error::OutOfDiskSpace);
+                let handle = thread::Builder::new()
+                    .name("zip_extractor".into())
+                    .spawn_with_priority(ThreadPriority::Background, move |result| {
+                        if result.is_err() {
+                            warn!("Failed to set background thread priority for zip extractor.");
                         }
-                    }
-            
-                    if read_bytes == 0 {
-                        break;
-                    }
-                }
-            
-                // Extract finished, flush the buffer
-                if buffer_pos != 0 {
-                    let written = file.write(&buffer[..buffer_pos])?;
-                    if written != buffer_pos {
-                        return Err(Error::OutOfDiskSpace);
-                    }
-                }
-                sync_pool.execute(move || {
-                    if let Err(e) = file.sync_data() {
-                        error!("Failed to sync file: {}", e)
-                    }
-                });
 
-                // Hash the file
-                let hash = hasher.finalize().to_hex().to_string();
-                if hash != repo_file.hash {
-                    return Err(Error::FileHashMismatch(path.to_str().unwrap_or("").to_string()));
-                }
-                cached_files.insert(repo_file.path.clone(), hash);
+                        let mut buffer = vec![0u8; CHUNK_SIZE];
+                        let mut hasher = blake3::Hasher::new();
 
-                hasher.reset();
+                        while let Ok(i) = receiver_clone.lock().unwrap().recv() {
+                            if stop_signal_clone.load(atomic::Ordering::Relaxed) { break; }
+
+                            let mut zip_entry = {
+                                let mut archive_guard = zip_archive_clone.lock().unwrap();
+                                match archive_guard.by_index(i) {
+                                    Ok(entry) => entry,
+                                    Err(_) => { non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst); continue; }
+                                }
+                            };
+                            
+                            let repo_file = match files_to_extract_clone.get(zip_entry.name()) {
+                                Some(file) => file,
+                                None => continue,
+                            };
+
+                            let path = repo_file.get_fs_path(&localized_data_dir_clone);
+                            if let Some(parent) = path.parent() {
+                                if fs::create_dir_all(parent).is_err() { non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst); continue; }
+                            }
+
+                            let mut out_file = match fs::File::create(&path) {
+                                Ok(file) => file,
+                                Err(_) => { non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst); continue; }
+                            };
+                            
+                            loop {
+                                match zip_entry.read(&mut buffer) {
+                                    Ok(0) => break,
+                                    Ok(read_bytes) => {
+                                        let data_slice = &buffer[..read_bytes];
+                                        if out_file.write_all(data_slice).is_err() {
+                                            *fatal_error_clone.lock().unwrap() = Some(Error::OutOfDiskSpace);
+                                            stop_signal_clone.store(true, atomic::Ordering::Relaxed);
+                                            return;
+                                        }
+                                        hasher.update(data_slice);
+                                        let prev_size = current_bytes_clone.fetch_add(read_bytes, atomic::Ordering::SeqCst);
+                                        updater.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + read_bytes, total_size))));
+                                    }
+                                    Err(_) => { non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst); break; }
+                                }
+                            }
+
+                            let hash = hasher.finalize().to_hex().to_string();
+                            if hash != repo_file.hash {
+                                let path_str = path.to_str().unwrap_or("").to_string();
+                                *fatal_error_clone.lock().unwrap() = Some(Error::FileHashMismatch(path_str));
+                                stop_signal_clone.store(true, atomic::Ordering::Relaxed);
+                                return;
+                            }
+                            
+                            cached_files_clone.lock().unwrap().insert(repo_file.path.clone(), hash);
+                            hasher.reset();
+                        }
+                    }).unwrap();
+                handles.push(handle);
             }
+
+            let zip_len = zip_archive.lock().unwrap().len();
+            for i in 0..zip_len {
+                if sender.send(i).is_err() { break; }
+            }
+            drop(sender);
+
+            for handle in handles {
+                handle.join().unwrap();
+            }
+            
+            if let Some(err) = fatal_error.lock().unwrap().take() { return Err(err); }
+            error_count = non_fatal_error_count.load(atomic::Ordering::Relaxed);
         }
 
-        // Wait for the sync pool to finish
-        sync_pool.join();
-
         if let Err(e) = fs::remove_file(&zip_path) {
-            error!("Failed to remove '{}': {}", zip_path.display(), e);
+            error!("Failed to remove temporary file '{}': {}", zip_path.display(), e);
             error_count += 1;
         }
 
