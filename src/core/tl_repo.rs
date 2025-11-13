@@ -299,7 +299,6 @@ impl Updater {
         &self,
         url: &str,
         file_path: &Path,
-        total_size: Arc<AtomicUsize>,
         progress_bar: Arc<dyn Fn(usize) + Send + Sync>
     ) -> Result<(), Error> {
         const MIN_CHUNK_SIZE: u64 = 1024 * 1024 * 5;
@@ -309,10 +308,6 @@ impl Updater {
 
         let content_length = res.header("Content-Length").and_then(|s| s.parse::<u64>().ok());
         let accepts_ranges = res.header("Accept-Ranges").map_or(false, |v| v == "bytes");
-        
-        if let Some(length) = content_length {
-            total_size.store(length as usize, atomic::Ordering::Relaxed);
-        }
 
         if let (Some(length), true) = (content_length, accepts_ranges) {
             if length == 0 { return Ok(()); }
@@ -524,23 +519,23 @@ impl Updater {
         let mut error_count = 0;
 
         {
-            let downloaded = Arc::new(AtomicUsize::new(0));
-            let total_size = Arc::new(AtomicUsize::new(0)); // This will be populated by the download function
+            let head_res = ureq::agent().head(&update_info.zip_url).call()?;
+            let total_size = head_res.header("Content-Length")
+                .and_then(|s| s.parse::<usize>().ok())
+                .unwrap_or(0); // Default to 0 if header is missing
 
+            let downloaded = Arc::new(AtomicUsize::new(0));
             let self_clone = self.clone();
             let downloaded_clone = downloaded.clone();
-            let total_size_clone = total_size.clone();
 
             let progress_bar = Arc::new(move |bytes_read: usize| {
                 let prev_size = downloaded_clone.fetch_add(bytes_read, atomic::Ordering::Relaxed);
-                let total = total_size_clone.load(atomic::Ordering::Relaxed);
-                self_clone.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + bytes_read, total))));
+                self_clone.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + bytes_read, total_size))));
             });
 
             self.download_parallel(
                 &update_info.zip_url,
                 &zip_path,
-                total_size,
                 progress_bar
             )?;
 
