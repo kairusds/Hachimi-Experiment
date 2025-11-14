@@ -402,6 +402,7 @@ impl Updater {
         cached_files: Arc<Mutex<FnvHashMap<String, String>>>
     ) -> Result<usize, Error> {
         let zip_path = localized_data_dir.join(".tmp.zip");
+        let download_path = localized_data_dir.join(".tmp.zip.download"); 
         let mut error_count = 0;
 
         {
@@ -432,30 +433,14 @@ impl Updater {
 
             http::download_file_parallel(
                 &update_info.zip_url,
-                &zip_path,
+                &download_path,
                 *NUM_THREADS,
                 MIN_CHUNK_SIZE,
                 CHUNK_SIZE,
                 progress_bar
             )?;
 
-            let zip_file = {
-                let mut attempts = 0;
-                loop {
-                    match fs::File::open(&zip_path) {
-                        Ok(file) => break file,
-                        Err(e) => {
-                            if attempts >= 10 {
-                                return Err(Error::RuntimeError(format!(
-                                    "Failed to open downloaded zip file after 10 retries: {}", e
-                                )));
-                            }
-                            thread::sleep(std::time::Duration::from_millis(50)); 
-                            attempts += 1;
-                        }
-                    }
-                }
-            };
+            fs::rename(&download_path, &zip_path)?;
 
             let files_to_extract = Arc::new(
                 update_info.files.iter()
