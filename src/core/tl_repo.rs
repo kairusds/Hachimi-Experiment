@@ -1,4 +1,4 @@
-use std::{fs, io::{Read, Write, Seek, SeekFrom}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::max};
+use std::{fs, io::{Read, Write, Seek, SeekFrom}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::{min, max}};
 
 use arc_swap::ArcSwap;
 use fnv::FnvHashMap;
@@ -433,7 +433,7 @@ impl Updater {
             http::download_file_parallel(
                 &update_info.zip_url,
                 &zip_path,
-                *NUM_THREADS * 4,
+                min(*NUM_THREADS * 4, 16),
                 MIN_CHUNK_SIZE,
                 CHUNK_SIZE,
                 progress_bar
