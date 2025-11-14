@@ -1,4 +1,4 @@
-use std::{fs, io::{Read, Write, Seek, SeekFrom}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::{min, max}};
+use std::{fs, io::{Read, Write, Seek, SeekFrom}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::max};
 
 use arc_swap::ArcSwap;
 use fnv::FnvHashMap;
@@ -95,6 +95,7 @@ static NUM_THREADS: Lazy<usize> = Lazy::new(|| {
 });
 // lowered for unauthenticated github rate limit
 const INCREMENTAL_UPDATE_LIMIT: usize = 50;
+const MIN_CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 
 struct DownloadJob {
     agent: ureq::Agent,
@@ -402,7 +403,6 @@ impl Updater {
     ) -> Result<usize, Error> {
         let zip_path = localized_data_dir.join(".tmp.zip");
         let mut error_count = 0;
-        const MIN_CHUNK_SIZE: u64 = 1024 * 1024 * 1;
 
         {
             let total_size_header = ureq::agent().head(&update_info.zip_url).call()
@@ -433,7 +433,7 @@ impl Updater {
             http::download_file_parallel(
                 &update_info.zip_url,
                 &zip_path,
-                min(*NUM_THREADS * 4, 16),
+                *NUM_THREADS,
                 MIN_CHUNK_SIZE,
                 CHUNK_SIZE,
                 progress_bar
