@@ -95,7 +95,6 @@ static NUM_THREADS: Lazy<usize> = Lazy::new(|| {
 });
 // lowered for unauthenticated github rate limit
 const INCREMENTAL_UPDATE_LIMIT: usize = 50;
-const MIN_CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 
 struct DownloadJob {
     agent: ureq::Agent,
@@ -403,6 +402,7 @@ impl Updater {
     ) -> Result<usize, Error> {
         let zip_path = localized_data_dir.join(".tmp.zip");
         let mut error_count = 0;
+        const MIN_CHUNK_SIZE: u64 = 1024 * 1024 * 1;
 
         {
             let total_size_header = ureq::agent().head(&update_info.zip_url).call()
@@ -433,7 +433,7 @@ impl Updater {
             http::download_file_parallel(
                 &update_info.zip_url,
                 &zip_path,
-                *NUM_THREADS,
+                *NUM_THREADS * 4,
                 MIN_CHUNK_SIZE,
                 CHUNK_SIZE,
                 progress_bar
