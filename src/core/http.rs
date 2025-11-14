@@ -158,22 +158,18 @@ pub fn download_file_parallel(url: &str, file_path: &Path, num_threads: usize,
         }
 
         if let Some(e) = fatal_error.lock().unwrap().take() { return Err(e); }
-        {
-            let downloaded_file = fs::File::options().write(true).open(file_path)?;
-            downloaded_file.sync_data()?;
-        }
+        let downloaded_file = fs::File::options().write(true).open(file_path)?;
+        downloaded_file.sync_data()?;
     } else {
         debug!("{} does not support range requests; falling back to single-threaded download.", url);
-        {
-            let res = agent.get(url).call()?;
-            let mut file = fs::File::create(file_path)?;
-            let mut buffer = vec![0u8; chunk_size];
-    
-            download_file_buffered(res, &mut file, &mut buffer, |bytes_slice| {
-                progress_callback(bytes_slice.len());
-            })?;
-            file.sync_data()?;
-        }
+        let res = agent.get(url).call()?;
+        let mut file = fs::File::create(file_path)?;
+        let mut buffer = vec![0u8; chunk_size];
+
+        download_file_buffered(res, &mut file, &mut buffer, |bytes_slice| {
+            progress_callback(bytes_slice.len());
+        })?;
+        file.sync_data()?;
     }
     Ok(())
 }

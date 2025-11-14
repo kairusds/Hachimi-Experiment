@@ -439,6 +439,24 @@ impl Updater {
                 progress_bar
             )?;
 
+            let zip_file = {
+                let mut attempts = 0;
+                loop {
+                    match fs::File::open(&zip_path) {
+                        Ok(file) => break file,
+                        Err(e) => {
+                            if attempts >= 10 {
+                                return Err(Error::RuntimeError(format!(
+                                    "Failed to open downloaded zip file after 10 retries: {}", e
+                                )));
+                            }
+                            thread::sleep(std::time::Duration::from_millis(50)); 
+                            attempts += 1;
+                        }
+                    }
+                }
+            };
+
             let files_to_extract = Arc::new(
                 update_info.files.iter()
                     .map(|f| (utils::concat_unix_path(&update_info.zip_dir, &f.path), f.clone()))
