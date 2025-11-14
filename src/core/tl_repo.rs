@@ -95,6 +95,7 @@ static NUM_THREADS: Lazy<usize> = Lazy::new(|| {
 });
 // lowered for unauthenticated github rate limit
 const INCREMENTAL_UPDATE_LIMIT: usize = 50;
+const MIN_CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 
 struct DownloadJob {
     agent: ureq::Agent,
