@@ -6,6 +6,9 @@ use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use size::Size;
 use thread_priority::{ThreadBuilderExt, ThreadPriority};
+use threadpool::ThreadPool;
+
+use crate::core::game::Region;
 use super::{gui::SimpleYesNoDialog, hachimi::LocalizedData, http::{self, AsyncRequest}, utils, Error, Gui, Hachimi};
 use once_cell::sync::Lazy;
 
@@ -13,7 +16,9 @@ use once_cell::sync::Lazy;
 pub struct RepoInfo {
     pub name: String,
     pub index: String,
-    pub short_desc: Option<String>
+    pub short_desc: Option<String>,
+    #[serde(default)]
+    pub region: Region
 }
 
 pub fn new_meta_index_request() -> AsyncRequest<Vec<RepoInfo>> {
