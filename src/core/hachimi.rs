@@ -40,11 +40,22 @@ pub struct Hachimi {
 
 static INSTANCE: OnceCell<Arc<Hachimi>> = OnceCell::new();
 
-use discord_rich_presence::{activity::{Activity, Assets, ActivityType, Timestamps}, DiscordIpc, DiscordIpcClient};
+#[cfg(target_os = "windows")]
+mod discord_impl {
+    use super::*; 
+    pub use discord_rich_presence::{
+        activity::{Activity, Assets, ActivityType, Timestamps}, 
+        DiscordIpc, 
+        DiscordIpcClient
+    };
 
-static DISCORD_CLIENT: Lazy<Mutex<Option<DiscordIpcClient>>> = Lazy::new(|| {
-    Mutex::new(None)
-});
+    pub static DISCORD_CLIENT: Lazy<Mutex<Option<DiscordIpcClient>>> = Lazy::new(|| {
+        Mutex::new(None)
+    });
+}
+
+#[cfg(target_os = "windows")]
+use discord_impl::*;
 
 impl Hachimi {
     pub fn init() -> bool {
