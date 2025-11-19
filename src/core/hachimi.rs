@@ -40,9 +40,8 @@ pub struct Hachimi {
 
 static INSTANCE: OnceCell<Arc<Hachimi>> = OnceCell::new();
 
-#[cfg(target_os = "windows")]
 use discord_rich_presence::{activity::{Activity, Assets, ActivityType, Timestamps}, DiscordIpc, DiscordIpcClient};
-#[cfg(target_os = "windows")]
+
 static DISCORD_CLIENT: Lazy<Mutex<Option<DiscordIpcClient>>> = Lazy::new(|| {
     Mutex::new(None)
 });
