@@ -1,4 +1,4 @@
-use std::{fs, io::{Read, Write, Seek, SeekFrom}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::max};
+use std::{fs, io::{Read, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::max};
 
 use arc_swap::ArcSwap;
 use fnv::FnvHashMap;
@@ -6,7 +6,6 @@ use rust_i18n::t;
 use serde::{Deserialize, Serialize};
 use size::Size;
 use thread_priority::{ThreadBuilderExt, ThreadPriority};
-use threadpool::ThreadPool;
 
 use crate::core::game::Region;
 use super::{gui::SimpleYesNoDialog, hachimi::LocalizedData, http::{self, AsyncRequest}, utils, Error, Gui, Hachimi};
