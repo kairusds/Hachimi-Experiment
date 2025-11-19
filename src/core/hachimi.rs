@@ -8,7 +8,22 @@ use crate::{core::plugin_api::Plugin, gui_impl, hachimi_impl, il2cpp::{self, hoo
 
 use super::{game::{Game, Region}, ipc, plurals, template, template_filters, tl_repo, utils, Error, Interceptor};
 
-use std::time::{SystemTime, UNIX_EPOCH};
+#[cfg(target_os = "windows")]
+mod discord_impl {
+    use super::*;
+    pub use std::time::{SystemTime, UNIX_EPOCH};
+    pub use discord_rich_presence::{
+        activity::{Activity, Assets, ActivityType, Timestamps}, 
+        DiscordIpc, DiscordIpcClient
+    };
+
+    pub static DISCORD_CLIENT: Lazy<Mutex<Option<DiscordIpcClient>>> = Lazy::new(|| {
+        Mutex::new(None)
+    });
+}
+
+#[cfg(target_os = "windows")]
+use discord_impl::*;
 
 pub struct Hachimi {
     // Hooking stuff
@@ -39,23 +54,6 @@ pub struct Hachimi {
 }
 
 static INSTANCE: OnceCell<Arc<Hachimi>> = OnceCell::new();
-
-#[cfg(target_os = "windows")]
-mod discord_impl {
-    use super::*; 
-    pub use discord_rich_presence::{
-        activity::{Activity, Assets, ActivityType, Timestamps}, 
-        DiscordIpc, 
-        DiscordIpcClient
-    };
-
-    pub static DISCORD_CLIENT: Lazy<Mutex<Option<DiscordIpcClient>>> = Lazy::new(|| {
-        Mutex::new(None)
-    });
-}
-
-#[cfg(target_os = "windows")]
-use discord_impl::*;
 
 impl Hachimi {
     pub fn init() -> bool {
