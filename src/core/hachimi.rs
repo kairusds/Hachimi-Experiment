@@ -13,7 +13,7 @@ mod discord_impl {
     use super::*;
     pub use std::time::{SystemTime, UNIX_EPOCH};
     pub use discord_rich_presence::{
-        activity::{Activity, Assets, ActivityType, Timestamps}, 
+        activity::{Activity, Assets, ActivityType, StatusDisplayType, Timestamps}, 
         DiscordIpc, DiscordIpcClient
     };
 
@@ -145,6 +145,7 @@ impl Hachimi {
     fn start_discord_rpc() -> Result<(), Error> {
         let mut client_guard = DISCORD_CLIENT.lock().unwrap();
         if(client_guard.is_some()){
+            info!("Discord RPC race condition");
             return Ok(());
         }
 
@@ -157,12 +158,14 @@ impl Hachimi {
             .as_secs();
 
         let activity = Activity::new()
-            .state("")
-            .details("")
+            .state("ウマ娘")
+            .details("プリティーダービー")
             .activity_type(ActivityType::Playing)
+            .status_display_type(StatusDisplayType::State)
             .assets(Assets::new().large_image("icon"))
             .timestamps(Timestamps::new().start(now as i64));
         client.set_activity(activity).map_err(|e| Error::DiscordRpcError(e.to_string()))?;
+        info!("Discord RPC set");
 
         *client_guard = Some(client);
         Ok(())
