@@ -158,10 +158,7 @@ impl Hachimi {
             .as_secs();
 
         let activity = Activity::new()
-            .state("ウマ娘")
-            .details("プリティーダービー")
             .activity_type(ActivityType::Playing)
-            .status_display_type(StatusDisplayType::State)
             .assets(Assets::new().large_image("icon"))
             .timestamps(Timestamps::new().start(now as i64));
         client.set_activity(activity).map_err(|e| Error::DiscordRpcError(e.to_string()))?;
