@@ -73,7 +73,7 @@ pub struct Config {
     pub block_minimize_in_full_screen: bool,
     #[serde(default)]
     pub window_always_on_top: bool,
-    #[serde(default = "default_true")]
+    #[serde(default = "Config::default_true")]
     pub discord_rpc: bool
 }
 
