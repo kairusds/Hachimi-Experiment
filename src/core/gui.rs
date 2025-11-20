@@ -993,6 +993,10 @@ impl ConfigEditor {
                 }
                 ui.end_row();
 
+                ui.label(t!("config_editor.discord_rpc"));
+                ui.checkbox(&mut config.windows.discord_rpc, "");
+                ui.end_row();
+
                 ui.label(t!("config_editor.debug_mode"));
                 ui.checkbox(&mut config.debug_mode, "");
                 ui.end_row();
