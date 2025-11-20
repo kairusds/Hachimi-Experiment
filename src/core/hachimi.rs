@@ -13,7 +13,7 @@ mod discord_impl {
     use super::*;
     pub use std::time::{SystemTime, UNIX_EPOCH};
     pub use discord_rich_presence::{
-        activity::{Activity, Assets, ActivityType, StatusDisplayType, Timestamps}, 
+        activity::{Activity, Assets, ActivityType, StatusDisplayType, Timestamps},
         DiscordIpc, DiscordIpcClient
     };
 
