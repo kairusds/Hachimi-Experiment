@@ -342,7 +342,7 @@ impl Gui {
                             
                             ui.label(t!("menu.discord_rpc"));
                             if ui.checkbox(&mut value, "").changed() {
-                                hachimi.window_always_on_top.store(value, atomic::Ordering::Relaxed);
+                                hachimi.discord_rpc.store(value, atomic::Ordering::Relaxed);
                                 if let Err(e) = if value { discord::start_rpc() } else { discord::stop_rpc() } {
                                     error!("{}", e);
                                 }
