@@ -13,7 +13,14 @@ use windows::{core::w, Win32::{
 
 use crate::{core::{game::Region, Gui, Hachimi}, il2cpp::{hook::{umamusume::SceneManager, UnityEngine_CoreModule}, symbols::Thread}, windows::utils};
 
-use super::gui_impl::input;
+use super::{gui_impl::input, Error};
+
+use std::time::{SystemTime, UNIX_EPOCH};
+use discord_rich_presence::{activity::{Activity, Assets, ActivityType, Timestamps}, DiscordIpc, DiscordIpcClient};
+
+static DISCORD_CLIENT: Lazy<Mutex<Option<DiscordIpcClient>>> = Lazy::new(|| {
+    Mutex::new(None)
+});
 
 static TARGET_HWND: AtomicIsize = AtomicIsize::new(0);
 pub fn get_target_hwnd() -> HWND {
@@ -131,6 +138,39 @@ pub fn init() {
         // Apply always on top
         if hachimi.window_always_on_top.load(atomic::Ordering::Relaxed) {
             _ = utils::set_window_topmost(hwnd, true);
+        }
+
+        if hachimi.discord_rpc load(atomic::Ordering::Relaxed) {
+            let init_discord = || -> Result<(), Error> {
+                let mut client_guard = DISCORD_CLIENT.lock().unwrap();
+                if client_guard.is_some() { 
+                    return Ok(()); 
+                }
+
+                let mut client = DiscordIpcClient::new("1440812697925980294");
+                client.connect().map_err(|e| Error::DiscordRpcError(e.to_string()))?;
+
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_else(|_| std::time::Duration::from_secs(0))
+                    .as_secs();
+
+                let activity = Activity::new()
+                    .activity_type(ActivityType::Playing)
+                    .assets(Assets::new().large_image("icon"))
+                    .timestamps(Timestamps::new().start(now as i64));
+
+                client.set_activity(activity)
+                    .map_err(|e| Error::DiscordRpcError(e.to_string()))?;
+
+                info!("Discord RPC set");
+                *client_guard = Some(client);
+                Ok(())
+            };
+
+            if let Err(e) = init_discord() {
+                error!("{}", e);
+            }
         }
     }
 }

@@ -1,29 +1,12 @@
 use std::{fs, path::{Path, PathBuf}, process, sync::{atomic::{self, AtomicBool, AtomicI32}, Arc, Mutex}};
 use arc_swap::ArcSwap;
 use fnv::{FnvHashMap, FnvHashSet};
-use once_cell::sync::{OnceCell, Lazy};
+use once_cell::sync::OnceCell;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use crate::{core::plugin_api::Plugin, gui_impl, hachimi_impl, il2cpp::{self, hook::umamusume::{CySpringController::SpringUpdateMode, GameSystem}}};
 
 use super::{game::{Game, Region}, ipc, plurals, template, template_filters, tl_repo, utils, Error, Interceptor};
-
-#[cfg(target_os = "windows")]
-mod discord_impl {
-    use super::*;
-    pub use std::time::{SystemTime, UNIX_EPOCH};
-    pub use discord_rich_presence::{
-        activity::{Activity, Assets, ActivityType, StatusDisplayType, Timestamps},
-        DiscordIpc, DiscordIpcClient
-    };
-
-    pub static DISCORD_CLIENT: Lazy<Mutex<Option<DiscordIpcClient>>> = Lazy::new(|| {
-        Mutex::new(None)
-    });
-}
-
-#[cfg(target_os = "windows")]
-use discord_impl::*;
 
 pub struct Hachimi {
     // Hooking stuff
@@ -107,13 +90,6 @@ impl Hachimi {
 
         config.language.set_locale();
 
-        #[cfg(target_os = "windows")]
-        if !game.is_steam_release {
-            if let Err(e) = Self::start_discord_rpc() {
-                error!("{}", e); 
-            }
-        }
-
         Ok(Hachimi {
             interceptor: Interceptor::default(),
             hooking_finished: AtomicBool::new(false),
@@ -135,37 +111,13 @@ impl Hachimi {
             window_always_on_top: AtomicBool::new(config.windows.window_always_on_top),
 
             #[cfg(target_os = "windows")]
+            discord_rpc: AtomicBool::new(config.windows.discord_rpc),
+
+            #[cfg(target_os = "windows")]
             updater: Arc::default(),
 
             config: ArcSwap::new(Arc::new(config))
         })
-    }
-
-    #[cfg(target_os = "windows")]
-    fn start_discord_rpc() -> Result<(), Error> {
-        let mut client_guard = DISCORD_CLIENT.lock().unwrap();
-        if(client_guard.is_some()){
-            info!("Discord RPC race condition");
-            return Ok(());
-        }
-
-        let mut client = DiscordIpcClient::new("1440812697925980294");
-        client.connect().map_err(|e| Error::DiscordRpcError(e.to_string()))?;
-
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_else(|_| std::time::Duration::from_secs(0))
-            .as_secs();
-
-        let activity = Activity::new()
-            .activity_type(ActivityType::Playing)
-            .assets(Assets::new().large_image("icon"))
-            .timestamps(Timestamps::new().start(now as i64));
-        client.set_activity(activity).map_err(|e| Error::DiscordRpcError(e.to_string()))?;
-        info!("Discord RPC set");
-
-        *client_guard = Some(client);
-        Ok(())
     }
 
     fn load_config(data_dir: &Path, region: &Region) -> Result<Config, Error> {

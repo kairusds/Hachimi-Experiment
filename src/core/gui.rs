@@ -1103,6 +1103,10 @@ impl ConfigEditor {
                     ui.label(t!("config_editor.window_always_on_top"));
                     ui.checkbox(&mut config.windows.window_always_on_top, "");
                     ui.end_row();
+
+                    ui.label(t!("config_editor.discord_rpc"));
+                    ui.checkbox(&mut config.windows.discord_rpc, "");
+                    ui.end_row();
                 }
             },
 
