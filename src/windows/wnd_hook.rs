@@ -18,8 +18,8 @@ use super::{gui_impl::input, Error};
 use std::time::{SystemTime, UNIX_EPOCH};
 use discord_rich_presence::{activity::{Activity, Assets, ActivityType, Timestamps}, DiscordIpc, DiscordIpcClient};
 
-static DISCORD_CLIENT: Lazy<Mutex<Option<DiscordIpcClient>>> = Lazy::new(|| {
-    Mutex::new(None)
+static DISCORD_CLIENT: Lazy<std::sync::Mutex<Option<DiscordIpcClient>>> = Lazy::new(|| {
+    std::sync::Mutex::new(None)
 });
 
 static TARGET_HWND: AtomicIsize = AtomicIsize::new(0);
