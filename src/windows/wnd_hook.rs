@@ -11,9 +11,9 @@ use windows::{core::w, Win32::{
     }
 }};
 
-use crate::{core::{game::Region, Gui, Hachimi}, il2cpp::{hook::{umamusume::SceneManager, UnityEngine_CoreModule}, symbols::Thread}, windows::utils};
+use crate::{core::{game::Region, Gui, Hachimi, Error}, il2cpp::{hook::{umamusume::SceneManager, UnityEngine_CoreModule}, symbols::Thread}, windows::utils};
 
-use super::{gui_impl::input, Error};
+use super::gui_impl::input;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 use discord_rich_presence::{activity::{Activity, Assets, ActivityType, Timestamps}, DiscordIpc, DiscordIpcClient};
