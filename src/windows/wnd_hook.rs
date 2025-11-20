@@ -140,7 +140,7 @@ pub fn init() {
             _ = utils::set_window_topmost(hwnd, true);
         }
 
-        if hachimi.discord_rpc load(atomic::Ordering::Relaxed) {
+        if hachimi.discord_rpc.load(atomic::Ordering::Relaxed) {
             let init_discord = || -> Result<(), Error> {
                 let mut client_guard = DISCORD_CLIENT.lock().unwrap();
                 if client_guard.is_some() { 

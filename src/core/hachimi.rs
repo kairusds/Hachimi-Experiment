@@ -33,6 +33,9 @@ pub struct Hachimi {
     pub window_always_on_top: AtomicBool,
 
     #[cfg(target_os = "windows")]
+    pub discord_rpc: AtomicBool,
+
+    #[cfg(target_os = "windows")]
     pub updater: Arc<crate::windows::updater::Updater>
 }
 
