@@ -2965,9 +2965,8 @@ pub struct Quaternion_t {
     pub y: f32,
     pub z: f32,
 }
-pub const HorizontalWrapMode_Wrap: HorizontalWrapMode = 0;
-pub const HorizontalWrapMode_Overflow: HorizontalWrapMode = 1;
-pub type HorizontalWrapMode = ::std::os::raw::c_int;
+pub const TextOverflow_Disallow: i32 = 0;
+pub const TextOverflow_Allow: i32 = 1;
 #[repr(C)]
 #[derive(Debug)]
 pub struct TextGenerationSettings_t {
@@ -2985,7 +2984,7 @@ pub struct TextGenerationSettings_t {
     pub resizeTextMaxSize: i32,
     pub updateBounds: bool,
     pub verticalOverflow: i32,
-    pub horizontalOverflow: HorizontalWrapMode,
+    pub horizontalOverflow: i32,
     pub generationExtents: Vector2_t,
     pub pivot: Vector2_t,
     pub generateOutOfBounds: bool,

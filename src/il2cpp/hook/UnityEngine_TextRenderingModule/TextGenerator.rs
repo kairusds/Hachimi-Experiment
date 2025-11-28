@@ -51,7 +51,7 @@ impl<'a> template::Context for TemplateContext<'a> {
         // Extra filters to modify the text generation settings
         match name {
             "nb" => {
-                self.settings.horizontalOverflow = HorizontalWrapMode_Overflow;
+                self.settings.horizontalOverflow = TextOverflow_Allow;
                 self.settings.generateOutOfBounds = true;
             }
             
