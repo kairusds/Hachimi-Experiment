@@ -3033,6 +3033,27 @@ pub struct RefreshRate {
     pub denominator: u32
 }
 
+#[repr(C)]
+pub struct CharacterSystemText {
+    pub obj: Il2CppObject,
+    pub characterId: i32,
+    pub voiceId: i32,
+    pub text: *mut Il2CppString,
+    pub cueSheet: *mut Il2CppString,
+    pub cueId: i32,
+    pub motionSet: i32,
+    pub scene: i32,
+    pub useGallery: i32,
+    pub cardId: i32,
+    pub lipSyncData: *mut Il2CppString,
+    pub gender: i32,
+    pub motionSecondSet: i32,
+    pub motionSecondStart: i32,
+    pub galleryKeyUsageCondition: i32,
+    pub startDate: i64,
+    _cueSheetString: *mut Il2CppString
+}
+
 /************** ACTk (READ-ONLY) **************/
 #[repr(C)]
 #[derive(Default, Debug)]
