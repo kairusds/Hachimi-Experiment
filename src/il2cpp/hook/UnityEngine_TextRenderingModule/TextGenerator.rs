@@ -119,6 +119,18 @@ impl<'a> template::Context for TemplateContext<'a> {
                 self.settings.verticalOverflow = overflow;
             }
 
+            "ls" => {
+                let value = args.get(0)?;
+                let template::Token::NumberLit(ls) = *value else {
+                    return None;
+                };
+                self.settings.lineSpacing = ls as f32;
+            }
+
+            "ub" => {
+                self.settings.updateBounds = true;
+            }
+
             _ => return None
         }
 
@@ -132,7 +144,7 @@ pub struct IgnoreTGFiltersContext();
 impl template::Context for IgnoreTGFiltersContext {
     fn on_filter_eval(&mut self, _name: &str, _args: &[template::Token]) -> Option<String> {
         match _name {
-            "nb" | "anchor" | "scale" | "ho" | "vo" => Some(String::new()),
+            "nb" | "anchor" | "scale" | "ho" | "vo" | "ls" | "ub" => Some(String::new()),
             _ => None
         }
     }
