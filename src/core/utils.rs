@@ -223,14 +223,16 @@ fn custom_wrap_algorithm<'a, 'b>(words: &'b [Word<'a>], line_widths: &'b [usize]
         clean_fragments.push(words[i]);
     }
 
+    let config = &Hachimi::instance().localized_data.load();
+    let penalties = &config.wrapper_penalties;
     // quick escape!!!11
     let f64_line_widths = line_widths.iter().map(|w| *w as f64).collect::<Vec<_>>();
     if remove_offset == 0 {
-        return wrap_algorithms::wrap_optimal_fit(words, &f64_line_widths, &wrap_algorithms::Penalties::new()).unwrap();
+        return wrap_algorithms::wrap_optimal_fit(words, &f64_line_widths, penalties).unwrap();
     }
 
     // Wrap without formatting tags
-    let wrapped = wrap_algorithms::wrap_optimal_fit(&clean_fragments, &f64_line_widths, &wrap_algorithms::Penalties::new()).unwrap();
+    let wrapped = wrap_algorithms::wrap_optimal_fit(&clean_fragments, &f64_line_widths, penalties).unwrap();
 
     // Create results with formatting tags added back
     // Note: The break word option doesn't really affect the extra long lines since
@@ -374,7 +376,7 @@ pub fn wrap_fit_text_il2cpp(string: *mut Il2CppString, base_line_width: i32, max
             return Some(result.to_il2cpp_string());
         }
     }
-    
+
     None
 }
 
