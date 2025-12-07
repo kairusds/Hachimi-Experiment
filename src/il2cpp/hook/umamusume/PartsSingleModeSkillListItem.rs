@@ -8,9 +8,9 @@ fn get__descText(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { DESCTEXT_FIELD })
 }
 
-type UpdateItemFn = extern "C" fn(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, is_plate_effect_enable: bool);
-extern "C" fn UpdateItem(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, is_plate_effect_enable: bool) {
-    get_orig_fn!(UpdateItem, UpdateItemFn)(this, skill_info, is_plate_effect_enable);
+type UpdateItemFn = extern "C" fn(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, is_plate_effect_enable: bool, resource_hash: i32);
+extern "C" fn UpdateItem(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, is_plate_effect_enable: bool, resource_hash: i32) {
+    get_orig_fn!(UpdateItem, UpdateItemFn)(this, skill_info, is_plate_effect_enable, resource_hash);
 
     if let Some(mult) = Hachimi::instance().localized_data.load().config.skill_list_item_desc_font_size_multiplier {
         let desc_text = get__descText(this);
@@ -22,7 +22,7 @@ extern "C" fn UpdateItem(this: *mut Il2CppObject, skill_info: *mut Il2CppObject,
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, PartsSingleModeSkillListItem);
 
-    let UpdateItem_addr = get_method_addr(PartsSingleModeSkillListItem, c"UpdateItem", 2);
+    let UpdateItem_addr = get_method_addr(PartsSingleModeSkillListItem, c"UpdateItem", 3);
 
     new_hook!(UpdateItem_addr, UpdateItem);
 
