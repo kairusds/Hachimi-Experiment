@@ -7,7 +7,10 @@ fn get__descText(this: *mut Il2CppObject) -> *mut Il2CppObject {
 
 type UpdateCurrentFn = extern "C" fn(this: *mut Il2CppObject);
 extern "C" fn UpdateCurrent(this: *mut Il2CppObject) {
-    Text::set_horizontalOverflow(get__descText(this), 1);
+    let desc = get__descText(this);
+    if !desc.is_null() {
+        Text::set_horizontalOverflow(desc, 1);
+    }
 
     TextDataQuery::with_skill_query(1.0, || {
         get_orig_fn!(UpdateCurrent, UpdateCurrentFn)(this);
