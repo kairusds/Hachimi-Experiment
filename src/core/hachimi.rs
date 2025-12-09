@@ -596,7 +596,8 @@ pub struct LocalizedDataConfig {
     // Predefined line widths are counts of cjk characters.
     // 1 cjk char = 2 columns, so setting this value to 2 replicates the default behaviour.
     pub line_width_multiplier: Option<f32>,
-    pub systext_base_width_multiplier: Option<f32>,
+    #[serde(default)]
+    pub systext_cue_lines: FnvHashMap<String, i32>,
     pub wrapper_penalties: Option<PenaltiesConfig>,
 
     #[serde(default)]

@@ -22,17 +22,31 @@ extern "C" fn Awake(this: *mut Il2CppObject) {
     }
 }
 
+// We make the assumption the basic process of these functions is to call
+// GallopUtil::LineHeadWrapForSystemText and set_text() the return value.
+// The presumed reason those are not called directly is special handling and TextCommon
+// object adjustments, which is exactly what we'll do here and take over wrapping.
+
 type SetSystemTextWithLineHeadWrapFn = extern "C" fn(this: *mut Il2CppObject, systemText: *mut CharacterSystemText, maxCharacter: i32);
 extern "C" fn SetSystemTextWithLineHeadWrap(this: *mut Il2CppObject, systemText: *mut CharacterSystemText, maxCharacter: i32) {
-    //? Unsure if a mult is needed vs a static value.
-    let config = &Hachimi::instance().localized_data.load().config;
-    let base_length = maxCharacter as f32 * config.systext_base_width_multiplier.unwrap_or(1.0);
+    let cue_sheet = unsafe{(*(*systemText).cueSheet).as_utf16str()}.to_string();
+    let cue_type = cue_sheet.split('_').nth(2).unwrap_or_default();
+    let font_size = Text::get_fontSize(this);
+    debug!("Cue sheet: {}, Font size: {}", cue_type, font_size);
 
-    // Util func deals with config, etc.
-    let Some(wrapped_text) = wrap_text_il2cpp(unsafe {(*systemText).text}, base_length.ceil() as i32) else {
-        return get_orig_fn!(SetSystemTextWithLineHeadWrap, SetSystemTextWithLineHeadWrapFn)(this, systemText, maxCharacter)
-    };
-    set_text(this, wrapped_text);
+    let config = &Hachimi::instance().localized_data.load().config;
+    let max_lines = *config.systext_cue_lines.get(cue_type).unwrap_or_else(||
+        config.systext_cue_lines.get("default").unwrap_or(&4)
+    );
+
+    // Always fit systext if using wrapper.
+    if let Some(wrapped_text) = wrap_fit_text_il2cpp(unsafe {(*systemText).text}, maxCharacter, max_lines, font_size) {
+        // Allow wrapper to dictate display.
+        Text::set_horizontalOverflow(this, 1);
+        return Text::set_text(this, wrapped_text);
+    }
+
+    get_orig_fn!(SetSystemTextWithLineHeadWrap, SetSystemTextWithLineHeadWrapFn)(this, systemText, maxCharacter);
 }
 
 static mut set_text_addr: usize = 0;
