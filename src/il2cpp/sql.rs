@@ -1,5 +1,6 @@
-use std::sync::atomic::{self, AtomicBool};
+use std::sync::atomic;
 
+use atomic_float::AtomicF32;
 use sqlparser::ast;
 
 use crate::{
@@ -102,7 +103,7 @@ pub struct TextDataQuery {
     index: Column
 }
 
-pub static TDQ_IS_SKILL_LEARNING_QUERY: AtomicBool = AtomicBool::new(false);
+pub static TDQ_IS_SKILL_QUERY: AtomicF32 = AtomicF32::new(0.0);
 
 impl TextDataQuery {
     // These values are guesstimated
@@ -113,14 +114,14 @@ impl TextDataQuery {
     const SKILL_DESC_LINE_COUNT: i32 = 4;
     const SKILL_DESC_FONT_SIZE: i32 = 28;
 
-    pub fn with_skill_learning_query(callback: impl FnOnce()) {
-        TDQ_IS_SKILL_LEARNING_QUERY.store(true, atomic::Ordering::Relaxed);
+    pub fn with_skill_query(extra_length_mod: f32, callback: impl FnOnce()) {
+        TDQ_IS_SKILL_QUERY.store(extra_length_mod, atomic::Ordering::Relaxed);
         callback();
-        TDQ_IS_SKILL_LEARNING_QUERY.store(false, atomic::Ordering::Relaxed);
+        TDQ_IS_SKILL_QUERY.store(0.0, atomic::Ordering::Relaxed);
     }
 
-    fn is_skill_learning_query() -> bool {
-        TDQ_IS_SKILL_LEARNING_QUERY.load(atomic::Ordering::Relaxed)
+    fn requested_skill_line_length_mult() -> f32 {
+        TDQ_IS_SKILL_QUERY.load(atomic::Ordering::Relaxed)
     }
 
     fn get_skill_name(index: i32) -> Option<*mut Il2CppString> {
@@ -137,9 +138,11 @@ impl TextDataQuery {
             .unwrap_or_default();
 
         if let Some(text) = text_opt {
-            // Fit the text when it's being used in the skill learning screen
-            if Self::is_skill_learning_query() {
-                if let Some(fitted) = utils::fit_text(text, Self::SKILL_NAME_LINE_WIDTH, Self::SKILL_NAME_FONT_SIZE) {
+            // Fit text if and as requested.
+            let mult = Self::requested_skill_line_length_mult();
+            if mult > 0.0 {
+                let line_width = (Self::SKILL_NAME_LINE_WIDTH as f32 * mult) as i32;
+                if let Some(fitted) = utils::fit_text(text, line_width, Self::SKILL_NAME_FONT_SIZE) {
                     return Some(fitted.to_il2cpp_string())
                 }
             }
@@ -150,7 +153,7 @@ impl TextDataQuery {
         }
     }
 
-    fn get_skill_desc(mut index: i32) -> Option<*mut Il2CppString> {
+    fn get_skill_desc(index: i32) -> Option<*mut Il2CppString> {
         let localized_data = Hachimi::instance().localized_data.load();
         let text_opt = localized_data
             .text_data_dict
@@ -159,10 +162,12 @@ impl TextDataQuery {
             .unwrap_or_default();
 
         if let Some(text) = text_opt {
-            // Do some prewrapping when it's being used in the skill learning screen
-            if Self::is_skill_learning_query() {
-                if let Some(fitted) = utils::wrap_fit_text(text,
-                    Self::SKILL_DESC_LINE_WIDTH, Self::SKILL_DESC_LINE_COUNT, Self::SKILL_DESC_FONT_SIZE
+            // Fit text if and as requested.
+            let mult = Self::requested_skill_line_length_mult();
+            if mult > 0.0 {
+                let line_width = (Self::SKILL_DESC_LINE_WIDTH as f32 * mult) as i32;
+                if let Some(fitted) = utils::wrap_fit_text(text, line_width,
+                    Self::SKILL_DESC_LINE_COUNT, Self::SKILL_DESC_FONT_SIZE
                 ) {
                     return Some(fitted.to_il2cpp_string());
                 }
@@ -209,7 +214,6 @@ impl SelectQueryState for TextDataQuery {
                     _ => ()
                 };
 
-                
                 return Hachimi::instance().localized_data.load()
                     .text_data_dict
                     .get(&category)
@@ -365,7 +369,7 @@ impl SelectExt for ast::Select {
                 }
             }
         }
-    
+
         None
     }
 }
