@@ -351,6 +351,10 @@ pub fn wrap_fit_text(string: &str, base_line_width: i32, mut max_line_count: i32
         return None;
     }
 
+    if max_line_count == 1 {
+        return fit_text(string, base_line_width, base_font_size);
+    }
+
     let mut line_width = base_line_width as f32;
     let mut font_size = base_font_size as f32;
     loop {
