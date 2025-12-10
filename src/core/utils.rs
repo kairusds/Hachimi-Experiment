@@ -547,3 +547,7 @@ pub fn notify_error(message: impl AsRef<str>) {
         mutex.lock().unwrap().show_notification(s);
     }
 }
+
+pub fn mul_int (base:i32, mult: f32) -> i32 {
+    (base as f32 * mult).round() as i32
+}

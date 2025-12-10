@@ -605,7 +605,8 @@ pub struct LocalizedDataConfig {
     pub story_line_count_offset: Option<i32>,
     pub text_frame_line_spacing_multiplier: Option<f32>,
     pub text_frame_font_size_multiplier: Option<f32>,
-    pub skill_list_item_desc_line_width_multiplier: Option<f32>,
+    #[serde(default)]
+    pub skill_formatting: SkillFormatting,
     #[serde(default)]
     pub text_common_allow_overflow: bool,
     #[serde(default)]
@@ -694,4 +695,24 @@ pub struct PenaltiesConfig {
     short_last_line_fraction: usize,
     short_last_line_penalty: usize,
     hyphen_penalty: usize
+}
+
+#[derive(Deserialize, Clone, Default)]
+pub struct SkillFormatting {
+    #[serde(default = "SkillFormatting::default_length")]
+    pub name_length: i32,
+    #[serde(default = "SkillFormatting::default_lines")]
+    pub desc_length: i32,
+    #[serde(default = "SkillFormatting::default_lines")]
+    pub name_short_lines: i32,
+
+    #[serde(default = "SkillFormatting::default_mult")]
+    pub name_short_mult: f32,
+    #[serde(default = "SkillFormatting::default_mult")]
+    pub name_sp_mult: f32,
+}
+impl SkillFormatting {
+    fn default_length() -> i32 { 17 }
+    fn default_lines() -> i32 { 1 }
+    fn default_mult() -> f32 { 1.0 }
 }

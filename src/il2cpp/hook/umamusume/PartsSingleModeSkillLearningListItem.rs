@@ -1,5 +1,9 @@
-use crate::il2cpp::{hook::UnityEngine_UI::Text, sql::TextDataQuery, symbols::{get_field_from_name, get_field_object_value, get_method_addr}, types::*};
+use crate::il2cpp::{hook::UnityEngine_UI::Text, sql::{self, TextDataQuery}, symbols::{get_field_from_name, get_field_object_value, get_method_addr}, types::*};
 
+static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
+fn get__nameText(this: *mut Il2CppObject) -> *mut Il2CppObject {
+    get_field_object_value(this, unsafe { NAMETEXT_FIELD })
+}
 static mut DESCTEXT_FIELD: *mut FieldInfo = 0 as _;
 fn get__descText(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { DESCTEXT_FIELD })
@@ -7,12 +11,28 @@ fn get__descText(this: *mut Il2CppObject) -> *mut Il2CppObject {
 
 type UpdateCurrentFn = extern "C" fn(this: *mut Il2CppObject);
 extern "C" fn UpdateCurrent(this: *mut Il2CppObject) {
+    let name = get__nameText(this);
     let desc = get__descText(this);
+
+    let mut skill_cfg = sql::SkillTextFormatting::default();
+    if !name.is_null() {
+        Text::set_horizontalOverflow(name, 1);
+        skill_cfg.name = Some(sql::TextFormatting{
+            line_len: 13,
+            line_count: 1,
+            font_size: Text::get_fontSize(name),
+        });
+    }
     if !desc.is_null() {
         Text::set_horizontalOverflow(desc, 1);
+        skill_cfg.desc = Some(sql::TextFormatting{
+            line_len: 18,
+            line_count: 4,
+            font_size: Text::get_fontSize(desc),
+        });
     }
 
-    TextDataQuery::with_skill_query(1.0, || {
+    TextDataQuery::with_skill_query(skill_cfg, || {
         get_orig_fn!(UpdateCurrent, UpdateCurrentFn)(this);
     });
 }
@@ -25,6 +45,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     new_hook!(UpdateCurrent_addr, UpdateCurrent);
 
     unsafe {
+        NAMETEXT_FIELD = get_field_from_name(PartsSingleModeSkillLearningListItem, c"_nameText");
         DESCTEXT_FIELD = get_field_from_name(PartsSingleModeSkillLearningListItem, c"_descriptionText");
     }
 }

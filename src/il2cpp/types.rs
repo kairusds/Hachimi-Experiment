@@ -3069,13 +3069,3 @@ impl ObscuredInt {
         self.hidden_value ^ self.current_crypto_key
     }
 }
-
-
-/************** Custom/misc representations **************/
-
-// Uncertain if direct match or simply happens to match through dynamic allocation.
-#[repr(i32)]
-pub enum TextResourceHash {
-    SkillName = 50331648, // Game const: DialogGenerateHashBegin
-    SkillDesc = 50331649
-}

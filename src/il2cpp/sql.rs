@@ -1,6 +1,5 @@
-use std::sync::atomic;
+use std::{ptr, sync::atomic::{self, AtomicPtr}};
 
-use atomic_float::AtomicF32;
 use sqlparser::ast;
 
 use crate::{
@@ -102,26 +101,35 @@ pub struct TextDataQuery {
     category: Column,
     index: Column
 }
+pub struct TextFormatting {
+    pub line_len: i32,
+    pub line_count: i32,
+    pub font_size: i32
+}
 
-pub static TDQ_IS_SKILL_QUERY: AtomicF32 = AtomicF32::new(0.0);
+#[derive(Default)]
+pub struct SkillTextFormatting {
+    pub name: Option<TextFormatting>,
+    pub desc: Option<TextFormatting>
+}
+
+pub static TDQ_SKILL_TEXT_FORMAT:AtomicPtr<SkillTextFormatting> = AtomicPtr::new(ptr::null_mut());
 
 impl TextDataQuery {
-    // These values are guesstimated
-    const SKILL_NAME_LINE_WIDTH: i32 = 13;
-    const SKILL_NAME_FONT_SIZE: i32 = 32;
-
-    const SKILL_DESC_LINE_WIDTH: i32 = 18;
-    const SKILL_DESC_LINE_COUNT: i32 = 4;
-    const SKILL_DESC_FONT_SIZE: i32 = 28;
-
-    pub fn with_skill_query(extra_length_mod: f32, callback: impl FnOnce()) {
-        TDQ_IS_SKILL_QUERY.store(extra_length_mod, atomic::Ordering::Relaxed);
+    pub fn with_skill_query(text_cfg: SkillTextFormatting, callback: impl FnOnce()) {
+        let cfg_ptr = (&text_cfg as *const SkillTextFormatting).cast_mut();
+        TDQ_SKILL_TEXT_FORMAT.store(cfg_ptr, atomic::Ordering::Relaxed);
         callback();
-        TDQ_IS_SKILL_QUERY.store(0.0, atomic::Ordering::Relaxed);
+        TDQ_SKILL_TEXT_FORMAT.store(ptr::null_mut(), atomic::Ordering::Relaxed);
     }
 
-    fn requested_skill_line_length_mult() -> f32 {
-        TDQ_IS_SKILL_QUERY.load(atomic::Ordering::Relaxed)
+    // Abuse static lifetime for our funky not-really static pointer because we like living on the Edge :>
+    fn requested_skill_format() -> Result<&'static SkillTextFormatting, ()> {
+        let cfg_ptr = TDQ_SKILL_TEXT_FORMAT.load(atomic::Ordering::Relaxed);
+        if cfg_ptr.is_null() {
+            return Err(());
+        }
+        Ok(unsafe{&*cfg_ptr})
     }
 
     fn get_skill_name(index: i32) -> Option<*mut Il2CppString> {
@@ -139,14 +147,13 @@ impl TextDataQuery {
 
         if let Some(text) = text_opt {
             // Fit text if and as requested.
-            let mult = Self::requested_skill_line_length_mult();
-            if mult > 0.0 {
-                let line_width = (Self::SKILL_NAME_LINE_WIDTH as f32 * mult) as i32;
-                if let Some(fitted) = utils::fit_text(text, line_width, Self::SKILL_NAME_FONT_SIZE) {
-                    return Some(fitted.to_il2cpp_string())
-                }
-            }
-            Some(text.to_il2cpp_string())
+            Self::requested_skill_format().ok()
+                .and_then(|cfg| cfg.name.as_ref())
+                .and_then(|name| utils::wrap_fit_text(text, name.line_len, name.line_count, name.font_size))
+                .map_or_else(
+                    || Some(text.to_il2cpp_string()),
+                    |fitted| Some(fitted.to_il2cpp_string()),
+                )
         }
         else {
             None
@@ -163,16 +170,13 @@ impl TextDataQuery {
 
         if let Some(text) = text_opt {
             // Fit text if and as requested.
-            let mult = Self::requested_skill_line_length_mult();
-            if mult > 0.0 {
-                let line_width = (Self::SKILL_DESC_LINE_WIDTH as f32 * mult) as i32;
-                if let Some(fitted) = utils::wrap_fit_text(text, line_width,
-                    Self::SKILL_DESC_LINE_COUNT, Self::SKILL_DESC_FONT_SIZE
-                ) {
-                    return Some(fitted.to_il2cpp_string());
-                }
-            }
-            Some(text.to_il2cpp_string())
+            Self::requested_skill_format().ok()
+                .and_then(|cfg| cfg.desc.as_ref())
+                .and_then(|desc| utils::wrap_fit_text(text, desc.line_len, desc.line_count, desc.font_size))
+                .map_or_else(
+                    || Some(text.to_il2cpp_string()),
+                    |fitted| Some(fitted.to_il2cpp_string()),
+                )
         }
         else {
             None
