@@ -43,6 +43,7 @@ extern "C" fn SetSystemTextWithLineHeadWrap(this: *mut Il2CppObject, systemText:
     if let Some(wrapped_text) = wrap_fit_text_il2cpp(unsafe {(*systemText).text}, maxCharacter, max_lines, font_size) {
         // Allow wrapper to dictate display.
         Text::set_horizontalOverflow(this, 1);
+        Text::set_verticalOverflow(this, 1);
         return Text::set_text(this, wrapped_text);
     }
 
