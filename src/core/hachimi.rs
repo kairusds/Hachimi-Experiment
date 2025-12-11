@@ -697,11 +697,11 @@ pub struct PenaltiesConfig {
     hyphen_penalty: usize
 }
 
-#[derive(Deserialize, Clone, Default)]
+#[derive(Deserialize, Clone)]
 pub struct SkillFormatting {
     #[serde(default = "SkillFormatting::default_length")]
     pub name_length: i32,
-    #[serde(default = "SkillFormatting::default_lines")]
+    #[serde(default = "SkillFormatting::default_length")]
     pub desc_length: i32,
     #[serde(default = "SkillFormatting::default_lines")]
     pub name_short_lines: i32,
@@ -712,7 +712,18 @@ pub struct SkillFormatting {
     pub name_sp_mult: f32,
 }
 impl SkillFormatting {
-    fn default_length() -> i32 { 17 }
+    fn default_length() -> i32 { 18 }
     fn default_lines() -> i32 { 1 }
     fn default_mult() -> f32 { 1.0 }
+}
+
+impl Default for SkillFormatting {
+    fn default() -> Self {
+        SkillFormatting {
+            name_length: 13,
+            desc_length: 18,
+            name_short_lines: 1,
+            name_short_mult: 1.0,
+            name_sp_mult: 1.0 }
+    }
 }
