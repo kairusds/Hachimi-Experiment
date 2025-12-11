@@ -50,9 +50,6 @@ extern "C" fn SetSystemTextWithLineHeadWrap(this: *mut Il2CppObject, systemText:
     get_orig_fn!(SetSystemTextWithLineHeadWrap, SetSystemTextWithLineHeadWrapFn)(this, systemText, maxCharacter);
 }
 
-static mut set_text_addr: usize = 0;
-impl_addr_wrapper_fn!(set_text, set_text_addr, (), this: *mut Il2CppObject, val: *mut Il2CppString);
-
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, TextCommon);
 
@@ -64,6 +61,5 @@ pub fn init(umamusume: *const Il2CppImage) {
 
     unsafe {
         TYPE_OBJECT = il2cpp_type_get_object(il2cpp_class_get_type(TextCommon));
-        set_text_addr = get_method_addr(TextCommon, c"set_text", 1);
     }
 }
