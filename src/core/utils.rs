@@ -369,7 +369,7 @@ pub fn wrap_fit_text(string: &str, base_line_width: i32, mut max_line_count: i32
         let mut scale = prev_max_line_count as f32 / max_line_count as f32;
         let adjusted_width = char_count / (prev_max_line_count as f32);
         let adj_scale = (line_width * line_width_multiplier) / adjusted_width;
-        scale = scale.max(adj_scale);
+        scale = scale.max(adj_scale).min(0.99);
 
         font_size = font_size as f32 * scale;
         line_width = line_width as f32 / scale;
