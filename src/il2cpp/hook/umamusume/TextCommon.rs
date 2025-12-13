@@ -27,27 +27,34 @@ extern "C" fn Awake(this: *mut Il2CppObject) {
 // The presumed reason those are not called directly is special handling and TextCommon
 // object adjustments, which is exactly what we'll do here and take over wrapping.
 
-type SetSystemTextWithLineHeadWrapFn = extern "C" fn(this: *mut Il2CppObject, systemText: *mut CharacterSystemText, maxCharacter: i32);
-extern "C" fn SetSystemTextWithLineHeadWrap(this: *mut Il2CppObject, systemText: *mut CharacterSystemText, maxCharacter: i32) {
-    let cue_sheet = unsafe{(*(*systemText).cueSheet).as_utf16str()}.to_string();
+type SetSystemTextWithLineHeadWrapFn = extern "C" fn(this: *mut Il2CppObject, system_text: *mut CharacterSystemText, maxCharacter: i32);
+extern "C" fn SetSystemTextWithLineHeadWrap(this: *mut Il2CppObject, system_text: *mut CharacterSystemText, max_character: i32) {
+    let ld = &Hachimi::instance().localized_data.load();
+    let systext = unsafe {&*system_text};
+
+    // Only process localized text so as to not possibly fuck up formatting of non-custom text.
+    if ld.character_system_text_dict.get(&systext.characterId).and_then(|c| c.get(&systext.voiceId)).is_none() {
+        return get_orig_fn!(SetSystemTextWithLineHeadWrap, SetSystemTextWithLineHeadWrapFn)(this, system_text, max_character);
+    }
+
+    let cue_sheet = unsafe{(*systext.cueSheet).as_utf16str()}.to_string();
     let cue_type = cue_sheet.split('_').nth(2).unwrap_or_default();
     let font_size = Text::get_fontSize(this);
     debug!("Cue sheet: {}, Font size: {}", cue_type, font_size);
 
-    let config = &Hachimi::instance().localized_data.load().config;
-    let max_lines = *config.systext_cue_lines.get(cue_type).unwrap_or_else(||
-        config.systext_cue_lines.get("default").unwrap_or(&4)
+    let max_lines = *ld.config.systext_cue_lines.get(cue_type).unwrap_or_else(||
+        ld.config.systext_cue_lines.get("default").unwrap_or(&4)
     );
 
     // Always fit systext if using wrapper.
-    if let Some(wrapped_text) = wrap_fit_text_il2cpp(unsafe {(*systemText).text}, maxCharacter, max_lines, font_size) {
+    if let Some(wrapped_text) = wrap_fit_text_il2cpp(systext.text, max_character, max_lines, font_size) {
         // Allow wrapper to dictate display.
         Text::set_horizontalOverflow(this, 1);
         Text::set_verticalOverflow(this, 1);
         return Text::set_text(this, wrapped_text);
     }
 
-    get_orig_fn!(SetSystemTextWithLineHeadWrap, SetSystemTextWithLineHeadWrapFn)(this, systemText, maxCharacter);
+    get_orig_fn!(SetSystemTextWithLineHeadWrap, SetSystemTextWithLineHeadWrapFn)(this, system_text, max_character);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
