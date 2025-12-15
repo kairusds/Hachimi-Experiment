@@ -345,7 +345,6 @@ pub fn wrap_fit_text(string: &str, base_line_width: i32, mut max_line_count: i32
         return None;
     }
     let line_width_multiplier = config.line_width_multiplier?;
-    let is_using_pens = config.wrapper_penalties.is_some();
 
     // don't wanna mess with different sizes
     if string.contains("<size=") {
@@ -355,7 +354,6 @@ pub fn wrap_fit_text(string: &str, base_line_width: i32, mut max_line_count: i32
     let mut line_width = base_line_width as f32;
     let mut font_size = base_font_size as f32;
 
-    let mut char_count = 30_f32;
 
     loop {
         let wrapped = wrap_text_internal(string, line_width.round() as i32, line_width_multiplier);
@@ -366,8 +364,7 @@ pub fn wrap_fit_text(string: &str, base_line_width: i32, mut max_line_count: i32
         let prev_max_line_count = max_line_count;
         max_line_count += 1;
 
-        let mut scale = prev_max_line_count as f32 / max_line_count as f32;
-
+        let scale = prev_max_line_count as f32 / max_line_count as f32;
         font_size = font_size as f32 * scale;
         line_width = line_width as f32 / scale;
     }
