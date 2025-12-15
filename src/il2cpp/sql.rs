@@ -149,7 +149,11 @@ impl TextDataQuery {
             // Fit text if and as requested.
             Self::requested_skill_format().ok()
                 .and_then(|cfg| cfg.name.as_ref())
-                .and_then(|name| utils::wrap_fit_text(text, name.line_len, name.line_count, name.font_size))
+                .and_then(|name| { match name.line_count {
+                    1 => utils::fit_text(text, name.line_len, name.font_size),
+                    _ => utils::wrap_fit_text(text, name.line_len, name.line_count, name.font_size)
+                    }
+                })
                 .map_or_else(
                     || Some(text.to_il2cpp_string()),
                     |fitted| Some(fitted.to_il2cpp_string()),

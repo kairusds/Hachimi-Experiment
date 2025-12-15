@@ -356,10 +356,6 @@ pub fn wrap_fit_text(string: &str, base_line_width: i32, mut max_line_count: i32
     let mut font_size = base_font_size as f32;
 
     let mut char_count = 30_f32;
-    if is_using_pens {
-        let isolate_iter = IsolateTags::new(string);
-        char_count = isolate_iter.fold(0, |acc, el| { if el.1 {acc + el.0.chars().count()} else {acc} }) as f32;
-    }
 
     loop {
         let wrapped = wrap_text_internal(string, line_width.round() as i32, line_width_multiplier);
@@ -371,12 +367,6 @@ pub fn wrap_fit_text(string: &str, base_line_width: i32, mut max_line_count: i32
         max_line_count += 1;
 
         let mut scale = prev_max_line_count as f32 / max_line_count as f32;
-        // Try to optimize scale only if repo is configured to take it into account.
-        if is_using_pens {
-            let adjusted_width = char_count / (prev_max_line_count as f32);
-            let adj_scale = (line_width * line_width_multiplier) / adjusted_width;
-            scale = scale.max(adj_scale).min(0.99);
-        }
 
         font_size = font_size as f32 * scale;
         line_width = line_width as f32 / scale;
