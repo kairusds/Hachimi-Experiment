@@ -3,7 +3,7 @@ use std::{
     os::raw::{c_char, c_int, c_void}
 };
 
-use jni::sys::{jboolean, jint, JNINativeMethod, JNIEnv, JNI_TRUE, jclass};
+use jni::sys::{jint, JNINativeMethod, JNIEnv, jclass};
 
 use crate::{android::gui_impl::input_hook, core::{Error, Hachimi, Interceptor}};
 use super::utils;
@@ -54,15 +54,6 @@ extern "C" fn do_dlopen(filename: *const c_char, flags: c_int, extinfo: *const c
     handle
 }
 
-type NativeFocusFn = extern "C" fn(env: JNIEnv, class: jclass, focused: jboolean);
-extern "C" fn nativeFocusChanged(env: JNIEnv, class: jclass, _focused: jboolean) {
-    let hachimi = Hachimi::instance();
-    let orig_fn: NativeFocusFn = unsafe {
-        std::mem::transmute(hachimi.interceptor.get_trampoline_addr(nativeFocusChanged as usize))
-    };
-    orig_fn(env, class, JNI_TRUE);
-}
-
 type RegisterNativesFn = extern "C" fn(env: JNIEnv, class: jclass, methods: *const JNINativeMethod, count: jint) -> jint;
 #[allow(non_snake_case)]
 extern "C" fn JNINativeInterface_RegisterNatives(env: JNIEnv, class: jclass, methods_: *const JNINativeMethod, count: jint) -> jint {
@@ -74,17 +65,10 @@ extern "C" fn JNINativeInterface_RegisterNatives(env: JNIEnv, class: jclass, met
     let methods = unsafe { std::slice::from_raw_parts(methods_, count as usize) };
     for method in methods {
         let name = unsafe { CStr::from_ptr(method.name).to_str().unwrap() };
-        match name {
-            "nativeInjectEvent" => {
-                info!("Got nativeInjectEvent address");
-                unsafe { input_hook::NATIVE_INJECT_EVENT_ADDR = method.fnPtr as usize; };
-            },
-            "nativeFocusChanged" => {
-            	let addr = method.fnPtr as usize;
-                info!("Got nativeFocusChanged address: {:#x}", addr);
-                hachimi.interceptor.hook(addr, nativeFocusChanged as usize).ok();
-            },
-            _ => {}
+        if name == "nativeInjectEvent" {
+            info!("Got nativeInjectEvent address");
+            unsafe { input_hook::NATIVE_INJECT_EVENT_ADDR = method.fnPtr as usize; };
+            hachimi.interceptor.unhook(JNINativeInterface_RegisterNatives as usize);
         }
     }
 
