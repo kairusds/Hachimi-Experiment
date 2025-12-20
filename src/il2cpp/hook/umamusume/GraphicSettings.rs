@@ -86,7 +86,7 @@ pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, _value: f32) {
 
 type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allow_msaa: bool) -> i32;
 extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, _allow_msaa: bool) -> i32 {
-    8
+    2
     // idk
     // get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, true)
 }
