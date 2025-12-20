@@ -144,7 +144,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     new_hook!(Get3DAntiAliasingLevel_addr, Get3DAntiAliasingLevel);
     new_hook!(Set3DQuality_addr, Set3DQuality);
     new_hook!(GetAntialiasingValue_addr, GetAntialiasingValue);
-    new_hook!(SetGameQuality_addr, SetGameQuality);
+    // new_hook!(SetGameQuality_addr, SetGameQuality);
 
     #[cfg(target_os = "windows")]
     unsafe {
