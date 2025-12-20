@@ -97,17 +97,19 @@ extern "C" fn Set3DQuality(this: *mut Il2CppObject, quality: i32) {
     get_orig_fn!(Set3DQuality, Set3DQualityFn)(this, 3);
 }
 
+/*
 type GetAntialiasingValueFn = extern "C" fn(this: *mut Il2CppObject) -> i32;
 extern "C" fn GetAntialiasingValue(this: *mut Il2CppObject) -> i32 {
-    // 0 None, 1 FXAA, 2 SMAA, 3 TAA AntialiasingMode
+    0 None, 1 FXAA, 2 SMAA, 3 TAA AntialiasingMode
     3
 }
 
 type SetGameQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32, q_type: i32);
 extern "C" fn SetGameQuality(this: *mut Il2CppObject, quality: i32, q_type: i32) {
-    // GameQuality::Rich, SettingQualityType::Normal
+    GameQuality::Rich, SettingQualityType::Normal
     get_orig_fn!(SetGameQuality, SetGameQualityFn)(this, 3, 0); 
 }
+*/
 
 type ApplyGraphicsQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: GraphicsQuality, force: bool);
 extern "C" fn ApplyGraphicsQuality(this: *mut Il2CppObject, quality: GraphicsQuality, force: bool) {
