@@ -11,6 +11,7 @@ pub mod RenderTexture;
 pub mod Graphics;
 pub mod Behaviour;
 pub mod Component;
+mod Camera;
 
 #[cfg(target_os = "windows")]
 pub mod QualitySettings;
@@ -40,6 +41,7 @@ pub fn init() {
     Graphics::init(image);
     Behaviour::init(image);
     Component::init(image);
+    Camera::init(image);
 
     #[cfg(target_os = "windows")]
     {

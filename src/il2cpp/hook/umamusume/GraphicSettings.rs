@@ -84,8 +84,9 @@ pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, _value: f32) {
 }
 
 type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allow_msaa: bool) -> i32;
-extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, _allow_msaa: bool) -> i32 {
+extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, allow_msaa: bool) -> i32 {
     get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, true)
+    // get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, allow_msaa)
 }
 
 type Set3DQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32);
@@ -101,7 +102,7 @@ extern "C" fn ApplyGraphicsQuality(this: *mut Il2CppObject, quality: GraphicsQua
         return get_orig_fn!(ApplyGraphicsQuality, ApplyGraphicsQualityFn)(this, custom_quality, true);
     }
 
-    get_orig_fn!(ApplyGraphicsQuality, ApplyGraphicsQualityFn)(this, quality, true);
+    get_orig_fn!(ApplyGraphicsQuality, ApplyGraphicsQualityFn)(this, quality, force);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
