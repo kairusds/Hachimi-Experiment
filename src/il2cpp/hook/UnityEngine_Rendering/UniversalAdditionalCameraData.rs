@@ -1,14 +1,13 @@
-use std::os::raw::c_void;
 use crate::il2cpp::{symbols::get_method_addr, types::*};
 
 static mut SET_ANTIALIASING_ADDR: usize = 0;
 static mut SET_ANTIALIASING_QUALITY_ADDR: usize = 0;
 
-impl_addr_wrapper_fn!(set_antialiasing, SET_ANTIALIASING_ADDR, (), this: *mut c_void, value: i32);
-impl_addr_wrapper_fn!(set_antialiasingQuality, SET_ANTIALIASING_QUALITY_ADDR, (), this: *mut c_void, value: i32);
+impl_addr_wrapper_fn!(set_antialiasing, SET_ANTIALIASING_ADDR, (), this: *mut Il2CppObject, value: i32);
+impl_addr_wrapper_fn!(set_antialiasingQuality, SET_ANTIALIASING_QUALITY_ADDR, (), this: *mut Il2CppObject, value: i32);
 
-type OnAfterDeserializeFn = extern "C" fn(this: *mut c_void);
-extern "C" fn OnAfterDeserialize(this: *mut c_void) {
+type OnAfterDeserializeFn = extern "C" fn(this: *mut Il2CppObject);
+extern "C" fn OnAfterDeserialize(this: *mut Il2CppObject) {
     get_orig_fn!(OnAfterDeserialize, OnAfterDeserializeFn)(this);
 
     // 0 None, 1 FXAA, 2 SMAA, 3 TAA
