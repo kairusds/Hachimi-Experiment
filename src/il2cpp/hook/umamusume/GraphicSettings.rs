@@ -69,47 +69,45 @@ pub enum GraphicsQuality {
 }
 
 type SetIsMSAAFn = extern "C" fn(this: *mut Il2CppObject, value: bool);
-pub extern "C" fn set_IsMSAA(this: *mut Il2CppObject, value: bool) {
+pub extern "C" fn set_IsMSAA(this: *mut Il2CppObject, _value: bool) {
     get_orig_fn!(set_IsMSAA, SetIsMSAAFn)(this, true);
 }
 
 type SetResolutionScaleFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
-extern "C" fn set_ResolutionScale(this: *mut Il2CppObject, value: f32) {
+extern "C" fn set_ResolutionScale(this: *mut Il2CppObject, _value: f32) {
     get_orig_fn!(set_ResolutionScale, SetResolutionScaleFn)(this, 1.0);
 }
 
 type SetResolutionScale2DFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
-pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, value: f32) {
+pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, _value: f32) {
     // Ignore the 'value' from the game, always set 1.0
     get_orig_fn!(set_ResolutionScale2D, SetResolutionScale2DFn)(this, 1.0);
 }
 
 type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allow_msaa: bool) -> i32;
-extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, allow_msaa: bool) -> i32 {
+extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, _allow_msaa: bool) -> i32 {
     //4
     // MSAA level 2x 4x 8x etc
     get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, true);
 }
 
 type Set3DQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32);
-extern "C" fn Set3DQuality(this: *mut Il2CppObject, quality: i32) {
+extern "C" fn Set3DQuality(this: *mut Il2CppObject, _quality: i32) {
     // Graphics3DQuality::Resolution4k
     get_orig_fn!(Set3DQuality, Set3DQualityFn)(this, 3);
 }
 
-/*
 type GetAntialiasingValueFn = extern "C" fn(this: *mut Il2CppObject) -> i32;
 extern "C" fn GetAntialiasingValue(this: *mut Il2CppObject) -> i32 {
-    0 None, 1 FXAA, 2 SMAA, 3 TAA AntialiasingMode
+    // 0 None, 1 FXAA, 2 SMAA, 3 TAA AntialiasingMode
     3
 }
 
 type SetGameQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32, q_type: i32);
 extern "C" fn SetGameQuality(this: *mut Il2CppObject, quality: i32, q_type: i32) {
-    GameQuality::Rich, SettingQualityType::Normal
+    // GameQuality::Rich, SettingQualityType::Normal
     get_orig_fn!(SetGameQuality, SetGameQualityFn)(this, 3, 0); 
 }
-*/
 
 type ApplyGraphicsQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: GraphicsQuality, force: bool);
 extern "C" fn ApplyGraphicsQuality(this: *mut Il2CppObject, quality: GraphicsQuality, force: bool) {
