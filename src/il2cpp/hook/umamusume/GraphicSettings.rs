@@ -75,12 +75,12 @@ pub extern "C" fn set_IsMSAA(this: *mut Il2CppObject, _value: bool) {
 
 type SetResolutionScaleFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
 extern "C" fn set_ResolutionScale(this: *mut Il2CppObject, _value: f32) {
-    get_orig_fn!(set_ResolutionScale, SetResolutionScaleFn)(this, 1.2);
+    get_orig_fn!(set_ResolutionScale, SetResolutionScaleFn)(this, 2.0);
 }
 
 type SetResolutionScale2DFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
 pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, _value: f32) {
-    get_orig_fn!(set_ResolutionScale2D, SetResolutionScale2DFn)(this, 1.2);
+    get_orig_fn!(set_ResolutionScale2D, SetResolutionScale2DFn)(this, 2.0);
 }
 
 type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allow_msaa: bool) -> i32;
@@ -92,18 +92,6 @@ type Set3DQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32);
 extern "C" fn Set3DQuality(this: *mut Il2CppObject, _quality: i32) {
     // Graphics3DQuality::Resolution4k
     get_orig_fn!(Set3DQuality, Set3DQualityFn)(this, 3);
-}
-
-type GetAntialiasingValueFn = extern "C" fn(this: *mut Il2CppObject) -> i32;
-extern "C" fn GetAntialiasingValue(this: *mut Il2CppObject) -> i32 {
-    // 0 None, 1 FXAA, 2 SMAA, 3 TAA AntialiasingMode
-    3
-}
-
-type SetGameQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32, qualityType: i32);
-extern "C" fn SetGameQuality(this: *mut Il2CppObject, quality: i32, qualityType: i32) {
-    // GameQuality::Rich, SettingQualityType
-    get_orig_fn!(SetGameQuality, SetGameQualityFn)(this, 3, qualityType); 
 }
 
 type ApplyGraphicsQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: GraphicsQuality, force: bool);
@@ -128,9 +116,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     let SetResolutionScale_addr = get_method_addr(GraphicSettings, c"set_ResolutionScale", 1);
     let SetResolutionScale2D_addr = get_method_addr(GraphicSettings, c"set_ResolutionScale2D", 1);
     let Get3DAntiAliasingLevel_addr = get_method_addr(GraphicSettings, c"Get3DAntiAliasingLevel", 1);
-    // let Set3DQuality_addr = get_method_addr(GraphicSettings, c"Set3DQuality", 1);
-    // let GetAntialiasingValue_addr = get_method_addr(GraphicSettings, c"GetAntialiasingValue", 0);
-    // let SetGameQuality_addr = get_method_addr(GraphicSettings, c"SetGameQuality", 2);
+    let Set3DQuality_addr = get_method_addr(GraphicSettings, c"Set3DQuality", 1);
 
     new_hook!(GetVirtualResolution3D_addr, GetVirtualResolution3D);
     new_hook!(GetVirtualResolution_addr, GetVirtualResolution);
@@ -141,9 +127,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     new_hook!(SetResolutionScale_addr, set_ResolutionScale);
     new_hook!(SetResolutionScale2D_addr, set_ResolutionScale2D);
     new_hook!(Get3DAntiAliasingLevel_addr, Get3DAntiAliasingLevel);
-    // new_hook!(Set3DQuality_addr, Set3DQuality);
-    // new_hook!(GetAntialiasingValue_addr, GetAntialiasingValue);
-    // new_hook!(SetGameQuality_addr, SetGameQuality);
+    new_hook!(Set3DQuality_addr, Set3DQuality);
 
     #[cfg(target_os = "windows")]
     unsafe {
