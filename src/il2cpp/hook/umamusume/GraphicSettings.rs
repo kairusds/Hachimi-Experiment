@@ -75,7 +75,7 @@ pub extern "C" fn set_IsMSAA(this: *mut Il2CppObject, value: bool) {
 
 type SetResolutionScaleFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
 extern "C" fn set_ResolutionScale(this: *mut Il2CppObject, value: f32) {
-    get_orig_fn!(set_ResolutionScale, SetResolutionScaleFn)(this, 2.0);
+    get_orig_fn!(set_ResolutionScale, SetResolutionScaleFn)(this, 1.0);
 }
 
 type SetResolutionScale2DFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
@@ -84,9 +84,11 @@ pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, _value: f32) {
     get_orig_fn!(set_ResolutionScale2D, SetResolutionScale2DFn)(this, 1.0);
 }
 
-// type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allow_msaa: bool) -> i32;
-extern "C" fn Get3DAntiAliasingLevel(his: *mut Il2CppObject, allow_msaa: bool) -> i32 {
-    4 // MSAA level 2x 4x 8x etc
+type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allow_msaa: bool) -> i32;
+extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, allow_msaa: bool) -> i32 {
+    //4
+    // MSAA level 2x 4x 8x etc
+    get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, true);
 }
 
 type Set3DQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32);
@@ -143,7 +145,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     new_hook!(SetResolutionScale2D_addr, set_ResolutionScale2D);
     new_hook!(Get3DAntiAliasingLevel_addr, Get3DAntiAliasingLevel);
     new_hook!(Set3DQuality_addr, Set3DQuality);
-    new_hook!(GetAntialiasingValue_addr, GetAntialiasingValue);
+    // new_hook!(GetAntialiasingValue_addr, GetAntialiasingValue);
     // new_hook!(SetGameQuality_addr, SetGameQuality);
 
     #[cfg(target_os = "windows")]
