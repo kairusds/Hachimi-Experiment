@@ -1,6 +1,5 @@
 use crate::il2cpp::{symbols::get_method_addr, types::*};
 
-/*
 pub extern "C" fn get_renderScale(this: *mut Il2CppObject) -> f32 {
     2.0
 }
@@ -20,8 +19,8 @@ pub fn init(Unity_RenderPipelines_Universal_Runtime: *const Il2CppImage) {
         new_hook!(get_msaa_addr, get_msaaSampleCount);
     }
 }
-*/
 
+/*
 static mut GET_RENDER_SCALE_ADDR: usize = 0;
 static mut SET_RENDER_SCALE_ADDR: usize = 0;
 static mut SET_MSAA_SAMPLE_COUNT_ADDR: usize = 0;
@@ -53,3 +52,4 @@ pub fn init(Unity_RenderPipelines_Universal_Runtime: *const Il2CppImage) {
         new_hook!(deserialize_addr, OnAfterDeserialize);
     }
 }
+*/
