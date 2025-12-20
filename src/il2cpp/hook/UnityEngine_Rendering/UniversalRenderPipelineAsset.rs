@@ -11,8 +11,8 @@ type OnAfterDeserializeFn = extern "C" fn(this: *mut c_void);
 extern "C" fn OnAfterDeserialize(this: *mut c_void) {
     get_orig_fn!(OnAfterDeserialize, OnAfterDeserializeFn)(this);
 
-    // 1.2 1080p, 1.5 1440p, 2 4k
-    set_renderScale(this, 2); 
+    // 1.2 1080p, 1.5 1440p, 2.0 4k
+    set_renderScale(this, 2.0); 
     set_msaaSampleCount(this, 8); 
  
     info!("Hachimi: URP Asset Overridden - Scale: 2, MSAA: 8x");
