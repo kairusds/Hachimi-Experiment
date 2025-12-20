@@ -11,10 +11,10 @@ type OnAfterDeserializeFn = extern "C" fn(this: *mut c_void);
 extern "C" fn OnAfterDeserialize(this: *mut c_void) {
     get_orig_fn!(OnAfterDeserialize, OnAfterDeserializeFn)(this);
 
-    set_antialiasing(this, 2); // 1 FXAA, 2 SMAA, 3 TAA
-    set_antialiasingQuality(this, 2); // 0 Low, 1 Medium, 2 High
-    
-    info!("Forced antialiasing on Camera Instance {:p}", this);
+    // 0 None, 1 FXAA, 2 SMAA, 3 TAA
+    set_antialiasing(this, 0);
+    // 0 Low, 1 Medium, 2 High
+    // set_antialiasingQuality(this, 2);
 }
 
 pub fn init(Unity_RenderPipelines_Universal_Runtime: *const Il2CppImage) {
