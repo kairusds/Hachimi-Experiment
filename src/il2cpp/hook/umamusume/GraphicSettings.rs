@@ -128,7 +128,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     let SetResolutionScale_addr = get_method_addr(GraphicSettings, c"set_ResolutionScale", 1);
     let SetResolutionScale2D_addr = get_method_addr(GraphicSettings, c"set_ResolutionScale2D", 1);
     let Get3DAntiAliasingLevel_addr = get_method_addr(GraphicSettings, c"Get3DAntiAliasingLevel", 1);
-    let Set3DQuality_addr = get_method_addr(GraphicSettings, c"Set3DQuality", 1);
+    // let Set3DQuality_addr = get_method_addr(GraphicSettings, c"Set3DQuality", 1);
     // let GetAntialiasingValue_addr = get_method_addr(GraphicSettings, c"GetAntialiasingValue", 0);
     // let SetGameQuality_addr = get_method_addr(GraphicSettings, c"SetGameQuality", 2);
 
@@ -141,7 +141,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     new_hook!(SetResolutionScale_addr, set_ResolutionScale);
     new_hook!(SetResolutionScale2D_addr, set_ResolutionScale2D);
     new_hook!(Get3DAntiAliasingLevel_addr, Get3DAntiAliasingLevel);
-    new_hook!(Set3DQuality_addr, Set3DQuality);
+    // new_hook!(Set3DQuality_addr, Set3DQuality);
     // new_hook!(GetAntialiasingValue_addr, GetAntialiasingValue);
     // new_hook!(SetGameQuality_addr, SetGameQuality);
 
