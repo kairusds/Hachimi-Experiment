@@ -26,7 +26,7 @@ static mut GET_RENDER_SCALE_ADDR: usize = 0;
 static mut SET_RENDER_SCALE_ADDR: usize = 0;
 static mut SET_MSAA_SAMPLE_COUNT_ADDR: usize = 0;
 
-impl_addr_wrapper_fn!(get_renderScale, GET_RENDER_SCALE_ADDR, (), this: *mut Il2CppObject, value: f32);
+impl_addr_wrapper_fn!(get_renderScale, GET_RENDER_SCALE_ADDR, f32, this: *mut Il2CppObject);
 impl_addr_wrapper_fn!(set_renderScale, SET_RENDER_SCALE_ADDR, (), this: *mut Il2CppObject, value: f32);
 impl_addr_wrapper_fn!(set_msaaSampleCount, SET_MSAA_SAMPLE_COUNT_ADDR, (), this: *mut Il2CppObject, value: i32);
 
@@ -45,6 +45,7 @@ pub fn init(Unity_RenderPipelines_Universal_Runtime: *const Il2CppImage) {
     get_class_or_return!(Unity_RenderPipelines_Universal_Runtime, "UnityEngine.Rendering.Universal", UniversalRenderPipelineAsset);
 
     unsafe {
+        GET_RENDER_SCALE_ADDR = get_method_addr(UniversalRenderPipelineAsset, c"get_renderScale", 0);
         SET_RENDER_SCALE_ADDR = get_method_addr(UniversalRenderPipelineAsset, c"set_renderScale", 1);
         SET_MSAA_SAMPLE_COUNT_ADDR = get_method_addr(UniversalRenderPipelineAsset, c"set_msaaSampleCount", 1);
 
