@@ -101,7 +101,7 @@ extern "C" fn ApplyGraphicsQuality(this: *mut Il2CppObject, quality: GraphicsQua
         return get_orig_fn!(ApplyGraphicsQuality, ApplyGraphicsQualityFn)(this, custom_quality, true);
     }
 
-    get_orig_fn!(ApplyGraphicsQuality, ApplyGraphicsQualityFn)(this, quality, force);
+    get_orig_fn!(ApplyGraphicsQuality, ApplyGraphicsQualityFn)(this, quality, true);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
