@@ -85,7 +85,8 @@ pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, _value: f32) {
 
 type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allow_msaa: bool) -> i32;
 extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, _allow_msaa: bool) -> i32 {
-    get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, true)
+    8
+    // get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, true)
 }
 
 type Set3DQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32);
@@ -128,8 +129,8 @@ pub fn init(umamusume: *const Il2CppImage) {
     let SetResolutionScale_addr = get_method_addr(GraphicSettings, c"set_ResolutionScale", 1);
     let SetResolutionScale2D_addr = get_method_addr(GraphicSettings, c"set_ResolutionScale2D", 1);
     let Get3DAntiAliasingLevel_addr = get_method_addr(GraphicSettings, c"Get3DAntiAliasingLevel", 1);
-    let Set3DQuality_addr = get_method_addr(GraphicSettings, c"Set3DQuality", 1);
-    // let GetAntialiasingValue_addr = get_method_addr(GraphicSettings, c"GetAntialiasingValue", 0);
+    // let Set3DQuality_addr = get_method_addr(GraphicSettings, c"Set3DQuality", 1);
+    let GetAntialiasingValue_addr = get_method_addr(GraphicSettings, c"GetAntialiasingValue", 0);
     // let SetGameQuality_addr = get_method_addr(GraphicSettings, c"SetGameQuality", 2);
 
     new_hook!(GetVirtualResolution3D_addr, GetVirtualResolution3D);
@@ -141,8 +142,8 @@ pub fn init(umamusume: *const Il2CppImage) {
     new_hook!(SetResolutionScale_addr, set_ResolutionScale);
     new_hook!(SetResolutionScale2D_addr, set_ResolutionScale2D);
     new_hook!(Get3DAntiAliasingLevel_addr, Get3DAntiAliasingLevel);
-    new_hook!(Set3DQuality_addr, Set3DQuality);
-    // new_hook!(GetAntialiasingValue_addr, GetAntialiasingValue);
+    // new_hook!(Set3DQuality_addr, Set3DQuality);
+    new_hook!(GetAntialiasingValue_addr, GetAntialiasingValue);
     // new_hook!(SetGameQuality_addr, SetGameQuality);
 
     #[cfg(target_os = "windows")]
