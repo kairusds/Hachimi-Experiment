@@ -106,7 +106,7 @@ extern "C" fn GetAntialiasingValue(this: *mut Il2CppObject) -> i32 {
 type SetGameQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32, qualityType: i32);
 extern "C" fn SetGameQuality(this: *mut Il2CppObject, quality: i32, qualityType: i32) {
     // GameQuality::Rich, SettingQualityType
-    get_orig_fn!(SetGameQuality, SetGameQualityFn)(this, 3, q_type); 
+    get_orig_fn!(SetGameQuality, SetGameQualityFn)(this, 3, qualityType); 
 }
 
 type ApplyGraphicsQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: GraphicsQuality, force: bool);
