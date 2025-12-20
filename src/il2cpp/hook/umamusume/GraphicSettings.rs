@@ -80,15 +80,12 @@ extern "C" fn set_ResolutionScale(this: *mut Il2CppObject, _value: f32) {
 
 type SetResolutionScale2DFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
 pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, _value: f32) {
-    // Ignore the 'value' from the game, always set 1.0
     get_orig_fn!(set_ResolutionScale2D, SetResolutionScale2DFn)(this, 2.0);
 }
 
 type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allow_msaa: bool) -> i32;
 extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, _allow_msaa: bool) -> i32 {
-    2
-    // idk
-    // get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, true)
+    get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, true)
 }
 
 type Set3DQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32);
