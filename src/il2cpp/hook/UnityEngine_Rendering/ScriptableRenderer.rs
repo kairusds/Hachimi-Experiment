@@ -1,0 +1,19 @@
+use crate::il2cpp::{symbols::get_method_addr, types::*};
+
+type GetRenderTextureDescriptorFn = extern "C" fn(cameraData: *mut isize,  renderPass: *mut Il2CppObject, targetRT: *mut RenderTextureDescriptor);
+extern "C" fn GetRenderTextureDescriptor(cameraData: *mut isize, renderPass: *mut Il2CppObject, targetRT: *mut RenderTextureDescriptor) {
+    get_orig_fn!(GetRenderTextureDescriptor, GetRenderTextureDescriptorFn)(cameraData, renderPass, targetRT);
+    unsafe {
+        (*targetRT).msaaSamples = 8; 
+    }
+}
+
+pub fn init(Unity_RenderPipelines_Universal_Runtime: *const Il2CppImage) {
+    get_class_or_return!(Unity_RenderPipelines_Universal_Runtime, "UnityEngine.Rendering.Universal", ScriptableRenderer);
+
+    unsafe {
+        let GetRenderTextureDescriptor_addr = get_method_addr(ScriptableRenderer, c"GetRenderTextureDescriptor", 3);
+        new_hook!(GetRenderTextureDescriptor_addr, GetRenderTextureDescriptor);
+    }
+}
+

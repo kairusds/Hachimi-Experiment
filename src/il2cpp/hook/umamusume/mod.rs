@@ -53,6 +53,7 @@ mod LiveTheaterCharaSelect;
 mod LiveTheaterViewController;
 pub mod CySpringController;
 mod CameraData;
+mod RenderingManager;
 
 #[cfg(target_os = "windows")]
 pub mod SceneManager;
@@ -118,6 +119,7 @@ pub fn init() {
     LiveTheaterViewController::init(image);
     CySpringController::init(image);
     CameraData::init(image);
+    RenderingManager::init(image);
 
     #[cfg(target_os = "windows")]
     {

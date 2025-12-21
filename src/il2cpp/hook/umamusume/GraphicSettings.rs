@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{core::Hachimi, il2cpp::{symbols::get_method_addr, types::*}};
+use crate::{core::Hachimi, il2cpp::{symbols::{get_method_addr, get_field_from_name, set_field_object_value}, types::*}};
 
 use super::{LowResolutionCamera, SingleModeStartResultCharaViewer};
 
@@ -17,6 +17,11 @@ pub fn instance() -> *mut Il2CppObject {
         return 0 as _;
     };
     singleton.instance()
+}
+
+static mut _ISMSAA_FIELD: *mut FieldInfo = 0 as _;
+pub fn set__isMSAA(this: *mut Il2CppObject, value: *mut bool) {
+    set_field_object_value(this, unsafe { _ISMSAA_FIELD }, value);
 }
 
 type GetVirtualResolutionFn = extern "C" fn(this: *mut Il2CppObject) -> Vector2Int_t;
@@ -68,9 +73,10 @@ pub enum GraphicsQuality {
     Max
 }
 
-type SetIsMSAAFn = extern "C" fn(this: *mut Il2CppObject, value: bool);
-pub extern "C" fn set_IsMSAA(this: *mut Il2CppObject, _value: bool) {
-    get_orig_fn!(set_IsMSAA, SetIsMSAAFn)(this, true);
+// type get_IsMSAAFn = extern "C" fn(this: *mut Il2CppObject) -> bool;
+pub extern "C" fn get_IsMSAA(this: *mut Il2CppObject) -> bool {
+    set__isMSAA(this, true);
+    true
 }
 
 type SetResolutionScaleFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
@@ -83,10 +89,12 @@ pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, _value: f32) {
     get_orig_fn!(set_ResolutionScale2D, SetResolutionScale2DFn)(this, 2.0);
 }
 
-type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allow_msaa: bool) -> i32;
-extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, allow_msaa: bool) -> i32 {
-    get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, true)
-    // get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, allow_msaa)
+type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allowMSAA: bool) -> i32;
+extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, allowMSAA: bool) -> i32 {
+    if allowMSAA {
+        return 8;
+    }
+    get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, allowMSAA)
 }
 
 type Set3DQualityFn = extern "C" fn(this: *mut Il2CppObject, quality: i32);
@@ -113,7 +121,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     let GetVirtualResolutionWidth3D_addr = get_method_addr(GraphicSettings, c"GetVirtualResolutionWidth3D", 0);
     let ApplyGraphicsQuality_addr = get_method_addr(GraphicSettings, c"ApplyGraphicsQuality", 2);
 
-    let SetIsMSAA_addr = get_method_addr(GraphicSettings, c"set_IsMSAA", 1);
+    let get_IsMSAA_addr = get_method_addr(GraphicSettings, c"get_IsMSAA", 0);
     let SetResolutionScale_addr = get_method_addr(GraphicSettings, c"set_ResolutionScale", 1);
     let SetResolutionScale2D_addr = get_method_addr(GraphicSettings, c"set_ResolutionScale2D", 1);
     let Get3DAntiAliasingLevel_addr = get_method_addr(GraphicSettings, c"Get3DAntiAliasingLevel", 1);
@@ -124,7 +132,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     new_hook!(GetVirtualResolutionWidth3D_addr, GetVirtualResolutionWidth3D);
     new_hook!(ApplyGraphicsQuality_addr, ApplyGraphicsQuality);
 
-    new_hook!(SetIsMSAA_addr, set_IsMSAA);
+    new_hook!(get_IsMSAA_addr, get_IsMSAA);
     new_hook!(SetResolutionScale_addr, set_ResolutionScale);
     new_hook!(SetResolutionScale2D_addr, set_ResolutionScale2D);
     new_hook!(Get3DAntiAliasingLevel_addr, Get3DAntiAliasingLevel);
@@ -133,6 +141,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     #[cfg(target_os = "windows")]
     unsafe {
         CLASS = GraphicSettings;
+        _ISMSAA_FIELD = get_field_from_name(GraphicSettings, c"_isMSAA");
         UPDATE3DRENDERTEXTURE_ADDR = get_method_addr(GraphicSettings, c"Update3DRenderTexture", 0);
     }
 }
