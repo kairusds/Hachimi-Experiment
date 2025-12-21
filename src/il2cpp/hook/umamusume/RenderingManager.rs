@@ -16,7 +16,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     let get_IsOverrideAntiAliasingLevel_addr = get_method_addr(RenderingManager, c"get_IsOverrideAntiAliasingLevel", 0);
     let get_OverrideAntiAliasingLevel_addr = get_method_addr(RenderingManager, c"get_RenderingAntiAliasing", 0);
     
-    new_hook!(get_IsCreateAntialiasTexture_addr, get_IsCreateAntialiasTexture);
+    new_hook!(get_IsOverrideAntiAliasingLevel_addr, get_IsOverrideAntiAliasingLevel);
     new_hook!(get_OverrideAntiAliasingLevel_addr, get_OverrideAntiAliasingLevel);
 }
 
