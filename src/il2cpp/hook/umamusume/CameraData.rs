@@ -23,7 +23,7 @@ extern "C" fn OnBeforeCameraRendering(this: *mut Il2CppObject) {
     get_orig_fn!(OnBeforeCameraRendering, OnBeforeCameraRenderingFn)(this);
     // AntiAliasLevel.Auto
     set_RequestAntiAliasing(this, 0);
-    UpdateAntiAliasParameter();
+    UpdateAntiAliasParameter(this);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
