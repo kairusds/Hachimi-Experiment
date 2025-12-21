@@ -75,7 +75,7 @@ pub enum GraphicsQuality {
 
 // type get_IsMSAAFn = extern "C" fn(this: *mut Il2CppObject) -> bool;
 pub extern "C" fn get_IsMSAA(this: *mut Il2CppObject) -> bool {
-    set__isMSAA(this, true);
+    set__isMSAA(this, &mut true as *mut bool);
     true
 }
 
