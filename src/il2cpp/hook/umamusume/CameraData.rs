@@ -1,4 +1,4 @@
-use crate::il2cpp::{symbols::get_method_addr, types::*};
+use crate::il2cpp::{symbols::{get_method_addr, get_field_from_name, set_field_object_value}, types::*};
 
 static mut REQUESTANTIALIASING_FIELD: *mut FieldInfo = 0 as _;
 pub fn set_RequestAntiAliasing(this: *mut Il2CppObject, value: *mut i32) {
