@@ -22,7 +22,7 @@ type OnBeforeCameraRenderingFn = extern "C" fn(this: *mut Il2CppObject);
 extern "C" fn OnBeforeCameraRendering(this: *mut Il2CppObject) {
     get_orig_fn!(OnBeforeCameraRendering, OnBeforeCameraRenderingFn)(this);
     // AntiAliasLevel.Auto
-    set_RequestAntiAliasing(this, 0);
+    set_RequestAntiAliasing(this, 0 as *mut i32);
     UpdateAntiAliasParameter(this);
 }
 
