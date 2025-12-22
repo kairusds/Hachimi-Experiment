@@ -18,7 +18,7 @@ impl_addr_wrapper_fn!(get_OriginalScreenWidth, GET_ORIGINALSCREENWIDTH_ADDR, i32
 static mut GET_ORIGINALSCREENHEIGHT_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_OriginalScreenHeight, GET_ORIGINALSCREENHEIGHT_ADDR, i32,);
 
-static mut _BGCAMERASETTINGS_FIELD: *mut FieldInfo = std::ptr::null_mut();
+static mut _BGCAMERASETTINGS_FIELD: *mut FieldInfo = 0;
 static mut BG_CAMERA_SETTINGS_ADDR: usize = 0;
 
 #[cfg(target_os = "android")]
