@@ -37,8 +37,8 @@ pub fn start_ChangeScreenOrientationLandscapeAsync() {
         let enumerator = ChangeScreenOrientationLandscapeAsync();
         let ui_manager = super::UIManager::instance();
 
-        if !ui_manager.is_null() && !enumerator.is_null() {
-            crate::il2cpp::hook::UnityEngine_CoreModule::MonoBehaviour::StartCoroutine(ui_manager, enumerator as _);
+        if !ui_manager.is_null() && !enumerator.this.is_null() {
+            crate::il2cpp::hook::UnityEngine_CoreModule::MonoBehaviour::StartCoroutine(ui_manager, enumerator.this as *mut Il2CppObject);
         }
     }
 }
