@@ -1,4 +1,4 @@
-use crate::il2cpp::{symbols::get_method_addr, types::*};
+use crate::il2cpp::{symbols::{get_method_addr, get_field_value}, types::*};
 
 #[cfg(target_os = "android")]
 use crate::core::Hachimi;
