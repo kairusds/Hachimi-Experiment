@@ -159,6 +159,6 @@ pub fn init(umamusume: *const Il2CppImage) {
         INITIALIZE_CHANGE_ORIENTATION_ADDR = get_method_addr(Screen, c"InitializeChangeOrientationForUIManager", 2);
 
         _BGCAMERASETTINGS_FIELD = get_field_from_name(Screen, c"_bgCameraSettings");
-        BG_CAMERA_SETTINGS_ADDR = get_field_ptr(Screen as *mut Il2CppObject, _BGCAMERASETTINGS_FIELD) as usize;
+        BG_CAMERA_SETTINGS_ADDR = get_field_ptr::<usize>(Screen as *mut Il2CppObject, _BGCAMERASETTINGS_FIELD) as usize;
     }
 }
