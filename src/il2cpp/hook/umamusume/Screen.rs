@@ -33,13 +33,11 @@ extern "C" fn ChangeScreenOrientationLandscapeAsync_MoveNext(enumerator: *mut Il
 
 #[cfg(target_os = "android")]
 pub fn start_ChangeScreenOrientationLandscapeAsync() {
-    unsafe {
-        let enumerator = ChangeScreenOrientationLandscapeAsync();
-        let ui_manager = super::UIManager::instance();
+    let enumerator = ChangeScreenOrientationLandscapeAsync();
+    let ui_manager = super::UIManager::instance();
 
-        if !ui_manager.is_null() && !enumerator.this.is_null() {
-            crate::il2cpp::hook::UnityEngine_CoreModule::MonoBehaviour::StartCoroutine(ui_manager, enumerator.this as *mut Il2CppObject);
-        }
+    if !ui_manager.is_null() && !enumerator.this.is_null() {
+        crate::il2cpp::hook::UnityEngine_CoreModule::MonoBehaviour::StartCoroutine(ui_manager, enumerator.this as *mut Il2CppObject);
     }
 }
 
