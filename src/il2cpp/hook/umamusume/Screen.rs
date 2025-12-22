@@ -1,4 +1,4 @@
-use crate::il2cpp::{symbols::get_method_addr, types::*, hook::UnityEngine_CoreModule::MonoBehaviour};
+use crate::il2cpp::{symbols::get_method_addr, types::*};
 
 #[cfg(target_os = "android")]
 use crate::core::Hachimi;
@@ -38,7 +38,7 @@ pub fn start_ChangeScreenOrientationLandscapeAsync() {
         let ui_manager = super::UIManager::instance();
 
         if !ui_manager.is_null() && !enumerator.is_null() {
-            MonoBehaviour::StartCoroutine(ui_manager, enumerator as _);
+            crate::il2cpp::hook::UnityEngine_CoreModule::MonoBehaviour::StartCoroutine(ui_manager, enumerator as _);
         }
     }
 }
