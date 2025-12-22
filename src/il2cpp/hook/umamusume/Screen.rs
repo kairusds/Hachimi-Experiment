@@ -5,7 +5,7 @@ use crate::core::Hachimi;
 
 type ChangeScreenOrientationFn = extern "C" fn(targetOrientation: ScreenOrientation, isForce: bool) -> crate::il2cpp::symbols::IEnumerator;
 extern "C" fn ChangeScreenOrientation(targetOrientation: ScreenOrientation, isForce: bool) -> crate::il2cpp::symbols::IEnumerator {
-    get_orig_fn!(ChangeScreenOrientation, ChangeScreenOrientationFn)(ScreenOrientation_Landscape, true)
+    get_orig_fn!(ChangeScreenOrientation, ChangeScreenOrientationFn)(ScreenOrientation_Landscape, isForce)
 }
 
 #[cfg(target_os = "android")]
