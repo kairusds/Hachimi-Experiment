@@ -54,6 +54,7 @@ mod LiveTheaterViewController;
 pub mod CySpringController;
 mod CameraData;
 mod RenderingManager;
+mod HomeViewController;
 
 #[cfg(target_os = "windows")]
 pub mod SceneManager;
@@ -120,6 +121,7 @@ pub fn init() {
     CySpringController::init(image);
     CameraData::init(image);
     RenderingManager::init(image);
+    HomeViewController::init(image);
 
     #[cfg(target_os = "windows")]
     {
