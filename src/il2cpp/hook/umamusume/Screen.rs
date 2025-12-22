@@ -10,13 +10,13 @@ static mut SET_RESOLUTION_ADDR: usize = 0;
 impl_addr_wrapper_fn!(SetResolution, SET_RESOLUTION_ADDR, (), w: i32, h: i32, fullscreen: bool, forceUpdate: bool, skipKeepAspect: bool);
 
 static mut INITIALIZE_CHANGE_ORIENTATION_ADDR: usize = 0;
-impl_addr_wrapper_fn!(InitializeChangeOrientationForUIManager, INITIALIZE_CHANGE_ORIENTATION_ADDR, (), isPortrait: bool, bgCameraSettings: *mut u8);
+impl_addr_wrapper_fn!(InitializeChangeOrientationForUIManager, INITIALIZE_CHANGE_ORIENTATION_ADDR, (), isPortrait: bool, bgCameraSettings: usize);
 
 static mut GET_ORIGINALSCREENWIDTH_ADDR: usize = 0;
-impl_addr_wrapper_fn!(get_OriginalScreenWidth, GET_ORIGINALSCREENWIDTH_ADDR, i32);
+impl_addr_wrapper_fn!(get_OriginalScreenWidth, GET_ORIGINALSCREENWIDTH_ADDR, i32,);
 
 static mut GET_ORIGINALSCREENHEIGHT_ADDR: usize = 0;
-impl_addr_wrapper_fn!(get_OriginalScreenHeight, GET_ORIGINALSCREENHEIGHT_ADDR, i32);
+impl_addr_wrapper_fn!(get_OriginalScreenHeight, GET_ORIGINALSCREENHEIGHT_ADDR, i32,);
 
 static mut BG_CAMERA_SETTINGS_ADDR: usize = 0;
 

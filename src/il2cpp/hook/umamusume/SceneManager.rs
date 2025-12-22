@@ -20,7 +20,7 @@ fn ChangeViewCommon(next_view_id: i32) {
         #[cfg(target_os = "android")]
         100 | 101 => { // ViewId.Home | ViewId.HomeHub
             if Screen::get_ScreenOrientation() == ScreenOrientation_Portrait {
-                Screen::start_ChangeScreenOrientationLandscapeAsync();
+                Screen::force_landscape();
             }
         },
         _ => {}
