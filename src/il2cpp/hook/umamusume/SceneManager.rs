@@ -1,6 +1,12 @@
 use std::sync::atomic::{self, AtomicBool};
 
-use crate::{core::{Hachimi, game::Region}, il2cpp::{symbols::get_method_addr, types::*}};
+use crate::{
+    core::{Hachimi, game::Region},
+    il2cpp::{symbols::get_method_addr, types::*}
+};
+
+#[cfg(target_os = "android")]
+use crate::il2cpp::hook::umamusume::Screen;
 
 static SPLASH_SHOWN: AtomicBool = AtomicBool::new(false);
 pub fn is_splash_shown() -> bool {
@@ -8,8 +14,16 @@ pub fn is_splash_shown() -> bool {
 }
 
 fn ChangeViewCommon(next_view_id: i32) {
-    if next_view_id == 1 { // ViewId.Splash
-        SPLASH_SHOWN.store(true, atomic::Ordering::Release);
+    match next_view_id {
+        // ViewId.Splash
+        1 => SPLASH_SHOWN.store(true, atomic::Ordering::Release),
+        #[cfg(target_os = "android")]
+        100 | 101 => { // ViewId.Home | ViewId.HomeHub
+            if Screen::get_ScreenOrientation() == ScreenOrientation_Portrait {
+                Screen::start_ChangeScreenOrientationLandscapeAsync();
+            }
+        },
+        _ => {}
     }
 }
 
@@ -53,8 +67,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     if Hachimi::instance().game.region == Region::Japan {
         let ChangeView_addr = get_method_addr(SceneManager, c"ChangeView", 6);
         new_hook!(ChangeView_addr, ChangeViewJp);
-    }
-    else {
+    }else {
         let ChangeView_addr = get_method_addr(SceneManager, c"ChangeView", 5);
         new_hook!(ChangeView_addr, ChangeViewOther);
     }
