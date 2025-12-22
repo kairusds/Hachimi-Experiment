@@ -3,9 +3,6 @@ use crate::il2cpp::{symbols::{get_method_addr, get_field_from_name, get_field_pt
 #[cfg(target_os = "android")]
 use crate::core::Hachimi;
 
-static mut GET_SCREENORIENTATION_ADDR: usize = 0;
-impl_addr_wrapper_fn!(get_ScreenOrientation, GET_SCREENORIENTATION_ADDR, ScreenOrientation,);
-
 static mut GET_ORIGINALSCREENWIDTH_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_OriginalScreenWidth, GET_ORIGINALSCREENWIDTH_ADDR, i32,);
 
@@ -152,7 +149,6 @@ pub fn init(umamusume: *const Il2CppImage) {
 
     #[cfg(target_os = "android")]
     unsafe {
-        GET_SCREENORIENTATION_ADDR = get_method_addr(Screen, c"get_ScreenOrientation", 0);
         GET_ORIGINALSCREENWIDTH_ADDR = get_method_addr(Screen, c"get_OriginalScreenWidth", 0);
         GET_ORIGINALSCREENHEIGHT_ADDR = get_method_addr(Screen, c"get_OriginalScreenHeight", 0);
     }
