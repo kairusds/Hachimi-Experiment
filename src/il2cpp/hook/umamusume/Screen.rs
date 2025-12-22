@@ -3,6 +3,11 @@ use crate::il2cpp::{symbols::get_method_addr, types::*};
 #[cfg(target_os = "android")]
 use crate::core::Hachimi;
 
+type ChangeScreenOrientationFn = extern "C" fn(targetOrientation: ScreenOrientation, isForce: bool) -> crate::il2cpp::symbols::IEnumerator;
+extern "C" fn ChangeScreenOrientation(targetOrientation: ScreenOrientation, isForce: bool) -> crate::il2cpp::symbols::IEnumerator {
+    get_orig_fn!(ChangeScreenOrientation, ChangeScreenOrientationFn)(ScreenOrientation_Landscape, true)
+}
+
 #[cfg(target_os = "android")]
 extern "C" fn ChangeScreenOrientationLandscapeAsync_MoveNext(enumerator: *mut Il2CppObject) -> bool {
     use crate::il2cpp::symbols::MoveNextFn;
@@ -85,6 +90,9 @@ pub fn get_Height_orig() -> i32 {
 
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, Screen);
+
+    let ChangeScreenOrientation_addr = get_method_addr(Screen, c"ChangeScreenOrientation", 2);
+    new_hook!(ChangeScreenOrientation_addr, ChangeScreenOrientation);
 
     #[cfg(target_os = "android")]
     {
