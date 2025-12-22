@@ -6,9 +6,6 @@ use crate::core::Hachimi;
 static mut GET_SCREENORIENTATION_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_ScreenOrientation, GET_SCREENORIENTATION_ADDR, ScreenOrientation,);
 
-static mut SET_RESOLUTION_ADDR: usize = 0;
-impl_addr_wrapper_fn!(SetResolution, SET_RESOLUTION_ADDR, (), w: i32, h: i32, fullscreen: bool, forceUpdate: bool, skipKeepAspect: bool);
-
 static mut GET_ORIGINALSCREENWIDTH_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_OriginalScreenWidth, GET_ORIGINALSCREENWIDTH_ADDR, i32,);
 
@@ -135,6 +132,5 @@ pub fn init(umamusume: *const Il2CppImage) {
         GET_SCREENORIENTATION_ADDR = get_method_addr(Screen, c"get_ScreenOrientation", 0);
         GET_ORIGINALSCREENWIDTH_ADDR = get_method_addr(Screen, c"get_OriginalScreenWidth", 0);
         GET_ORIGINALSCREENHEIGHT_ADDR = get_method_addr(Screen, c"get_OriginalScreenHeight", 0);
-        SET_RESOLUTION_ADDR = get_method_addr(Screen, c"SetResolution", 5);
     }
 }
