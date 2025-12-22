@@ -3080,7 +3080,7 @@ pub struct RenderTextureDescriptor {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct CameraSettings {
     pub IsEnable: bool,  
     pub ClearFlags: i32,
