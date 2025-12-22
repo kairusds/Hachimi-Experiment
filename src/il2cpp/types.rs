@@ -3079,14 +3079,6 @@ pub struct RenderTextureDescriptor {
     pub useDynamicScale: bool
 }
 
-#[repr(C)]
-#[derive(Debug)]
-pub struct CameraSettings {
-    pub IsEnable: bool,  
-    pub ClearFlags: i32,
-    pub BackgroundColor: Color_t
-}
-
 /************** ACTk (READ-ONLY) **************/
 #[repr(C)]
 #[derive(Default, Debug)]

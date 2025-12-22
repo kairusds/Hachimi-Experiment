@@ -9,44 +9,17 @@ impl_addr_wrapper_fn!(get_ScreenOrientation, GET_SCREENORIENTATION_ADDR, ScreenO
 static mut SET_RESOLUTION_ADDR: usize = 0;
 impl_addr_wrapper_fn!(SetResolution, SET_RESOLUTION_ADDR, (), w: i32, h: i32, fullscreen: bool, forceUpdate: bool, skipKeepAspect: bool);
 
-static mut INITIALIZE_CHANGE_ORIENTATION_ADDR: usize = 0;
-impl_addr_wrapper_fn!(InitializeChangeOrientationForUIManager, INITIALIZE_CHANGE_ORIENTATION_ADDR, (), isPortrait: bool, bgCameraSettings: usize);
-
 static mut GET_ORIGINALSCREENWIDTH_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_OriginalScreenWidth, GET_ORIGINALSCREENWIDTH_ADDR, i32,);
 
 static mut GET_ORIGINALSCREENHEIGHT_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_OriginalScreenHeight, GET_ORIGINALSCREENHEIGHT_ADDR, i32,);
 
-static mut _BGCAMERASETTINGS_FIELD: *mut FieldInfo = std::ptr::null_mut();
-
 #[cfg(target_os = "android")]
-pub fn force_landscape() {
-    let w = get_OriginalScreenWidth();
-    let h = get_OriginalScreenHeight();
-    SetResolution(w.max(h), w.min(h), true, true, true);
-    unsafe {
-        let settings_ptr = get_field_ptr::<CameraSettings>(Screen as *mut Il2CppObject, _BGCAMERASETTINGS_FIELD);
-        let settings = &mut *settings_ptr;
-        settings.IsEnable = true;
-        if settings.ClearFlags == 0 {
-            settings.ClearFlags = 2; 
-        }
-        InitializeChangeOrientationForUIManager(false, settings_ptr as usize);
-    }
-    super::UIManager::apply_ui_scale();
+type SetResolutionFn = extern "C" fn(w: i32, h: i32, fullscreen: bool, forceUpdate: bool, skipKeepAspect: bool);
+fn SetResolution(w: i32, h: i32, fullscreen: bool, forceUpdate: bool, skipKeepAspect: bool) {
+    get_orig_fn!(SetResolution, SetResolutionFn)(w.max(h), w.min(h), fullscreen, forceUpdate, skipKeepAspect);
 }
-
-/*
-#[cfg(target_os = "android")]
-pub fn start_ChangeScreenOrientationLandscapeAsync() {
-    let enumerator = ChangeScreenOrientationLandscapeAsync();
-    let ui_manager = super::UIManager::instance();
-
-    if !ui_manager.is_null() && !enumerator.this.is_null() {
-        crate::il2cpp::hook::UnityEngine_CoreModule::MonoBehaviour::StartCoroutine(ui_manager, enumerator.this as *mut Il2CppObject);
-    }
-}*/
 
 #[cfg(target_os = "android")]
 extern "C" fn ChangeScreenOrientationLandscapeAsync_MoveNext(enumerator: *mut Il2CppObject) -> bool {
@@ -141,9 +114,11 @@ pub fn init(umamusume: *const Il2CppImage) {
     {
         let ChangeScreenOrientationLandscapeAsync_addr = get_method_addr(Screen, c"ChangeScreenOrientationLandscapeAsync", 0);
         let ChangeScreenOrientationPortraitAsync_addr = get_method_addr(Screen, c"ChangeScreenOrientationPortraitAsync", 0);
+        let SetResolution_addr = get_method_addr(Screen, c"SetResolution", 5);
 
         new_hook!(ChangeScreenOrientationLandscapeAsync_addr, ChangeScreenOrientationLandscapeAsync);
         new_hook!(ChangeScreenOrientationPortraitAsync_addr, ChangeScreenOrientationPortraitAsync);
+        new_hook!(SetResolution_addr, SetResolution);
     }
 
     #[cfg(target_os = "windows")]
@@ -161,8 +136,5 @@ pub fn init(umamusume: *const Il2CppImage) {
         GET_ORIGINALSCREENWIDTH_ADDR = get_method_addr(Screen, c"get_OriginalScreenWidth", 0);
         GET_ORIGINALSCREENHEIGHT_ADDR = get_method_addr(Screen, c"get_OriginalScreenHeight", 0);
         SET_RESOLUTION_ADDR = get_method_addr(Screen, c"SetResolution", 5);
-        INITIALIZE_CHANGE_ORIENTATION_ADDR = get_method_addr(Screen, c"InitializeChangeOrientationForUIManager", 2);
-
-        _BGCAMERASETTINGS_FIELD = get_field_from_name(Screen, c"_bgCameraSettings");
     }
 }
