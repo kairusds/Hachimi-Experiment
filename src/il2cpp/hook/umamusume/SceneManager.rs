@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[cfg(target_os = "android")]
-use hook::umamusume::Screen;
+use crate::il2cpp::hook::umamusume::Screen;
 
 static SPLASH_SHOWN: AtomicBool = AtomicBool::new(false);
 pub fn is_splash_shown() -> bool {
