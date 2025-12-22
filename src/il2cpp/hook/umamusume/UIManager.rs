@@ -140,12 +140,12 @@ pub fn init(umamusume: *const Il2CppImage) {
 
     let SetHeaderTitleText_addr = get_method_overload_addr(UIManager, "SetHeaderTitleText",
         &[Il2CppTypeEnum_IL2CPP_TYPE_STRING, Il2CppTypeEnum_IL2CPP_TYPE_VALUETYPE]);
-    let WaitResizeUI_addr = get_method_addr(UIManager, c"WaitResizeUI", 2);
-    let get_SafeAreaType_addr = get_method_addr(UIManager, c"get_SafeAreaType", 0);
+    // let WaitResizeUI_addr = get_method_addr(UIManager, c"WaitResizeUI", 2);
+    // let get_SafeAreaType_addr = get_method_addr(UIManager, c"get_SafeAreaType", 0);
 
     new_hook!(SetHeaderTitleText_addr, SetHeaderTitleText);
-    new_hook!(WaitResizeUI_addr, WaitResizeUI);
-    new_hook!(get_SafeAreaType_addr, get_SafeAreaType);
+    // new_hook!(WaitResizeUI_addr, WaitResizeUI);
+    // new_hook!(get_SafeAreaType_addr, get_SafeAreaType);
 
     #[cfg(target_os = "windows")]
     {

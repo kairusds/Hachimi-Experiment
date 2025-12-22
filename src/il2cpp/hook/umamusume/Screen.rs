@@ -91,8 +91,8 @@ pub fn get_Height_orig() -> i32 {
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, Screen);
 
-    let ChangeScreenOrientation_addr = get_method_addr(Screen, c"ChangeScreenOrientation", 2);
-    new_hook!(ChangeScreenOrientation_addr, ChangeScreenOrientation);
+    // let ChangeScreenOrientation_addr = get_method_addr(Screen, c"ChangeScreenOrientation", 2);
+    // new_hook!(ChangeScreenOrientation_addr, ChangeScreenOrientation);
 
     #[cfg(target_os = "android")]
     {
