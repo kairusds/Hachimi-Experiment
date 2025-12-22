@@ -1,8 +1,5 @@
 use crate::{
-    hook::{
-        UnityEngine_CoreModule::MonoBehaviour
-    },
-    il2cpp::{symbols::get_method_addr, types::*}
+    il2cpp::{symbols::get_method_addr, types::*, hook::UnityEngine_CoreModule::MonoBehaviour
 };
 
 #[cfg(target_os = "android")]
