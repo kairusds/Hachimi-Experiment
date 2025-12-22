@@ -55,7 +55,7 @@ pub mod CySpringController;
 mod CameraData;
 mod RenderingManager;
 
-// #[cfg(target_os = "windows")]
+#[cfg(target_os = "windows")]
 pub mod SceneManager;
 
 #[cfg(target_os = "windows")]
@@ -120,11 +120,10 @@ pub fn init() {
     CySpringController::init(image);
     CameraData::init(image);
     RenderingManager::init(image);
-    SceneManager::init(image);
 
     #[cfg(target_os = "windows")]
     {
-        // SceneManager::init(image);
+        SceneManager::init(image);
         PaymentUtility::init(image);
     }
     LowResolutionCamera::init(image);

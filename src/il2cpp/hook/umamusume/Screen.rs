@@ -3,12 +3,13 @@ use crate::il2cpp::{symbols::get_method_addr, types::*};
 #[cfg(target_os = "android")]
 use crate::core::Hachimi;
 
-static mut GET_SCREENORIENTATION_ADDR: usize = 0;
-impl_addr_wrapper_fn!(get_ScreenOrientation, GET_SCREENORIENTATION_ADDR, ScreenOrientation,);
+/* static mut GET_SCREENORIENTATION_ADDR: usize = 0;
+impl_addr_wrapper_fn!(get_ScreenOrientation, GET_SCREENORIENTATION_ADDR, ScreenOrientation,);*/
 
 type GetOriginalScreenWidthFn = extern "C" fn() -> i32;
 type GetOriginalScreenHeightFn = extern "C" fn() -> i32;
 
+/*
 extern "C" fn get_OriginalScreenWidth() -> i32 {
     let w = get_orig_fn!(get_OriginalScreenWidth, GetOriginalScreenWidthFn)();
     let h = get_orig_fn!(get_OriginalScreenHeight, GetOriginalScreenHeightFn)();
@@ -20,6 +21,7 @@ extern "C" fn get_OriginalScreenHeight() -> i32 {
     let h = get_orig_fn!(get_OriginalScreenHeight, GetOriginalScreenHeightFn)();    
     w.max(h)
 }
+*/
 
 #[cfg(target_os = "android")]
 extern "C" fn ChangeScreenOrientationLandscapeAsync_MoveNext(enumerator: *mut Il2CppObject) -> bool {
@@ -31,6 +33,7 @@ extern "C" fn ChangeScreenOrientationLandscapeAsync_MoveNext(enumerator: *mut Il
     moved
 }
 
+/*
 #[cfg(target_os = "android")]
 pub fn start_ChangeScreenOrientationLandscapeAsync() {
     let enumerator = ChangeScreenOrientationLandscapeAsync();
@@ -39,7 +42,7 @@ pub fn start_ChangeScreenOrientationLandscapeAsync() {
     if !ui_manager.is_null() && !enumerator.this.is_null() {
         crate::il2cpp::hook::UnityEngine_CoreModule::MonoBehaviour::StartCoroutine(ui_manager, enumerator.this as *mut Il2CppObject);
     }
-}
+}*/
 
 #[cfg(target_os = "android")]
 extern "C" fn ChangeScreenOrientationPortraitAsync_MoveNext(enumerator: *mut Il2CppObject) -> bool {
@@ -114,11 +117,11 @@ pub fn get_Height_orig() -> i32 {
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, Screen);
 
-    let get_OriginalScreenWidth_addr = get_method_addr(Screen, c"get_OriginalScreenWidth", 0);
-    let get_OriginalScreenHeight_addr = get_method_addr(Screen, c"get_OriginalScreenHeight", 0);
+    // let get_OriginalScreenWidth_addr = get_method_addr(Screen, c"get_OriginalScreenWidth", 0);
+    // let get_OriginalScreenHeight_addr = get_method_addr(Screen, c"get_OriginalScreenHeight", 0);
 
-    new_hook!(get_OriginalScreenWidth_addr, get_OriginalScreenWidth);
-    new_hook!(get_OriginalScreenHeight_addr, get_OriginalScreenHeight);
+    // new_hook!(get_OriginalScreenWidth_addr, get_OriginalScreenWidth);
+    // new_hook!(get_OriginalScreenHeight_addr, get_OriginalScreenHeight);
 
     #[cfg(target_os = "android")]
     {
@@ -138,7 +141,7 @@ pub fn init(umamusume: *const Il2CppImage) {
         new_hook!(get_Height_addr, get_Height);
     }
 
-    unsafe {
+    /* unsafe {
         GET_SCREENORIENTATION_ADDR = get_method_addr(Screen, c"get_ScreenOrientation", 0);
-    }
+    } */
 }
