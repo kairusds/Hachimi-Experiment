@@ -2,9 +2,11 @@ use std::sync::atomic::{self, AtomicBool};
 
 use crate::{
     core::{Hachimi, game::Region},
-    hook::umamusume::Screen,
     il2cpp::{symbols::get_method_addr, types::*}
 };
+
+#[cfg(target_os = "android")]
+use hook::umamusume::Screen;
 
 static SPLASH_SHOWN: AtomicBool = AtomicBool::new(false);
 pub fn is_splash_shown() -> bool {
