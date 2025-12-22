@@ -56,10 +56,10 @@ extern "C" fn ChangeScreenOrientationLandscapeAsync() -> crate::il2cpp::symbols:
 type ChangeScreenOrientationPortraitAsyncFn = extern "C" fn() -> crate::il2cpp::symbols::IEnumerator;
 #[cfg(target_os = "android")]
 extern "C" fn ChangeScreenOrientationPortraitAsync() -> crate::il2cpp::symbols::IEnumerator {
-    let enumerator = get_orig_fn!(ChangeScreenOrientationPortraitAsync, ChangeScreenOrientationPortraitAsyncFn)();
+    let enumerator = get_orig_fn!(ChangeScreenOrientationLandscapeAsync, ChangeScreenOrientationLandscapeAsyncFn)();
     if Hachimi::instance().config.load().ui_scale == 1.0 { return enumerator; }
 
-    if let Err(e) = enumerator.hook_move_next(ChangeScreenOrientationPortraitAsync_MoveNext) {
+    if let Err(e) = enumerator.hook_move_next(ChangeScreenOrientationLandscapeAsync_MoveNext) {
         error!("Failed to hook enumerator: {}", e);
     }
 
