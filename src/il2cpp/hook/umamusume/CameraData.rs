@@ -1,4 +1,4 @@
-use crate::il2cpp::{symbols::{get_method_addr, get_field_from_name, set_field_object_value}, types::*};
+use crate::il2cpp::{symbols::{get_method_addr, get_field_from_name, set_field_value}, types::*};
 
 // Doesn't really do anything????
 
