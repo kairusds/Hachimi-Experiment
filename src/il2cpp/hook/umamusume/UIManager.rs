@@ -1,7 +1,7 @@
 use crate::{
     core::Hachimi,
     il2cpp::{
-        ext::{Il2CppStringExt, StringExt}, hook::UnityEngine_UI::CanvasScaler, symbols::{get_method_addr, get_method_overload_addr, Array, SingletonLike}, types::*
+        ext::{Il2CppStringExt, StringExt}, hook::UnityEngine_UI::CanvasScaler, symbols::{get_method_addr, get_method_overload_addr, get_field_from_name, set_field_value, Array, SingletonLike}, types::*
     }
 };
 
