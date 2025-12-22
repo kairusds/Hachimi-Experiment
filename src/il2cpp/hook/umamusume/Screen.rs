@@ -14,8 +14,15 @@ impl_addr_wrapper_fn!(get_OriginalScreenHeight, GET_ORIGINALSCREENHEIGHT_ADDR, i
 
 #[cfg(target_os = "android")]
 type SetResolutionFn = extern "C" fn(w: i32, h: i32, fullscreen: bool, forceUpdate: bool, skipKeepAspect: bool);
+#[cfg(target_os = "android")]
 fn SetResolution(w: i32, h: i32, fullscreen: bool, forceUpdate: bool, skipKeepAspect: bool) {
     get_orig_fn!(SetResolution, SetResolutionFn)(w.max(h), w.min(h), fullscreen, forceUpdate, skipKeepAspect);
+}
+
+// type get_IsLandscapeMode = extern "C" fn() -> bool;
+#[cfg(target_os = "android")]
+fn get_IsLandscapeMode() -> bool {
+    true
 }
 
 #[cfg(target_os = "android")]
@@ -112,10 +119,12 @@ pub fn init(umamusume: *const Il2CppImage) {
         let ChangeScreenOrientationLandscapeAsync_addr = get_method_addr(Screen, c"ChangeScreenOrientationLandscapeAsync", 0);
         let ChangeScreenOrientationPortraitAsync_addr = get_method_addr(Screen, c"ChangeScreenOrientationPortraitAsync", 0);
         let SetResolution_addr = get_method_addr(Screen, c"SetResolution", 5);
+        let get_IsLandscapeMode_addr = get_method_addr(Screen, c"get_IsLandscapeMode", 0);
 
         new_hook!(ChangeScreenOrientationLandscapeAsync_addr, ChangeScreenOrientationLandscapeAsync);
         new_hook!(ChangeScreenOrientationPortraitAsync_addr, ChangeScreenOrientationPortraitAsync);
         new_hook!(SetResolution_addr, SetResolution);
+        new_hook!(get_IsLandscapeMode_addr, get_IsLandscapeMode);
     }
 
     #[cfg(target_os = "windows")]
