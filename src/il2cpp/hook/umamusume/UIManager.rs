@@ -119,11 +119,13 @@ extern "C" fn BeginOrientation(this: *mut Il2CppObject, isPortrait: bool, bgCame
     get_orig_fn!(BeginOrientation, BeginOrientationFn)(this, false, bgCameraSettings);
 }*/
 
+/*
 #[cfg(target_os = "android")]
 type WaitResizeUIFn = extern "C" fn(this: *mut Il2CppObject, isPortrait: bool, isShowOrientationGuide: bool);
 extern "C" fn WaitResizeUI(this: *mut Il2CppObject, isPortrait: bool, isShowOrientationGuide: bool) {
     get_orig_fn!(WaitResizeUI, WaitResizeUIFn)(this, true, isShowOrientationGuide);
 }
+*/
 
 #[cfg(target_os = "windows")]
 static mut CREATERENDERTEXTUREFROMSCREEN_ADDR: usize = 0;
@@ -149,11 +151,11 @@ pub fn init(umamusume: *const Il2CppImage) {
     {
         let WaitBootSetup_addr = get_method_addr(UIManager, c"WaitBootSetup", 0);
         // let BeginOrientation_addr = get_method_addr(UIManager, c"BeginOrientation", 2);
-        let WaitResizeUI_addr = get_method_addr(UIManager, c"WaitResizeUI", 2);
+        // let WaitResizeUI_addr = get_method_addr(UIManager, c"WaitResizeUI", 2);
 
         new_hook!(WaitBootSetup_addr, WaitBootSetup);
         // new_hook!(BeginOrientation_addr, BeginOrientation);
-        new_hook!(WaitResizeUI_addr, WaitResizeUI);
+        // new_hook!(WaitResizeUI_addr, WaitResizeUI);
     }
 
     unsafe {

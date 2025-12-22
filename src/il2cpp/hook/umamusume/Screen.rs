@@ -25,6 +25,18 @@ fn get_IsLandscapeMode() -> bool {
     true
 }
 
+// type get_ScreenOrientation = extern "C" fn() -> ScreenOrientation;
+#[cfg(target_os = "android")]
+fn get_ScreenOrientation() -> ScreenOrientation {
+    ScreenOrientation_Landscape
+}
+
+// type get_IsVertical = extern "C" fn() -> bool;
+#[cfg(target_os = "android")]
+extern "C" fn get_IsVertical() -> bool {
+    false
+}
+
 #[cfg(target_os = "android")]
 extern "C" fn ChangeScreenOrientationLandscapeAsync_MoveNext(enumerator: *mut Il2CppObject) -> bool {
     use crate::il2cpp::symbols::MoveNextFn;
@@ -63,10 +75,10 @@ extern "C" fn ChangeScreenOrientationLandscapeAsync() -> crate::il2cpp::symbols:
 type ChangeScreenOrientationPortraitAsyncFn = extern "C" fn() -> crate::il2cpp::symbols::IEnumerator;
 #[cfg(target_os = "android")]
 extern "C" fn ChangeScreenOrientationPortraitAsync() -> crate::il2cpp::symbols::IEnumerator {
-    let enumerator = get_orig_fn!(ChangeScreenOrientationLandscapeAsync, ChangeScreenOrientationLandscapeAsyncFn)();
+    let enumerator = get_orig_fn!(ChangeScreenOrientationPortraitAsync, ChangeScreenOrientationPortraitAsyncFn)();
     if Hachimi::instance().config.load().ui_scale == 1.0 { return enumerator; }
 
-    if let Err(e) = enumerator.hook_move_next(ChangeScreenOrientationLandscapeAsync_MoveNext) {
+    if let Err(e) = enumerator.hook_move_next(ChangeScreenOrientationPortraitAsync_MoveNext) {
         error!("Failed to hook enumerator: {}", e);
     }
 
@@ -120,11 +132,13 @@ pub fn init(umamusume: *const Il2CppImage) {
         let ChangeScreenOrientationPortraitAsync_addr = get_method_addr(Screen, c"ChangeScreenOrientationPortraitAsync", 0);
         let SetResolution_addr = get_method_addr(Screen, c"SetResolution", 5);
         let get_IsLandscapeMode_addr = get_method_addr(Screen, c"get_IsLandscapeMode", 0);
+        let get_IsVertical_addr = get_method_addr(Screen, c"get_IsVertical", 0);
 
         new_hook!(ChangeScreenOrientationLandscapeAsync_addr, ChangeScreenOrientationLandscapeAsync);
         new_hook!(ChangeScreenOrientationPortraitAsync_addr, ChangeScreenOrientationPortraitAsync);
         new_hook!(SetResolution_addr, SetResolution);
         new_hook!(get_IsLandscapeMode_addr, get_IsLandscapeMode);
+        new_hook!(get_IsVertical_addr, get_IsVertical);
     }
 
     #[cfg(target_os = "windows")]
