@@ -1,6 +1,4 @@
-use crate::{
-    il2cpp::{symbols::get_method_addr, types::*, hook::UnityEngine_CoreModule::MonoBehaviour
-};
+use crate::il2cpp::{symbols::get_method_addr, types::*, hook::UnityEngine_CoreModule::MonoBehaviour};
 
 #[cfg(target_os = "android")]
 use crate::core::Hachimi;
