@@ -10,7 +10,7 @@ use crate::{
 use crate::core::Hachimi;
 
 static mut GET_SCREENORIENTATION_ADDR: usize = 0;
-impl_addr_wrapper_fn!(get_ScreenOrientation, GET_SCREENORIENTATION_ADDR, ScreenOrientation);
+impl_addr_wrapper_fn!(get_ScreenOrientation, GET_SCREENORIENTATION_ADDR, ScreenOrientation,);
 
 type GetOriginalScreenWidthFn = extern "C" fn() -> i32;
 type GetOriginalScreenHeightFn = extern "C" fn() -> i32;
