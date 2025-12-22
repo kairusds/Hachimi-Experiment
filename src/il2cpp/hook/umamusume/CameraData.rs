@@ -3,8 +3,8 @@ use crate::il2cpp::{symbols::{get_method_addr, get_field_from_name, set_field_va
 // Doesn't really do anything????
 
 static mut REQUESTANTIALIASING_FIELD: *mut FieldInfo = 0 as _;
-pub fn set_RequestAntiAliasing(this: *mut Il2CppObject, value: *mut i32) {
-    set_field_value(this, unsafe { REQUESTANTIALIASING_FIELD }, value);
+pub fn set_RequestAntiAliasing(this: *mut Il2CppObject, value: i32) {
+    set_field_value(this, unsafe { REQUESTANTIALIASING_FIELD }, &value);
 }
 
 // type get_IsCreateAntialiasTextureFn = extern "C" fn(this: *mut Il2CppObject) -> bool;
@@ -24,7 +24,7 @@ type InitializeFn = extern "C" fn(this: *mut Il2CppObject,  rendererIndex: i32);
 extern "C" fn Initialize(this: *mut Il2CppObject, rendererIndex: i32) {
     get_orig_fn!(Initialize, InitializeFn)(this, rendererIndex);
     // AntiAliasLevel.Auto
-    set_RequestAntiAliasing(this, 0 as *mut i32);
+    set_RequestAntiAliasing(this, 0);
     UpdateAntiAliasParameter(this);
 }
 
