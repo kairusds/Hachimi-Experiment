@@ -25,7 +25,11 @@ pub fn force_landscape() {
     let w = get_OriginalScreenWidth();
     let h = get_OriginalScreenHeight();
     SetResolution(w.max(h), w.min(h), true, true, true);
-    InitializeChangeOrientationForUIManager(false, BG_CAMERA_SETTINGS_ADDR);
+
+    unsafe {
+        InitializeChangeOrientationForUIManager(false, BG_CAMERA_SETTINGS_ADDR);
+    }
+
     super::UIManager::apply_ui_scale();
 }
 
