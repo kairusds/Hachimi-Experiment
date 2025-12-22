@@ -18,18 +18,14 @@ impl_addr_wrapper_fn!(get_OriginalScreenWidth, GET_ORIGINALSCREENWIDTH_ADDR, i32
 static mut GET_ORIGINALSCREENHEIGHT_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_OriginalScreenHeight, GET_ORIGINALSCREENHEIGHT_ADDR, i32,);
 
-static mut BG_CAMERA_SETTINGS_ADDR: usize = 0;
+static mut _BGCAMERASETTINGS_FIELD: *mut FieldInfo = std::ptr::null_mut();
 
 #[cfg(target_os = "android")]
 pub fn force_landscape() {
     let w = get_OriginalScreenWidth();
     let h = get_OriginalScreenHeight();
     SetResolution(w.max(h), w.min(h), true, true, true);
-
-    unsafe {
-        InitializeChangeOrientationForUIManager(false, BG_CAMERA_SETTINGS_ADDR);
-    }
-
+    InitializeChangeOrientationForUIManager(false, unsafe { get_static_field_value(_BGCAMERASETTINGS_FIELD) });
     super::UIManager::apply_ui_scale();
 }
 
@@ -159,7 +155,6 @@ pub fn init(umamusume: *const Il2CppImage) {
         SET_RESOLUTION_ADDR = get_method_addr(Screen, c"SetResolution", 5);
         INITIALIZE_CHANGE_ORIENTATION_ADDR = get_method_addr(Screen, c"InitializeChangeOrientationForUIManager", 2);
 
-        let cameraSettings_field = get_field_from_name(Screen, c"_bgCameraSettings");
-        BG_CAMERA_SETTINGS_ADDR = get_field_value(Screen, cameraSettings_field);
+        _BGCAMERASETTINGS_FIELD = get_field_from_name(Screen, c"_bgCameraSettings");
     }
 }
