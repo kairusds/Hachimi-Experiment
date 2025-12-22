@@ -1,7 +1,6 @@
 use crate::{
     hook::{
-        umamusume::UIManager,
-        UnityEngine_CoreModule::MonoBehaviour,
+        UnityEngine_CoreModule::MonoBehaviour
     },
     il2cpp::{symbols::get_method_addr, types::*}
 };
@@ -41,7 +40,7 @@ extern "C" fn ChangeScreenOrientationLandscapeAsync_MoveNext(enumerator: *mut Il
 pub fn start_ChangeScreenOrientationLandscapeAsync() {
     unsafe {
         let enumerator = ChangeScreenOrientationLandscapeAsync();
-        let ui_manager = UIManager::instance();
+        let ui_manager = super::UIManager::instance();
 
         if !ui_manager.is_null() && !enumerator.is_null() {
             MonoBehaviour::StartCoroutine(ui_manager, enumerator as _);
@@ -123,7 +122,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, Screen);
 
     let get_OriginalScreenWidth_addr = get_method_addr(Screen, c"get_OriginalScreenWidth", 0);
-    let get_OriginalScreenHeightaddr = get_method_addr(Screen, c"get_OriginalScreenHeight", 0);
+    let get_OriginalScreenHeight_addr = get_method_addr(Screen, c"get_OriginalScreenHeight", 0);
 
     new_hook!(get_OriginalScreenWidth_addr, get_OriginalScreenWidth);
     new_hook!(get_OriginalScreenHeight_addr, get_OriginalScreenHeight);
