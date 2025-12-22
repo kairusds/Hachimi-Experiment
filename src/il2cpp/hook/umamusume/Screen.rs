@@ -1,26 +1,7 @@
-use crate::il2cpp::{symbols::{get_method_addr, get_field_from_name, get_field_ptr}, types::*};
+use crate::il2cpp::{symbols::get_method_addr, types::*};
 
 #[cfg(target_os = "android")]
 use crate::core::Hachimi;
-
-static mut GET_ORIGINALSCREENWIDTH_ADDR: usize = 0;
-impl_addr_wrapper_fn!(get_OriginalScreenWidth, GET_ORIGINALSCREENWIDTH_ADDR, i32,);
-
-static mut GET_ORIGINALSCREENHEIGHT_ADDR: usize = 0;
-impl_addr_wrapper_fn!(get_OriginalScreenHeight, GET_ORIGINALSCREENHEIGHT_ADDR, i32,);
-
-#[cfg(target_os = "android")]
-type SetResolutionFn = extern "C" fn(w: i32, h: i32, fullscreen: bool, forceUpdate: bool, skipKeepAspect: bool);
-#[cfg(target_os = "android")]
-fn SetResolution(w: i32, h: i32, fullscreen: bool, forceUpdate: bool, skipKeepAspect: bool) {
-    get_orig_fn!(SetResolution, SetResolutionFn)(w.max(h), w.min(h), fullscreen, forceUpdate, skipKeepAspect);
-}
-
-// type get_IsLandscapeMode = extern "C" fn() -> bool;
-#[cfg(target_os = "android")]
-fn get_IsLandscapeMode() -> bool {
-    true
-}
 
 #[cfg(target_os = "android")]
 extern "C" fn ChangeScreenOrientationLandscapeAsync_MoveNext(enumerator: *mut Il2CppObject) -> bool {
@@ -105,23 +86,13 @@ pub fn get_Height_orig() -> i32 {
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, Screen);
 
-    // let get_OriginalScreenWidth_addr = get_method_addr(Screen, c"get_OriginalScreenWidth", 0);
-    // let get_OriginalScreenHeight_addr = get_method_addr(Screen, c"get_OriginalScreenHeight", 0);
-
-    // new_hook!(get_OriginalScreenWidth_addr, get_OriginalScreenWidth);
-    // new_hook!(get_OriginalScreenHeight_addr, get_OriginalScreenHeight);
-
     #[cfg(target_os = "android")]
     {
         let ChangeScreenOrientationLandscapeAsync_addr = get_method_addr(Screen, c"ChangeScreenOrientationLandscapeAsync", 0);
         let ChangeScreenOrientationPortraitAsync_addr = get_method_addr(Screen, c"ChangeScreenOrientationPortraitAsync", 0);
-        let SetResolution_addr = get_method_addr(Screen, c"SetResolution", 5);
-        let get_IsLandscapeMode_addr = get_method_addr(Screen, c"get_IsLandscapeMode", 0);
 
         new_hook!(ChangeScreenOrientationLandscapeAsync_addr, ChangeScreenOrientationLandscapeAsync);
         new_hook!(ChangeScreenOrientationPortraitAsync_addr, ChangeScreenOrientationPortraitAsync);
-        new_hook!(SetResolution_addr, SetResolution);
-        new_hook!(get_IsLandscapeMode_addr, get_IsLandscapeMode);
     }
 
     #[cfg(target_os = "windows")]
@@ -131,11 +102,5 @@ pub fn init(umamusume: *const Il2CppImage) {
 
         new_hook!(get_Width_addr, get_Width);
         new_hook!(get_Height_addr, get_Height);
-    }
-
-    #[cfg(target_os = "android")]
-    unsafe {
-        GET_ORIGINALSCREENWIDTH_ADDR = get_method_addr(Screen, c"get_OriginalScreenWidth", 0);
-        GET_ORIGINALSCREENHEIGHT_ADDR = get_method_addr(Screen, c"get_OriginalScreenHeight", 0);
     }
 }
