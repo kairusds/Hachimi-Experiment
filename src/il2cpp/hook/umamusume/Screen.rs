@@ -158,6 +158,8 @@ pub fn init(umamusume: *const Il2CppImage) {
         GET_ORIGINALSCREENHEIGHT_ADDR = get_method_addr(Screen, c"get_OriginalScreenHeight", 0);
         SET_RESOLUTION_ADDR = get_method_addr(Screen, c"SetResolution", 5);
         INITIALIZE_CHANGE_ORIENTATION_ADDR = get_method_addr(Screen, c"InitializeChangeOrientationForUIManager", 2);
-        BG_CAMERA_SETTINGS_ADDR = get_field_value(Screen, c"_bgCameraSettings");
+
+        let cameraSettings_field = get_field_from_name(Screen, c"_bgCameraSettings");
+        BG_CAMERA_SETTINGS_ADDR = get_field_value(Screen, cameraSettings_field);
     }
 }
