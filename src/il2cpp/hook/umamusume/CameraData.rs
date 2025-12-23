@@ -29,6 +29,8 @@ extern "C" fn Initialize(this: *mut Il2CppObject, rendererIndex: i32) {
     get_orig_fn!(Initialize, InitializeFn)(this, rendererIndex);
     // AntiAliasLevel.Auto
     set_RequestAntiAliasing(this, 0);
+    set_RenderingAntiAliasing(this, 8);
+    set_IsCreateAntialiasTexture(this, true);
     UpdateAntiAliasParameter(this);
 }
 
