@@ -13,9 +13,9 @@ extern "C" fn get_IsCreateAntialiasTexture(this: *mut Il2CppObject) -> bool {
 }
 
 // type get_RenderingAntiAliasingFn = extern "C" fn(this: *mut Il2CppObject) -> i32;
-/* extern "C" fn get_RenderingAntiAliasing(this: *mut Il2CppObject) -> i32 {
+extern "C" fn get_RenderingAntiAliasing(this: *mut Il2CppObject) -> i32 {
     8
-} */
+}
 
 static mut UPDATEANTIALIASPARAMETER_ADDR: usize = 0;
 impl_addr_wrapper_fn!(UpdateAntiAliasParameter, UPDATEANTIALIASPARAMETER_ADDR, (), this: *mut Il2CppObject);
@@ -33,11 +33,11 @@ pub fn init(umamusume: *const Il2CppImage) {
 
     let get_IsCreateAntialiasTexture_addr = get_method_addr(CameraData, c"get_IsCreateAntialiasTexture", 0);
     let Initialize_addr = get_method_addr(CameraData, c"Initialize", 1);
-    // let get_RenderingAntiAliasing_addr = get_method_addr(CameraData, c"get_RenderingAntiAliasing", 0);
+    let get_RenderingAntiAliasing_addr = get_method_addr(CameraData, c"get_RenderingAntiAliasing", 0);
     
     new_hook!(get_IsCreateAntialiasTexture_addr, get_IsCreateAntialiasTexture);
     new_hook!(Initialize_addr, Initialize);
-    // new_hook!(get_RenderingAntiAliasing_addr, get_RenderingAntiAliasing);
+    new_hook!(get_RenderingAntiAliasing_addr, get_RenderingAntiAliasing);
 
     unsafe {
         REQUESTANTIALIASING_FIELD = get_field_from_name(CameraData, c"RequestAntiAliasing");
