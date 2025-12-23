@@ -81,12 +81,12 @@ pub extern "C" fn get_IsMSAA(this: *mut Il2CppObject) -> bool {
 
 type SetResolutionScaleFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
 extern "C" fn set_ResolutionScale(this: *mut Il2CppObject, _value: f32) {
-    get_orig_fn!(set_ResolutionScale, SetResolutionScaleFn)(this, 2.0);
+    get_orig_fn!(set_ResolutionScale, SetResolutionScaleFn)(this, 4.0);
 }
 
 type SetResolutionScale2DFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
 pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, _value: f32) {
-    get_orig_fn!(set_ResolutionScale2D, SetResolutionScale2DFn)(this, 2.0);
+    get_orig_fn!(set_ResolutionScale2D, SetResolutionScale2DFn)(this, 4.0);
 }
 
 type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allowMSAA: bool) -> i32;
