@@ -1,5 +1,7 @@
 use crate::il2cpp::{symbols::{get_method_addr, get_field_from_name, set_field_object_value}, types::*};
 
+// so far these hooks doesn't do anything
+
 // type get_BgSeasonFn = extern "C" fn(this: *mut Il2CppObject) -> i32;
 extern "C" fn get_BgSeason(this: *mut Il2CppObject) -> i32 {
     5 // BgSeason.CherryBlossom

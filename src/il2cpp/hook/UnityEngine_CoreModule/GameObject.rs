@@ -1,11 +1,11 @@
 use widestring::Utf16Str;
-
+use std::ffi::CStr;
 use crate::{
     core::ext::Utf16StringExt,
     il2cpp::{
-        api::il2cpp_resolve_icall,
+        api::{il2cpp_resolve_icall, il2cpp_class_from_system_type},
         hook::{
-            umamusume::FlashActionPlayer, Plugins::AnimateToUnity::AnRoot,
+            umamusume::{CameraData, FlashActionPlayer}, Plugins::AnimateToUnity::AnRoot,
             UnityEngine_AssetBundleModule::AssetBundle
         },
         symbols::{get_method_addr, Array},
@@ -68,8 +68,29 @@ pub fn on_LoadAsset(bundle: *mut Il2CppObject, this: *mut Il2CppObject, name: &U
     }
 }
 
+type Internal_AddComponentWithTypeFn = extern "C" fn(this: *mut Il2CppObject, componentType: *mut Il2CppObject) -> *mut Il2CppObject;
+extern "C" fn Internal_AddComponentWithType(this: *mut Il2CppObject, componentType: *mut Il2CppObject) -> *mut Il2CppObject {
+    let component = get_orig_fn!(Internal_AddComponentWithType, Internal_AddComponentWithTypeFn)(this, componentType);
+
+    unsafe {
+        let target_klass = il2cpp_class_from_system_type(componentType as *mut Il2CppReflectionType);
+        let namespaze = CStr::from_ptr((*target_klass).namespaze).to_string_lossy();
+        let name = CStr::from_ptr((*target_klass).name).to_string_lossy();
+
+        if namespaze.contains("Gallop") && name.contains("CameraData") {
+            CameraData::set_RenderingAntiAliasing(component, 8);
+            CameraData::set_IsCreateAntialiasTexture(component, true);
+            return component;
+        }
+    }
+    component
+}
+
 pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
     get_class_or_return!(UnityEngine_CoreModule, UnityEngine, GameObject);
+
+    let Internal_AddComponentWithType_addr = il2cpp_resolve_icall(c"UnityEngine.GameObject::Internal_AddComponentWithType(System.Type)".as_ptr());
+    new_hook!(Internal_AddComponentWithType_addr, Internal_AddComponentWithType);
 
     unsafe {
         CLASS = GameObject;
