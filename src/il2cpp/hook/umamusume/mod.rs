@@ -52,7 +52,7 @@ mod ApplicationSettingSaveLoader;
 mod LiveTheaterCharaSelect;
 mod LiveTheaterViewController;
 pub mod CySpringController;
-mod CameraData;
+pub mod CameraData;
 mod RenderingManager;
 mod HomeViewController;
 
