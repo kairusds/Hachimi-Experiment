@@ -42,11 +42,11 @@ pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, "Gallop.RenderPipeline", CameraData);
 
     // let get_IsCreateAntialiasTexture_addr = get_method_addr(CameraData, c"get_IsCreateAntialiasTexture", 0);
-    let Initialize_addr = get_method_addr(CameraData, c"Initialize", 1);
+    // let Initialize_addr = get_method_addr(CameraData, c"Initialize", 1);
     // let get_RenderingAntiAliasing_addr = get_method_addr(CameraData, c"get_RenderingAntiAliasing", 0);
     
     // new_hook!(get_IsCreateAntialiasTexture_addr, get_IsCreateAntialiasTexture);
-    new_hook!(Initialize_addr, Initialize);
+    // new_hook!(Initialize_addr, Initialize);
     // new_hook!(get_RenderingAntiAliasing_addr, get_RenderingAntiAliasing);
 
     unsafe {
