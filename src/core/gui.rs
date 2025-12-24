@@ -1126,7 +1126,7 @@ impl ConfigEditor {
 
                 ui.label(t!("config_editor.msaa"));
                 Gui::run_combo(ui, "msaa", &mut config.msaa, &[
-                    (MsaaQuality::Default, &t!("default")),
+                    (MsaaQuality:: Disabled, &t!("default")),
                     (MsaaQuality::_2x, "2x"),
                     (MsaaQuality::_4x, "4x"),
                     (MsaaQuality::_8x, "8x")

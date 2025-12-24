@@ -83,7 +83,7 @@ pub extern "C" fn get_IsMSAA(this: *mut Il2CppObject) -> bool {
     if Hachimi::instance().config.load().msaa != MsaaQuality::Disabled {
         return true;
     }
-    get_orig_fn!(get_IsMSAA, get_IsMSAAFn)(this);
+    get_orig_fn!(get_IsMSAA, get_IsMSAAFn)(this)
 }
 
 type set_ResolutionScaleFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
