@@ -89,19 +89,15 @@ pub extern "C" fn get_IsMSAA(this: *mut Il2CppObject) -> bool {
 type set_ResolutionScaleFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
 extern "C" fn set_ResolutionScale(this: *mut Il2CppObject, value: f32) {
     let render_scale = Hachimi::instance().config.load().render_scale;
-    if render_scale != 1.0 {
-        return get_orig_fn!(set_ResolutionScale, set_ResolutionScaleFn)(this, render_scale);
-    }
-    get_orig_fn!(set_ResolutionScale, set_ResolutionScaleFn)(this, value);
+    let target_value = if render_scale != 1.0 { render_scale } else { value };
+    get_orig_fn!(set_ResolutionScale, set_ResolutionScaleFn)(this, target_value);
 }
 
 type SetResolutionScale2DFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
 pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, value: f32) {
     let render_scale = Hachimi::instance().config.load().render_scale;
-    if render_scale != 1.0 {
-        return get_orig_fn!(set_ResolutionScale, set_ResolutionScaleFn)(this, render_scale);
-    }
-    get_orig_fn!(set_ResolutionScale, set_ResolutionScaleFn)(this, value);
+    let target_value = if render_scale != 1.0 { render_scale } else { value };
+    get_orig_fn!(set_ResolutionScale2D, set_ResolutionScale2DFn)(this, target_value);
 }
 
 type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allowMSAA: bool) -> i32;

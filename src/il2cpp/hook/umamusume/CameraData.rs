@@ -34,8 +34,8 @@ extern "C" fn Initialize(this: *mut Il2CppObject, rendererIndex: i32) {
     if Hachimi::instance().config.load().msaa != MsaaQuality::Disabled {
         // AntiAliasLevel.Auto
         set_RequestAntiAliasing(this, 0);
-        UpdateAntiAliasParameter(this);
     }
+    UpdateAntiAliasParameter(this);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
