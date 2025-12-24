@@ -14,7 +14,7 @@ extern "C" fn GetRenderTextureDescriptor(cameraData: *mut isize, renderPass: *mu
     let msaa = Hachimi::instance().config.load().msaa;
     if msaa != MsaaQuality::Disabled {
         unsafe {
-            (*targetRT).msaaSamples = msaa; 
+            (*targetRT).msaaSamples = msaa as i32;
         }
     }
 }

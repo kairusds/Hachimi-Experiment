@@ -19,7 +19,7 @@ type get_RenderingAntiAliasingFn = extern "C" fn(this: *mut Il2CppObject) -> i32
 extern "C" fn get_RenderingAntiAliasing(this: *mut Il2CppObject) -> i32 {
     let msaa = Hachimi::instance().config.load().msaa;
     if msaa != MsaaQuality::Disabled {
-        return msaa;
+        return msaa as i32;
     }
     get_orig_fn!(get_RenderingAntiAliasing, get_RenderingAntiAliasingFn)(this)
 }

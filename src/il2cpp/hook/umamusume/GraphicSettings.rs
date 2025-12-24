@@ -108,7 +108,7 @@ type Get3DAntiAliasingLevelFn = extern "C" fn(this: *mut Il2CppObject, allowMSAA
 extern "C" fn Get3DAntiAliasingLevel(this: *mut Il2CppObject, allowMSAA: bool) -> i32 {
     let msaa = Hachimi::instance().config.load().msaa;
     if allowMSAA && msaa != MsaaQuality::Disabled {
-        return msaa;
+        return msaa as i32;
     }
     get_orig_fn!(Get3DAntiAliasingLevel, Get3DAntiAliasingLevelFn)(this, allowMSAA)
 }
