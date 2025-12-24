@@ -11,11 +11,8 @@ type GetRenderTextureDescriptorFn = extern "C" fn(cameraData: *mut isize,  rende
 extern "C" fn GetRenderTextureDescriptor(cameraData: *mut isize, renderPass: *mut Il2CppObject, targetRT: *mut RenderTextureDescriptor) {
     get_orig_fn!(GetRenderTextureDescriptor, GetRenderTextureDescriptorFn)(cameraData, renderPass, targetRT);
 
-    let msaa = Hachimi::instance().config.load().msaa;
-    if msaa != MsaaQuality::Disabled {
-        unsafe {
-            (*targetRT).msaaSamples = msaa as i32;
-        }
+    unsafe {
+        (*targetRT).msaaSamples = Hachimi::instance().config.load().msaa as i32;
     }
 }
 
