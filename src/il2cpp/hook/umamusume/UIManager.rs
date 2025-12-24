@@ -1,7 +1,7 @@
 use crate::{
     core::Hachimi,
     il2cpp::{
-        ext::{Il2CppStringExt, StringExt}, hook::UnityEngine_UI::CanvasScaler, symbols::{get_method_addr, get_method_overload_addr, get_field_from_name, set_field_value, Array, SingletonLike}, types::*
+        ext::{Il2CppStringExt, StringExt}, hook::UnityEngine_UI::CanvasScaler, symbols::{get_method_addr, get_method_overload_addr, Array, SingletonLike}, types::*
     }
 };
 
@@ -15,11 +15,6 @@ pub fn instance() -> *mut Il2CppObject {
         return 0 as _;
     };
     singleton.instance()
-}
-
-static mut SAFEAREATYPE_BACKINGFIELD: *mut FieldInfo = 0 as _;
-pub fn set_SafeAreaType_BackingField(this: *mut Il2CppObject, value: i32) {
-    set_field_value(this, unsafe { SAFEAREATYPE_BACKINGFIELD }, &value);
 }
 
 static mut GETCANVASSCALERLIST_ADDR: usize = 0;
@@ -117,19 +112,6 @@ extern "C" fn WaitBootSetup(this: *mut Il2CppObject) -> crate::il2cpp::symbols::
     enumerator
 }
 
-// public SafeAreaType get_SafeAreaType() { }
-// type get_SafeAreaTypeFn = extern "C" fn(this: *mut Il2CppObject) -> i32;
-extern "C" fn get_SafeAreaType(this: *mut Il2CppObject) -> i32 {
-    // SafeAreaType.IPadPro2nd
-    set_SafeAreaType_BackingField(this, 4);
-    4
-}
-
-type WaitResizeUIFn = extern "C" fn(this: *mut Il2CppObject, isPortrait: bool, isShowOrientationGuide: bool);
-extern "C" fn WaitResizeUI(this: *mut Il2CppObject, isPortrait: bool, isShowOrientationGuide: bool) {
-    get_orig_fn!(WaitResizeUI, WaitResizeUIFn)(this, false, isShowOrientationGuide);
-}
-
 #[cfg(target_os = "windows")]
 static mut CREATERENDERTEXTUREFROMSCREEN_ADDR: usize = 0;
 #[cfg(target_os = "windows")]
@@ -140,12 +122,8 @@ pub fn init(umamusume: *const Il2CppImage) {
 
     let SetHeaderTitleText_addr = get_method_overload_addr(UIManager, "SetHeaderTitleText",
         &[Il2CppTypeEnum_IL2CPP_TYPE_STRING, Il2CppTypeEnum_IL2CPP_TYPE_VALUETYPE]);
-    // let WaitResizeUI_addr = get_method_addr(UIManager, c"WaitResizeUI", 2);
-    // let get_SafeAreaType_addr = get_method_addr(UIManager, c"get_SafeAreaType", 0);
 
     new_hook!(SetHeaderTitleText_addr, SetHeaderTitleText);
-    // new_hook!(WaitResizeUI_addr, WaitResizeUI);
-    // new_hook!(get_SafeAreaType_addr, get_SafeAreaType);
 
     #[cfg(target_os = "windows")]
     {
@@ -164,7 +142,6 @@ pub fn init(umamusume: *const Il2CppImage) {
     unsafe {
         CLASS = UIManager;
         GETCANVASSCALERLIST_ADDR = get_method_addr(UIManager, c"GetCanvasScalerList", 0);
-        SAFEAREATYPE_BACKINGFIELD = get_field_from_name(UIManager, c"<SafeAreaType>k__BackingField");
 
         #[cfg(target_os = "windows")]
         { CREATERENDERTEXTUREFROMSCREEN_ADDR = get_method_addr(UIManager, c"CreateRenderTextureFromScreen", 0); }

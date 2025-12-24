@@ -1120,6 +1120,19 @@ impl ConfigEditor {
                 ui.add(egui::Slider::new(&mut config.ui_animation_scale, 0.1..=10.0).step_by(0.1));
                 ui.end_row();
 
+                ui.label(t!("config_editor.render_scale"));
+                ui.add(egui::Slider::new(&mut config.render_scale, 0.1..=10.0).step_by(0.1));
+                ui.end_row();
+
+                ui.label(t!("config_editor.msaa"));
+                Gui::run_combo(ui, "msaa", &mut config.msaa, &[
+                    (MsaaQuality::Default, &t!("default")),
+                    (MsaaQuality::_2x, "2x"),
+                    (MsaaQuality::_4x, "4x"),
+                    (MsaaQuality::_8x, "8x")
+                ]);
+                ui.end_row();
+
                 ui.label(t!("config_editor.graphics_quality"));
                 Gui::run_combo(ui, "graphics_quality", &mut config.graphics_quality, &[
                     (GraphicsQuality::Default, &t!("default")),
