@@ -11,7 +11,6 @@ pub mod RenderTexture;
 pub mod Graphics;
 pub mod Behaviour;
 pub mod Component;
-pub mod MonoBehaviour;
 
 #[cfg(target_os = "windows")]
 pub mod QualitySettings;
@@ -41,7 +40,6 @@ pub fn init() {
     Graphics::init(image);
     Behaviour::init(image);
     Component::init(image);
-    MonoBehaviour::init(image);
 
     #[cfg(target_os = "windows")]
     {
