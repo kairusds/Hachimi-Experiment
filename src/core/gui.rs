@@ -7,7 +7,7 @@ use chrono::{Utc, Datelike};
 
 use crate::il2cpp::{
     hook::{
-        umamusume::{CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::GraphicsQuality, Localize},
+        umamusume::{CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize},
         UnityEngine_CoreModule::Application
     },
     symbols::Thread

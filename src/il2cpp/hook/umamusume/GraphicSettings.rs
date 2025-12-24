@@ -96,7 +96,7 @@ extern "C" fn set_ResolutionScale(this: *mut Il2CppObject, value: f32) {
 }
 
 type SetResolutionScale2DFn = extern "C" fn(this: *mut Il2CppObject, value: f32);
-pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, _value: f32) {
+pub extern "C" fn set_ResolutionScale2D(this: *mut Il2CppObject, value: f32) {
     let render_scale = Hachimi::instance().config.load().render_scale;
     if render_scale != 1.0 {
         return get_orig_fn!(set_ResolutionScale, set_ResolutionScaleFn)(this, render_scale);

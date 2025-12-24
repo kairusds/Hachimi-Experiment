@@ -1,6 +1,10 @@
-use crate::{core::Hachimi, il2cpp::{symbols::get_method_addr, types::*}};
-
-use super::GraphicSettings::MsaaQuality;
+use crate::{
+    core::Hachimi,
+    il2cpp::{
+        symbols::get_method_addr, types::*,
+        hook::umamusume::GraphicSettings::MsaaQuality
+    }
+};
 
 // el magico
 type GetRenderTextureDescriptorFn = extern "C" fn(cameraData: *mut isize,  renderPass: *mut Il2CppObject, targetRT: *mut RenderTextureDescriptor);
