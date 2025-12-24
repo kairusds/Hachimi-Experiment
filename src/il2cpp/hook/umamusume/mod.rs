@@ -52,7 +52,6 @@ mod ApplicationSettingSaveLoader;
 mod LiveTheaterCharaSelect;
 mod LiveTheaterViewController;
 pub mod CySpringController;
-pub mod CameraData;
 mod RenderingManager;
 
 #[cfg(target_os = "windows")]
@@ -118,7 +117,6 @@ pub fn init() {
     LiveTheaterCharaSelect::init(image);
     LiveTheaterViewController::init(image);
     CySpringController::init(image);
-    CameraData::init(image);
     RenderingManager::init(image);
 
     #[cfg(target_os = "windows")]
