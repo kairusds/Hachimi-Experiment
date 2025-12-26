@@ -1102,6 +1102,10 @@ impl ConfigEditor {
                 }
                 ui.end_row();
 
+                ui.label(t!("config_editor.gui_scale"));
+                ui.add(egui::Slider::new(&mut config.gui_scale, 0.25..=2.0).step_by(0.05));
+                ui.end_row();
+
                 #[cfg(target_os = "windows")]
                 {
                     ui.label(t!("config_editor.discord_rpc"));
@@ -1188,15 +1192,11 @@ impl ConfigEditor {
                 Self::option_slider(ui, &t!("config_editor.target_fps"), &mut config.target_fps, 30..=240);
 
                 ui.label(t!("config_editor.virtual_resolution_multiplier"));
-                ui.add(egui::Slider::new(&mut config.virtual_res_mult, 1.0..=4.0).step_by(0.1));
+                ui.add(egui::Slider::new(&mut config.virtual_res_mult, 0.1..=4.0).step_by(0.1));
                 ui.end_row();
 
                 ui.label(t!("config_editor.ui_scale"));
                 ui.add(egui::Slider::new(&mut config.ui_scale, 0.1..=10.0).step_by(0.05));
-                ui.end_row();
-
-                ui.label(t!("config_editor.gui_scale"));
-                ui.add(egui::Slider::new(&mut config.gui_scale, 0.25..=2.0).step_by(0.05));
                 ui.end_row();
 
                 ui.label(t!("config_editor.ui_animation_scale"));
