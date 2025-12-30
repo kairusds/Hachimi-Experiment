@@ -1372,7 +1372,6 @@ impl Window for ConfigEditor {
 
                     egui::ScrollArea::vertical()
                     .id_salt("body_scroll")
-                    .scroll_bar_visibility(egui::ScrollBarVisibility::AlwaysVisible)
                     .show(ui, |ui| {
                         egui::Frame::NONE
                         .inner_margin(egui::Margin::symmetric(8, 0))
