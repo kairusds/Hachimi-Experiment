@@ -20,8 +20,8 @@ extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArr
 
             if songId == 1151 { // legend changer
                 // fill indices 0 to 2 with specific IDs
-                // 1029 amoai, 1115 orfe, 1116 donna
-                let my_ids = [1029, 1115, 1116];
+                // 1129 amoai, 1115 orfe, 1116 donna
+                let my_ids = [1129, 1115, 1116];
                 for i in 0..len.min(3) {
                     *data_ptr.add(i) = my_ids[i];
                 }
@@ -35,9 +35,7 @@ extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArr
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, "Gallop", LiveUtil);
 
-    unsafe {
-        let GetSingCharaIdList_addr = get_method_addr(LiveUtil, c"GetSingCharaIdList", 5);
-        new_hook!(GetSingCharaIdList_addr, GetSingCharaIdList);
-    }
+    let GetSingCharaIdList_addr = get_method_addr(LiveUtil, c"GetSingCharaIdList", 5);
+    new_hook!(GetSingCharaIdList_addr, GetSingCharaIdList);
 }
 
