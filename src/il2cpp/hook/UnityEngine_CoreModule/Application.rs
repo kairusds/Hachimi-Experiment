@@ -11,10 +11,18 @@ pub extern "C" fn set_targetFrameRate(mut value: i32) {
     get_orig_fn!(set_targetFrameRate, SetTargetFrameRateFn)(value);
 }
 
-pub fn init(_UnityEngine_CoreModule: *const Il2CppImage) {
+static mut GET_PERSISTENTDATAPATH_ADDR: usize = 0;
+impl_addr_wrapper_fn!(get_persistentDataPath, GET_PERSISTENTDATAPATH_ADDR, *mut Il2CppString,);
+
+pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
+    get_class_or_return!(UnityEngine_CoreModule, UnityEngine, RenderTexture);
+
     let set_targetFrameRate_addr = il2cpp_resolve_icall(
         c"UnityEngine.Application::set_targetFrameRate(System.Int32)".as_ptr()
     );
-
     new_hook!(set_targetFrameRate_addr, set_targetFrameRate);
+
+    unsafe {
+        GET_PERSISTENTDATAPATH_ADDR = get_method_addr(Application, c"get_persistentDataPath", 0);
+    }
 }

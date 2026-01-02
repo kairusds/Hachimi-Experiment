@@ -4,7 +4,7 @@ use serde::Serialize;
 use textwrap::{core::Word, wrap_algorithms, WordSeparator::UnicodeBreakProperties};
 use unicode_width::UnicodeWidthChar;
 
-use crate::{core::Gui, il2cpp::{ext::{Il2CppStringExt, StringExt}, types::Il2CppString}};
+use crate::{core::Gui, il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::UnityEngine_CoreModule::Application, types::Il2CppString}};
 
 use super::{Error, Hachimi};
 
@@ -521,6 +521,10 @@ pub fn get_file_modified_time<P: AsRef<Path>>(path: P) -> Option<SystemTime> {
     let metadata = std::fs::metadata(path).ok()?;
     if !metadata.is_file() { return None; }
     metadata.modified().ok()
+}
+
+pub fn get_persistent_path() -> String {
+    unsafe { (*Application::get_persistentDataPath()).as_utf16str().to_string() }
 }
 
 // Intentionally dumb png loader implementation that only loads RGBA8 images
