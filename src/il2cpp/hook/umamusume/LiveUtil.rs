@@ -20,8 +20,8 @@ extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArr
 
             if songId == 1151 { // legend changer
                 // fill indices 0 to 2 with specific IDs
-                // 1129 amoai, 1115 orfe, 1116 donna
-                let my_ids = [1129, 1115, 1116];
+                // 1129 amoai, 1116 donna, 1135 stego
+                let my_ids = [1129, 1116, 1135];
                 for i in 0..len.min(3) {
                     *data_ptr.add(i) = my_ids[i];
                 }
