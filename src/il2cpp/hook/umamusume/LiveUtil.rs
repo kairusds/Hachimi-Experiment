@@ -19,13 +19,10 @@ type GetSingCharaIdListFn = extern "C" fn(songId: i32, songPartNumber: i32, allC
 extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArray: *mut Il2CppArray, vocalCharaIdArray: *mut Il2CppArray, shuffledCharaDataList: *mut Il2CppObject) -> *mut Il2CppObject {
     if songId == 1151 { // legend changer
         // fill indices 0 to 2 with specific IDs
-        // 1097 still, 1075 tact, 9002 akikawa?
-        let chara_ids = [1097, 1075, 9002];
         // 1129 amoai, 1116 donna, 1135 stego
         let chara_vo_ids = [1129, 1116, 1135];
 
         unsafe {
-            force_array_ids(allCharaIdArray, &chara_ids);
             force_array_ids(vocalCharaIdArray, &chara_vo_ids);
         }
     }
