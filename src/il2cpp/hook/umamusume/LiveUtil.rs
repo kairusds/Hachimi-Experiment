@@ -33,10 +33,10 @@ extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArr
                 // fill indices 0 to 2 with specific IDs
                 // 1097 still, 1075 tact, 9002 akikawa?
                 let chara_ids = [1097, 1075, 9002];
-                force_array_ids(allCharaIdArray, chara_ids);
+                force_array_ids(allCharaIdArray, &chara_ids);
                 // 1129 amoai, 1116 donna, 1135 stego
                 let chara_vo_ids = [1129, 1116, 1135];
-                force_array_ids(vocalCharaIdArray, chara_vo_ids);
+                force_array_ids(vocalCharaIdArray, &chara_vo_ids);
                 /* let chara_ids = [1129, 1116, 1135];
                 for i in 0..len.min(3) {
                     *data_ptr.add(i) = chara_ids[i];
