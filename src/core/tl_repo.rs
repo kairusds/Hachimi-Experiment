@@ -1,4 +1,4 @@
-use std::{fs, io::{Read, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::max};
+use std::{collections::HashSet, fs, io::{Read, Write}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::max};
 
 use arc_swap::ArcSwap;
 use fnv::FnvHashMap;
@@ -99,6 +99,7 @@ struct RepoCache {
     base_url: String,
     files: FnvHashMap<String, String> // path: hash
 }
+const REPO_EXCLUDES_FILENAME: &str = "excludes.txt";
 
 #[derive(Default)]
 pub struct Updater {
@@ -204,6 +205,18 @@ impl Updater {
             RepoCache::default()
         };
 
+        let excludes_path = hachimi.get_data_path(REPO_EXCLUDES_FILENAME);
+        let excludes: HashSet<String> = if excludes_path.exists() {
+            fs::read_to_string(&excludes_path)
+                .unwrap_or_default()
+                .lines()
+                .map(|l| l.trim().replace("\\", "/")) // normalize to match repo format
+                .filter(|l| !l.is_empty())
+                .collect()
+        } else {
+            HashSet::new()
+        };
+
         let is_new_repo = index.base_url != repo_cache.base_url;
         let mut update_files: Vec<RepoFile> = Vec::new();
         let mut update_size: usize = 0;
@@ -217,8 +230,10 @@ impl Updater {
             let updated = if is_new_repo {
                 // redownload every single file because the directory will be deleted
                 true
-            }
-            else if let Some(hash) = repo_cache.files.get(&file.path) {
+            } else if !pedantic && excludes.contains(&file.path) {
+                // skip excluded files unless pedantic update
+                false
+            } else if let Some(hash) = repo_cache.files.get(&file.path) {
                 // get path or force download if path is invalid
                 let path = ld_dir_path.as_ref().map(|p| p.join(&file.path));
 
