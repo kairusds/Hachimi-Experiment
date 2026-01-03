@@ -220,28 +220,30 @@ impl Updater {
             }
             else if let Some(hash) = repo_cache.files.get(&file.path) {
                 // get path or force download if path is invalid
-                let Some(path) = ld_dir_path.as_ref().map(|p| p.join(&file.path)) else {
-                    true
-                };
+                let path = ld_dir_path.as_ref().map(|p| p.join(&file.path));
 
-                // check if file exists on disk
-                if !path.is_file() {
-                    true
-                } else {
-                    // fast size check to catch interrupted downloads
-                    let metadata = fs::metadata(&path).ok();
-                    let size_mismatch = metadata.map(|m| m.len() as usize != file.size).unwrap_or(true);
-
-                    if size_mismatch {
-                        true // size mismatch -> redownload
-                    } else if hash != &file.hash {
-                        true // index hash changed -> update
-                    } else if pedantic {
-                        // full blake3 integrity check if user requested pedantic update
-                        !file.verify_integrity(&path)
+                if let Some(path) = path {
+                    // file doesn't exist -> download
+                    if !path.is_file() {
+                        true
                     } else {
-                        false // everything matches -> skip
+                        // fast size check to catch interrupted downloads
+                        let metadata = fs::metadata(&path).ok();
+                        let size_mismatch = metadata.map(|m| m.len() as usize != file.size).unwrap_or(true);
+    
+                        if size_mismatch {
+                            true // size mismatch -> redownload
+                        } else if hash != &file.hash {
+                            true // index hash changed -> update
+                        } else if pedantic {
+                            // full blake3 integrity check if user requested pedantic update
+                            !file.verify_integrity(&path)
+                        } else {
+                            false // everything matches -> skip
+                        }
                     }
+                } else {
+                    true // path invalid -> download
                 }
             };
 
