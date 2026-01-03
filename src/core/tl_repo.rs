@@ -146,10 +146,8 @@ impl Updater {
     }
 
     fn should_use_zip_download(file_count: usize, update_size: usize, total_size: usize, base_url: &str) -> bool {
-        let is_github = Self::is_github_hosted(base_url);
-    
         // if it's on GitHub and the update has > 55 files, use ZIP to avoid 403 errors
-        if is_github && file_count > INCREMENTAL_UPDATE_LIMIT_GITHUB {
+        if Self::is_github_hosted(base_url) && file_count > INCREMENTAL_UPDATE_LIMIT_GITHUB {
             return true;
         }
 
