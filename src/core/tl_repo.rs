@@ -245,6 +245,9 @@ impl Updater {
                 } else {
                     true // path invalid -> download
                 }
+            } else {
+                // file doesn't exist in cache at all -> download it
+                true
             };
 
             if updated {
