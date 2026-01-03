@@ -154,7 +154,7 @@ impl Updater {
             INCREMENTAL_UPDATE_LIMIT_GITHUB
         } else {
             INCREMENTAL_UPDATE_LIMIT_CDN
-        }
+        };
 
         if file_count > file_limit {
             if total_size > (update_size * 5) {
