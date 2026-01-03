@@ -119,9 +119,9 @@ struct DownloadJob {
 }
 
 impl DownloadJob {
-    fn new() -> DownloadJob {
+    fn new(agent1: ureq::Agent) -> DownloadJob {
         DownloadJob {
-            agent: ureq::Agent::new(),
+            agent: agent1,
             hasher: blake3::Hasher::new(),
             buffer: [0u8; CHUNK_SIZE]
         }
@@ -144,41 +144,26 @@ impl Updater {
         url.contains("github.io")
     }
 
-    // Determine whether to use ZIP download based on multiple factors
-    fn should_use_zip_download(
-        file_count: usize,
-        update_size: usize,
-        base_url: &str
-    ) -> bool {
-        // Factor 1: Hosting platform determines file count limit
-        let file_limit = if Self::is_github_hosted(base_url) {
-            debug!("GitHub hosting detected, using conservative limit: {}", INCREMENTAL_UPDATE_LIMIT_GITHUB);
-            INCREMENTAL_UPDATE_LIMIT_GITHUB
-        } else {
-            debug!("CDN/Custom hosting detected, using aggressive limit: {}", INCREMENTAL_UPDATE_LIMIT_CDN);
-            INCREMENTAL_UPDATE_LIMIT_CDN
-        };
-
-        // Factor 2: Total size consideration
-        let size_exceeds_threshold = update_size > INCREMENTAL_SIZE_THRESHOLD;
-        
-        if size_exceeds_threshold {
-            debug!("Update size ({} MB) exceeds threshold, preferring ZIP download", 
-                   update_size / (1024 * 1024));
+    fn should_use_zip_download(file_count: usize, update_size: usize, total_size: usize, base_url: &str) -> bool {
+        let is_github = Self::is_github_hosted(base_url);
+        if is_github && file_count > 55 {
+            return true;
         }
 
-        // Decision: Use ZIP if either condition is met
-        let use_zip = file_count > file_limit || size_exceeds_threshold;
-        
-        debug!(
-            "Download strategy decision: files={}, limit={}, size={} MB, use_zip={}", 
-            file_count, 
-            file_limit, 
-            update_size / (1024 * 1024),
-            use_zip
-        );
+        let file_limit = if is_github {
+            INCREMENTAL_UPDATE_LIMIT_GITHUB
+        } else {
+            INCREMENTAL_UPDATE_LIMIT_CDN
+        }
 
-        use_zip
+        if file_count > file_limit {
+            if total_size > (update_size * 5) {
+                return false; 
+            }
+            return true;
+        }
+
+        update_size > INCREMENTAL_SIZE_THRESHOLD
     }
 
     fn check_for_updates_internal(&self, pedantic: bool) -> Result<(), Error> {
@@ -249,6 +234,7 @@ impl Updater {
             let will_use_zip = Self::should_use_zip_download(
                 update_files.len(),
                 update_size,
+                total_size,
                 &index.base_url
             );
 
@@ -406,6 +392,8 @@ impl Updater {
         let fatal_error = Arc::new(Mutex::new(None::<Error>));
         let stop_signal = Arc::new(AtomicBool::new(false));
 
+        let shared_agent = ureq::Agent::new();
+
         let (sender, receiver) = mpsc::channel::<RepoFile>();
         let receiver = Arc::new(Mutex::new(receiver));
 
@@ -421,13 +409,15 @@ impl Updater {
             let stop_signal_clone = Arc::clone(&stop_signal);
             let receiver_clone = Arc::clone(&receiver);
 
+            let thread_agent = shared_agent.clone();
+
             let handle = thread::Builder::new()
                 .name("incremental_downloader".into())
                 .spawn_with_priority(ThreadPriority::Min, move |result| {
                     if result.is_err() {
                         warn!("Failed to set background thread priority for incremental downloader.");
                     }
-                    let mut job = DownloadJob::new();
+                    let mut job = DownloadJob::new(thread_agent);
 
                     while let Ok(repo_file) = receiver_clone.lock().unwrap().recv() {
                         if stop_signal_clone.load(atomic::Ordering::Relaxed) { break; }
