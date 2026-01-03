@@ -49,6 +49,18 @@ impl RepoFile {
         #[cfg(not(target_os = "windows"))]
         return root_dir.join(&self.path);
     }
+    fn verify_integrity(&self, full_path: &Path) -> bool {
+        let Ok(mut file) = fs::File::open(full_path) else { return false };
+        let mut hasher = blake3::Hasher::new();
+        let mut buffer = [0u8; 8192];
+        
+        while let Ok(n) = file.read(&mut buffer) {
+            if n == 0 { break; }
+            hasher.update(&buffer[..n]);
+        }
+        
+        hasher.finalize().to_hex().as_str() == self.hash
+    }
 }
 
 #[derive(Clone)]
@@ -134,7 +146,6 @@ impl Updater {
         });
     }
 
-    // Determine if a URL is hosted on GitHub
     fn is_github_hosted(url: &str) -> bool {
         url.contains("github.com") || 
         url.contains("githubusercontent.com") ||
@@ -208,17 +219,30 @@ impl Updater {
                 true
             }
             else if let Some(hash) = repo_cache.files.get(&file.path) {
-                if hash == &file.hash {
-                    // download if the file doesn't actually exist on disk (in pedantic mode)
-                    pedantic && ld_dir_path.as_ref().map(|p| !p.join(&file.path).is_file()).unwrap_or(true)
-                }
-                else {
+                // get path or force download if path is invalid
+                let Some(path) = ld_dir_path.as_ref().map(|p| p.join(&file.path)) else {
                     true
+                };
+
+                // check if file exists on disk
+                if !path.is_file() {
+                    true
+                } else {
+                    // fast size check to catch interrupted downloads
+                    let metadata = fs::metadata(&path).ok();
+                    let size_mismatch = metadata.map(|m| m.len() as usize != file.size).unwrap_or(true);
+
+                    if size_mismatch {
+                        true // size mismatch -> redownload
+                    } else if hash != &file.hash {
+                        true // index hash changed -> update
+                    } else if pedantic {
+                        // full blake3 integrity check if user requested pedantic update
+                        !file.verify_integrity(&path)
+                    } else {
+                        false // everything matches -> skip
+                    }
                 }
-            }
-            else {
-                // file doesnt exist yet, download it
-                true
             };
 
             if updated {
