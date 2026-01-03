@@ -102,13 +102,10 @@ static NUM_THREADS: Lazy<usize> = Lazy::new(|| {
     max(1, parallelism / 2)
 });
 
-// Hybrid update limits based on hosting platform
-const INCREMENTAL_UPDATE_LIMIT_GITHUB: usize = 50;  // Conservative for GitHub
-const INCREMENTAL_UPDATE_LIMIT_CDN: usize = 200;    // Aggressive for CDN/custom servers
-const INCREMENTAL_SIZE_THRESHOLD: usize = 50 * 1024 * 1024; // 50MB
-
-// Warn user if ZIP download is N times larger than actual changes
-const ZIP_SIZE_WARNING_RATIO: f64 = 2.0;  // Warn if ZIP is 2x+ larger than changes
+const INCREMENTAL_UPDATE_LIMIT_GITHUB: usize = 55; 
+const INCREMENTAL_UPDATE_LIMIT_GITLAB: usize = 250; 
+const INCREMENTAL_SIZE_RATIO_THRESHOLD: f64 = 0.8;
+const ZIP_SIZE_WARNING_RATIO: f64 = 1.2;  // Warn if ZIP is 1.2x larger than changes
 
 const MIN_CHUNK_SIZE: u64 = 1024 * 1024 * 5;
 
@@ -144,26 +141,30 @@ impl Updater {
         url.contains("github.io")
     }
 
+    fn is_gitlab_hosted(url: &str) -> bool {
+        url.contains("gitlab.com") || url.contains("gitlab.io")
+    }
+
     fn should_use_zip_download(file_count: usize, update_size: usize, total_size: usize, base_url: &str) -> bool {
         let is_github = Self::is_github_hosted(base_url);
-        if is_github && file_count > 55 {
+    
+        // if it's on GitHub and the update has > 55 files, use ZIP to avoid 403 errors
+        if is_github && file_count > INCREMENTAL_UPDATE_LIMIT_GITHUB {
             return true;
         }
 
-        let file_limit = if is_github {
-            INCREMENTAL_UPDATE_LIMIT_GITHUB
-        } else {
-            INCREMENTAL_UPDATE_LIMIT_CDN
-        };
-
-        if file_count > file_limit {
-            if total_size > (update_size * 5) {
-                return false; 
-            }
+        // for GitLab, 250 file limit is a safe safe buffer below the raw endpoint cap of 300
+        if Self::is_gitlab_hosted(base_url) && file_count > INCREMENTAL_UPDATE_LIMIT_GITLAB {
             return true;
         }
 
-        update_size > INCREMENTAL_SIZE_THRESHOLD
+        // as long as the update is less than 80% of the total size of the repo, keep it incremental
+        if (update_size as f64) < (total_size as f64 * INCREMENTAL_SIZE_RATIO_THRESHOLD) {
+            return false; 
+        }
+
+        // if the update >80% of the repo size, just grab the ZIP
+        true
     }
 
     fn check_for_updates_internal(&self, pedantic: bool) -> Result<(), Error> {
@@ -258,7 +259,7 @@ impl Updater {
             if let Some(mutex) = Gui::instance() {
                 // Determine the dialog message based on download strategy
                 let dialog_message = if will_use_zip && update_size > 0 {
-                    let size_ratio = total_size as f64 / update_size as f64;
+                    let size_ratio = total_size as f64 / update_size.max(1) as f64;
                     
                     if size_ratio >= ZIP_SIZE_WARNING_RATIO {
                         // Warn user about larger ZIP download
