@@ -227,25 +227,26 @@ impl Updater {
                 continue;
             }
 
+            let path = ld_dir_path.as_ref().map(|p| p.join(&file.path));
+            let exists = path.as_ref().map(|p| p.is_file()).unwrap_or(false);
+
             let updated = if is_new_repo {
                 // redownload every single file because the directory will be deleted
                 true
-            } else if !pedantic && excludes.contains(&file.path) {
-                // skip excluded files unless pedantic update
+            } else if !pedantic && exists && excludes.contains(&file.path) {
+                // skip excluded files unless pedantic update (only if the file actually exists)
                 false
             } else if let Some(hash) = repo_cache.files.get(&file.path) {
                 // get path or force download if path is invalid
-                let path = ld_dir_path.as_ref().map(|p| p.join(&file.path));
-
                 if let Some(path) = path {
                     // file doesn't exist -> download
-                    if !path.is_file() {
+                    if !exists {
                         true
                     } else {
                         // fast size check to catch interrupted downloads
                         let metadata = fs::metadata(&path).ok();
                         let size_mismatch = metadata.map(|m| m.len() as usize != file.size).unwrap_or(true);
-    
+        
                         if size_mismatch {
                             true // size mismatch -> redownload
                         } else if hash != &file.hash {
