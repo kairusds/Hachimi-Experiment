@@ -68,10 +68,7 @@ notification:
   no_updates: "Tidak ada pembaruan."
   press_to_set_menu_key: "Tekan tombol di jendela gim untuk atur hotkey."
   menu_open_key_set: "Hotkey buka menu diatur ke %{key}"
-<<<<<<< HEAD
   ipc_softreset_exec: "Kendali IPC soft-reset dijalankan"
-=======
->>>>>>> 045b73f (Add Indonesian translation)
 
 first_time_setup:
   title: "Pengaturan Pertama"
