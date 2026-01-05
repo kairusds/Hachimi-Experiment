@@ -234,7 +234,7 @@ impl Updater {
                 // redownload every single file because the directory will be deleted
                 true
             } else if !pedantic && exists && excludes.contains(&file.path) {
-                // skip excluded files unless pedantic update (only if the file actually exists)
+                // skip excluded file unless pedantic update or the file doesn't exist in the system
                 false
             } else if let Some(hash) = repo_cache.files.get(&file.path) {
                 // get path or force download if path is invalid
