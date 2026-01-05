@@ -242,8 +242,9 @@ impl Hachimi {
             // Don't auto check for tl updates if it's not up to date
             #[cfg(target_os = "windows")]
             self.updater.clone().check_for_updates(|new_update| {
-                if !new_update && !self.config.load().translator_mode {
-                    Hachimi::instance().tl_updater.clone().check_for_updates(false);
+                let hachimi = Hachimi::instance();
+                if !new_update && !hachimi.config.load().translator_mode {
+                    hachimi.tl_updater.clone().check_for_updates(false);
                 }
             });
         }
