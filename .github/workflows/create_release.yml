@@ -81,11 +81,23 @@ jobs:
           cd ..
           move Installer\build\x86_64-pc-windows-msvc\release\hachimi_installer.exe build
 
+      - name: Get checksums for Windows binaries
+        shell: pwsh
+        run: |
+          cargo install b3sum
+          $DLL_HASH = (b3sum build/hachimi.dll).Split()[0]
+          $EXE_HASH = (b3sum build/hachimi_installer.exe).Split()[0]
+          @{
+            "hachimi.dll" = $DLL_HASH
+            "hachimi_installer.exe" = $EXE_HASH
+          } | ConvertTo-Json | Out-File -Encoding utf8 build/blake3.json
+
       - name: Upload Windows binaries
         uses: actions/upload-artifact@v4
         with:
           name: windows
           path: |
+            build/blake3.json
             build/hachimi.dll
             build/hachimi_installer.exe
 
