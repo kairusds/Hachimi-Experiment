@@ -84,7 +84,7 @@ jobs:
       - name: Get checksums for Windows binaries
         shell: pwsh
         run: |
-          cargo install b3sum
+          apt install -y b3sum
           $DLL_HASH = (b3sum build/hachimi.dll).Split()[0]
           $EXE_HASH = (b3sum build/hachimi_installer.exe).Split()[0]
           @{
