@@ -46,11 +46,11 @@ impl Updater {
             mutex.lock().unwrap().show_notification(&t!("notification.checking_for_updates"));
         }
 
-        let latest = match http::get_json::<Release>(format!("{}/{}/releases/latest", GITHUB_API, REPO_PATH)) {
+        let latest = match http::get_json::<Release>(&format!("{}/{}/releases/latest", GITHUB_API, REPO_PATH)) {
             Ok(res) => res,
             Err(e) => {
                 warn!("GitHub update check failed, trying Codeberg: {}", e);
-                http::get_json::<Release>(format!("{}/{}/releases/latest", CODEBERG_API, REPO_PATH))?
+                http::get_json::<Release>(&format!("{}/{}/releases/latest", CODEBERG_API, REPO_PATH))?
             }
         };
 
