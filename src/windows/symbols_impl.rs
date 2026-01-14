@@ -243,7 +243,6 @@ const SYMBOL_LIST: &[&'static str] = &[
     "il2cpp_unity_set_android_network_up_state_func"
 ];
 
-const START_RVA: u32 = 0x782c92;
 fn generate_symbol_map() -> Result<FnvHashMap<&'static str, CString>, Error> {
     let mut map = FnvHashMap::with_capacity(SYMBOL_LIST.len());
 
@@ -253,17 +252,51 @@ fn generate_symbol_map() -> Result<FnvHashMap<&'static str, CString>, Error> {
     let pe = PeFile::from_bytes(&file_map)?;
     let image = file_map.as_ref();
 
-    let mut rva = START_RVA;
+    let scanned_rva = find_registration_rva(pe).ok_or_else(|| Error::RuntimeError("Could not find IL2CPP registration table".into()))?;
+
+    let mut rva = scanned_rva + 3;
+    let start_rva_for_stride = rva;
+
     for symbol in SYMBOL_LIST {
         let offset = pe.rva_to_file_offset(rva)?;
         let rip_offset = u32::from_le_bytes(image[offset..offset+4].try_into().unwrap());
         let name_offset = pe.rva_to_file_offset(rva + 0x4 + rip_offset)?;
         let name = unsafe { CStr::from_ptr(image[name_offset..].as_ptr() as _) };
         map.insert(*symbol, name.to_owned());
-        rva += if rva == START_RVA { 0x28 } else { 0x26 };
+
+        rva += if rva == start_rva_for_stride { 0x28 } else { 0x26 };
     }
 
     Ok(map)
+}
+
+fn find_registration_rva(view: PeFile) -> Option<u32> {
+    let section = view.section_headers()
+        .iter()
+        .find(|s| s.name_bytes().starts_with(b".text"))?;
+
+    let code = view.get_section_bytes(section).ok()?;
+    let section_rva = section.VirtualAddress;
+
+    let pattern = [0x48, 0x8d, 0x15]; 
+    let mut hits = Vec::new();
+
+    for i in 0..(code.len() - 3) {
+        if code[i..i+3] == pattern {
+            hits.push(section_rva + i as u32);
+        }
+    }
+
+    for i in 0..hits.len().saturating_sub(10) {
+        let d1 = hits[i+1] - hits[i];
+        let d2 = hits[i+2] - hits[i+1];
+        let d3 = hits[i+3] - hits[i+2];
+
+        if (d1 == 0x28 || d1 == 0x26) && (d2 == 0x26) && (d3 == 0x26) {
+            return Some(hits[i]);
+        }
+    }
+    None
 }
 
 impl From<pelite::Error> for Error {
