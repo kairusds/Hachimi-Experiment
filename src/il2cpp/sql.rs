@@ -66,7 +66,7 @@ impl CharacterData {
         }
     
         // unknown character name
-        "???"
+        "???".to_string()
     }
 }
 
