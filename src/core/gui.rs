@@ -1625,7 +1625,7 @@ impl LiveVocalsSwapWindow {
 impl Window for LiveVocalsSwapWindow {
     fn run(&mut self, ctx: &egui::Context) -> bool {
         let mut open = true;
-        let mut open2 = true
+        let mut open2 = true;
 
         let chara_data_guard = Hachimi::instance().chara_data.load();
         let mut chara_choices: Vec<(i32, &str)> = Vec::new();
