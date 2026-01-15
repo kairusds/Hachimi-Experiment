@@ -16,6 +16,27 @@ static mut SOFTWARERESET_ADDR: usize = 0;
 impl_addr_wrapper_fn!(SoftwareReset, SOFTWARERESET_ADDR, (), this: *mut Il2CppObject);
 
 pub fn on_game_initialized() {
+    let hachimi = Hachimi::instance();
+    hachimi.init_character_data();
+    if let Some(data) = hachimi.chara_data.load().as_ref() {
+        info!(
+            "Character Database Initialized: {} IDs found, {} Names mapped.",
+            data.chara_ids.len(),
+            data.chara_names.len()
+        );
+        if data.exists(1001) {
+            info!("Test Lookup (1001): {}", data.get_name(1001));
+        }
+    } else {
+        error!("Character database is empty after initialization!");
+    }
+    let sample: String = data.chara_ids.iter()
+        .take(5)
+        .map(|&id| format!("{}: {}", id, data.get_name(id)))
+        .collect::<Vec<_>>()
+        .join(", ");
+    info!("Sample Character Data: [{}]", sample);
+
     #[cfg(target_os = "windows")]
     super::UIManager::apply_ui_scale();
 }

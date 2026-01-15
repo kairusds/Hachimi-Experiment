@@ -5,7 +5,7 @@ use once_cell::sync::OnceCell;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use textwrap::wrap_algorithms::Penalties;
 
-use crate::{core::plugin_api::Plugin, gui_impl, hachimi_impl, il2cpp::{self, hook::umamusume::{CySpringController::SpringUpdateMode, GameSystem}}};
+use crate::{core::plugin_api::Plugin, gui_impl, hachimi_impl, il2cpp::{self, hook::umamusume::{CySpringController::SpringUpdateMode, GameSystem}, sql::CharacterData}};
 
 use super::{game::{Game, Region}, ipc, plurals, template, template_filters, tl_repo, utils, Error, Interceptor};
 
@@ -18,6 +18,9 @@ pub struct Hachimi {
     // Localized data
     pub localized_data: ArcSwap<LocalizedData>,
     pub tl_updater: Arc<tl_repo::Updater>,
+
+    // Character data
+    pub chara_data: ArcSwap<Option<CharacterData>>,
 
     // Shared properties
     pub game: Game,
@@ -177,6 +180,20 @@ impl Hachimi {
             }
         };
         self.localized_data.store(Arc::new(new_data));
+    }
+
+    pub fn init_character_data(&self) {
+        if self.chara_data.load().is_none() {
+            match CharacterData::load_from_db() {
+                Ok(data) => {
+                    self.chara_data.store(Arc::new(Some(data)));
+                    info!("Character database loaded successfully.");
+                }
+                Err(e) => {
+                    error!("Failed to load character database: {}", e);
+                }
+            }
+        }
     }
 
     pub fn on_dlopen(&self, filename: &str, handle: usize) -> bool {

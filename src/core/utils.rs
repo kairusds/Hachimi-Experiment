@@ -524,7 +524,7 @@ pub fn get_file_modified_time<P: AsRef<Path>>(path: P) -> Option<SystemTime> {
 }
 
 pub fn get_persistent_path() -> String {
-    unsafe { (*Application::get_persistentDataPath()).as_utf16str().to_string() }
+    unsafe { (*Application::get_persistentDataPath()).as_utf16str() }.to_string()
 }
 
 // Intentionally dumb png loader implementation that only loads RGBA8 images

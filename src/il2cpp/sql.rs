@@ -1,11 +1,63 @@
 use std::{ptr, sync::atomic::{self, AtomicPtr}};
-
+use rusqlite::{Connection, OpenFlags};
+use fnv::{FnvHashMap, FnvHashSet};
 use sqlparser::ast;
-
 use crate::{
-    core::{utils, Hachimi},
+    core::{utils::{get_persistent_path, fit_text, wrap_fit_text}, Hachimi},
     il2cpp::{ext::StringExt, hook::LibNative_Runtime, types::{Il2CppObject, Il2CppString}}
 };
+
+// public API
+pub struct CharacterData {
+    pub chara_ids: FnvHashSet<i32>,
+    pub chara_names: FnvHashMap<i32, String>
+}
+
+impl CharacterData {
+    pub fn load_from_db() -> Result<Self, rusqlite::Error> {
+        let mut chara_ids = FnvHashSet::default();
+        let mut chara_names = FnvHashMap::default();
+
+        let db_path = format!("{}/master/master.mdb", utils::get_persistent_path());
+        
+        // open read-only + no mutex for maximum performance and zero game interference
+        let conn = Connection::open_with_flags(
+            &db_path, 
+            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX
+        )?;
+
+        // query joining chara_data (for the IDs) and text_data (for the names)
+        let mut stmt = conn.prepare(
+            "SELECT C.id, T.text 
+             FROM chara_data AS C 
+             JOIN text_data AS T ON C.id = T.\"index\" 
+             WHERE T.id = 6"
+        )?;
+
+        let rows = stmt.query_map([], |row| {
+            Ok((
+                row.get::<_, i32>(0)?, // id
+                row.get::<_, String>(1)? // name
+            ))
+        })?;
+
+        for row in rows.flatten() {
+            let (id, name) = row;
+            chara_ids.insert(id);
+            chara_names.insert(id, name);
+        }
+
+        Ok(CharacterData { chara_ids, chara_names })
+    }
+
+    pub fn exists(&self, id: i32) -> bool {
+        self.chara_ids.contains(&id)
+    }
+
+    pub fn get_name(&self, id: i32) -> &str {
+        self.chara_names.get(&id).map(|s| s.as_str()).unwrap_or("???")
+    }
+}
 
 // All of this add column/param stuff could be simplified to two hash maps, but that's overkill.
 pub trait SelectQueryState {
