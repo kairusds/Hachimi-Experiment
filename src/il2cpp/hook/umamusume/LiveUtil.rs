@@ -9,22 +9,21 @@ unsafe fn force_array_ids(array_ptr: *mut Il2CppArray, ids: &[i32]) {
     }
 
     let len = (*array_ptr).max_length as usize;
+    // Il2CppArray data starts right after the header (which is why it needs to add 1)
     let data_ptr = array_ptr.add(1) as *mut i32;
     for i in 0..len.min(ids.len()) {
+        if ids[i] == 0 {
+            continue;
+        }
         *data_ptr.add(i) = ids[i];
     }
 }
 
 type GetSingCharaIdListFn = extern "C" fn(songId: i32, songPartNumber: i32, allCharaIdArray: *mut Il2CppArray, vocalCharaIdArray: *mut Il2CppArray, shuffledCharaDataList: *mut Il2CppObject) -> *mut Il2CppObject;
 extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArray: *mut Il2CppArray, vocalCharaIdArray: *mut Il2CppArray, shuffledCharaDataList: *mut Il2CppObject) -> *mut Il2CppObject {
-    if songId == 1151 { // legend changer
-        // fill indices 0 to 2 with specific IDs
-        // 1129 amoai, 1116 donna, 1135 stego
-        let chara_vo_ids = [1129, 1116, 1135];
-
-        unsafe {
-            force_array_ids(vocalCharaIdArray, &chara_vo_ids);
-        }
+    let chara_vo_ids = Hachimi::instance().config.load().live_vocals_swap;
+    unsafe {
+        force_array_ids(vocalCharaIdArray, &chara_vo_ids);
     }
 
     get_orig_fn!(GetSingCharaIdList, GetSingCharaIdListFn)(songId, songPartNumber, allCharaIdArray, vocalCharaIdArray, shuffledCharaDataList)

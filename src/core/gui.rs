@@ -1628,21 +1628,25 @@ impl Window for LiveVocalsSwapWindow {
         let mut open2 = true;
 
         let chara_data_guard = Hachimi::instance().chara_data.load();
-        let mut chara_choices: Vec<(i32, &str)> = Vec::new();
-        // this leaks the string so it lives forever, fixing the borrow checker error
-        chara_choices.push((0, Box::leak(t!("default").into_owned().into_boxed_str())));
+        let mut chara_choices: Vec<(i32, String)> = Vec::new();
+        chara_choices.push((0, t!("default").into_owned()));
 
         if let Some(data) = chara_data_guard.as_ref() {
-            for (&id, name) in &data.chara_names {
-                chara_choices.push((id, name.as_str()));
+            for &id in &data.chara_ids {
+                chara_choices.push((id, data.get_name(id)));
             }
         }
         chara_choices.sort_by_key(|choice| choice.0);
 
+        let combo_items: Vec<(i32, &str)> = chara_choices
+            .iter()
+            .map(|&(id, ref name)| (id, name.as_str()))
+            .collect();
+
         new_window(ctx, self.id, t!("config_editor.live_vocals_swap"))
         .open(&mut open)
         .show(ctx, |ui| {
-            egui::Grid::new("vocals_swap_grid").show(ui, |ui| {
+            egui::Grid::new(self.id.with("live_vocals_swap_grid")).show(ui, |ui| {
                 for i in 0..6 {
                     ui.label(t!("config_editor.live_vocals_swap_character_n", index = i + 1));
                     Gui::run_combo(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &chara_choices);
