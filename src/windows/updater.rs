@@ -12,13 +12,9 @@ use windows::{
     }
 };
 
-use crate::core::{gui::{PersistentMessageWindow, SimpleYesNoDialog}, http, Error, Gui, Hachimi};
+use crate::core::{gui::{PersistentMessageWindow, SimpleYesNoDialog}, hachimi::{REPO_PATH, CODEBERG_API, GITHUB_API}, http, Error, Gui, Hachimi};
 
 use super::{main::DLL_HMODULE, utils};
-
-const REPO_PATH: &str = "kairusds/Hachimi-Experiment";
-const GITHUB_API: &str = "https://api.github.com/repos";
-const CODEBERG_API: &str = "https://codeberg.org/api/v1/repos";
 
 #[derive(Default)]
 pub struct Updater {

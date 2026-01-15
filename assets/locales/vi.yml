@@ -8,6 +8,7 @@ android:
 
 splash_sub: "\uf015 Nhấn nút %{open_key_str} để mở menu."
 loading_label: "Đang tải..."
+open: "Mở"
 cancel: "Hủy"
 save: "Lưu"
 done: "Hoàn tất"
@@ -85,6 +86,8 @@ about:
   title: "Giới thiệu"
   copyright: "© 2024-%{year} LeadRDRK, kairusds and contributors"
   view_license: "Xem bản quyền"
+  open_website: "Mở trang web"
+  view_source_code: "Xem mã nguồn"
   check_for_updates: "Kiểm tra cập nhật"
 
 license:
@@ -144,6 +147,8 @@ config_editor:
   menu_open_key_set: "Nhấn để thiết lập"
   render_scale: "Tỷ lệ kết xuất"
   aniso_level: "Lọc dị hướng"
+  live_vocals_swap: "Thay đổi giọng hát trực tiếp"
+  live_vocals_swap_character_n: "Nhân vật %{index}"
 
 tl_update_dialog:
   title: "Bản cập nhật mới"

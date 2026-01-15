@@ -8,6 +8,7 @@ android:
 
 splash_sub: "\uf015 按 %{open_key_str} 打开菜单"
 loading_label: "加载中..."
+open: "打开"
 cancel: "取消"
 save: "保存"
 done: "完成"
@@ -95,6 +96,8 @@ about:
   title: "关于"
   copyright: "© 2024-%{year} LeadRDRK, kairusds 及贡献者"
   view_license: "查看许可证"
+  open_website: "打开网站"
+  view_source_code: "查看源代码"
   check_for_updates: "检查更新"
 
 license:
@@ -162,6 +165,8 @@ config_editor:
   menu_open_key_set: "按下以设置"
   render_scale: "渲染比例"
   aniso_level: "各向异性过滤"
+  live_vocals_swap: "Live演唱人声切换"
+  live_vocals_swap_character_n: "角色 %{index}"
 
 tl_update_dialog:
   title: "新翻译更新可用"

@@ -8,6 +8,7 @@ android:
 
 splash_sub: "\uf015 Tekan %{open_key_str} untuk buka menu."
 loading_label: "Memuat..."
+open: "Buka"
 cancel: "Batal"
 save: "Simpan"
 done: "Selesai"
@@ -95,6 +96,8 @@ about:
   title: "Tentang"
   copyright: "© 2024-%{year} LeadRDRK, kairusds dan kontributor"
   view_license: "Lihat lisensi"
+  open_website: "Buka situs web"
+  view_source_code: "Lihat kode sumber"
   check_for_updates: "Cek pembaruan"
 
 license:
@@ -165,6 +168,8 @@ config_editor:
   msaa: "MSAA"
   render_scale: "Skala render"
   aniso_level: "Filter Anisotropik"
+  live_vocals_swap: "Tukar Vokal Langsung"
+  live_vocals_swap_character_n: "Karakter %{index}"
 
 tl_update_dialog:
   title: "Pembaruan Translasi Tersedia"

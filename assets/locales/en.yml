@@ -8,6 +8,7 @@ android:
 
 splash_sub: "\uf015 Press %{open_key_str} to open menu."
 loading_label: "Loading..."
+open: "Open"
 cancel: "Cancel"
 save: "Save"
 done: "Done"
@@ -95,6 +96,8 @@ about:
   title: "About"
   copyright: "© 2024-%{year} LeadRDRK, kairusds and contributors"
   view_license: "View license"
+  open_website: "Open website"
+  view_source_code: "View source code"
   check_for_updates: "Check for updates"
 
 license:
@@ -165,6 +168,8 @@ config_editor:
   msaa: "MSAA"
   render_scale: "Render Scale"
   aniso_level: "Anisotropic Filtering"
+  live_vocals_swap: "Live Vocals Swap"
+  live_vocals_swap_character_n: "Character %{index}"
 
 tl_update_dialog:
   title: "New update available"

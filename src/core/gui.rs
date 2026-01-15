@@ -7,6 +7,7 @@ use rust_i18n::t;
 use chrono::{Utc, Datelike};
 
 use crate::il2cpp::{
+    ext::StringExt,
     hook::{
         umamusume::{CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize},
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
@@ -20,7 +21,13 @@ use crate::il2cpp::hook::umamusume::WebViewManager;
 #[cfg(target_os = "windows")]
 use crate::il2cpp::hook::UnityEngine_CoreModule::QualitySettings;
 
-use super::{hachimi::{self, Language}, http::AsyncRequest, tl_repo::{self, RepoInfo}, utils, Hachimi};
+use super::{
+    hachimi::{self, Language, REPO_PATH, WEBSITE_URL},
+    http::AsyncRequest,
+    tl_repo::{self, RepoInfo},
+    utils,
+    Hachimi
+};
 
 macro_rules! add_font {
     ($fonts:expr, $family_fonts:expr, $filename:literal) => {
@@ -110,8 +117,7 @@ impl Gui {
 
         let default_style = context.style().as_ref().clone();
 
-        let mut fps_value = hachimi.target_fps.load(atomic::Ordering::Relaxed
-);
+        let mut fps_value = hachimi.target_fps.load(atomic::Ordering::Relaxed);
         if fps_value == -1 {
             fps_value = 30;
         }
@@ -1301,6 +1307,18 @@ impl ConfigEditor {
                 ui.checkbox(&mut config.live_theater_allow_same_chara, "");
                 ui.end_row();
 
+                ui.label(t!("config_editor.live_vocals_swap"));
+                ui.horizontal(|ui| {
+                    if ui.button(t!("open")).clicked() {
+                        thread::spawn(|| {
+                            Gui::instance().unwrap()
+                            .lock().unwrap()
+                            .show_window(Box::new(LiveVocalsSwapWindow::new()));
+                        });
+                    }
+                });
+                ui.end_row();
+
                 ui.label(t!("config_editor.hide_ingame_ui_hotkey"));
                 if ui.checkbox(&mut config.hide_ingame_ui_hotkey, "").clicked() {
                     if config.hide_ingame_ui_hotkey {
@@ -1589,6 +1607,63 @@ impl Window for FirstTimeSetupWindow {
     }
 }
 
+struct LiveVocalsSwapWindow {
+    id: egui::Id,
+    // Store a local copy to edit, then save on close or via a "Save" button
+    config: hachimi::Config, 
+}
+
+impl LiveVocalsSwapWindow {
+    fn new() -> LiveVocalsSwapWindow {
+        LiveVocalsSwapWindow {
+            id: random_id(),
+            config: (**Hachimi::instance().config.load()).clone()
+        }
+    }
+}
+
+impl Window for LiveVocalsSwapWindow {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let mut open = true;
+        let chara_data_guard = Hachimi::instance().chara_data.load();
+        let mut chara_choices: Vec<(i32, &str)> = Vec::new();
+        chara_choices.push((0, t!("default").as_ref()));
+
+        if let Some(data) = chara_data_guard.as_ref() {
+            for (&id, name) in &data.chara_names {
+                chara_choices.push((id, name.as_str()));
+            }
+        }
+        chara_choices.sort_by_key(|choice| choice.0);
+
+        new_window(ctx, self.id, t!("config_editor.live_vocals_swap"))
+        .open(&mut open)
+        .show(ctx, |ui| {
+            egui::Grid::new("vocals_swap_grid").show(ui, |ui| {
+                for i in 0..6 {
+                    ui.label(t!("config_editor.live_vocals_swap_character_n", index = i + 1));
+                    Gui::run_combo(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &chara_choices);
+                    ui.end_row();
+                }
+            });
+
+            ui.separator();
+
+            ui.horizontal(|ui| {
+                if ui.button(t!("save")).clicked() {
+                    // save_and_reload_config(self.config.clone());
+                    open = false;
+                }
+                if ui.button(t!("cancel")).clicked() {
+                    open = false;
+                }
+            });
+        });
+
+        open
+    }
+}
+
 struct AboutWindow {
     id: egui::Id
 }
@@ -1616,7 +1691,7 @@ impl Window for AboutWindow {
                 });
             });
             ui.label(t!("about.copyright", year = Utc::now().year()));
-            ui.horizontal(|ui| {
+            ui.vertical(|ui| {
                 if ui.button(t!("about.view_license")).clicked() {
                     thread::spawn(|| {
                         Gui::instance().unwrap()
@@ -1624,6 +1699,19 @@ impl Window for AboutWindow {
                         .show_window(Box::new(LicenseWindow::new()));
                     });
                 }
+                ui.end_row();
+
+                if ui.button(t!("about.open_website")).clicked() {
+                    Application::OpenURL(WEBSITE_URL.to_il2cpp_string());
+                }
+                ui.end_row(); 
+
+                if ui.button(t!("about.view_source_code")).clicked() {
+                    Application::OpenURL(format!("https://github.com/{}", REPO_PATH).to_il2cpp_string());
+                }
+                ui.end_row(); 
+ 
+                // TODO: add central updater for both Android(only version check) and Windows
                 #[cfg(target_os = "windows")]
                 if ui.button(t!("about.check_for_updates")).clicked() {
                     Hachimi::instance().updater.clone().check_for_updates(|_| {});

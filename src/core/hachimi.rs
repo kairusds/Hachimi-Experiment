@@ -9,6 +9,11 @@ use crate::{core::plugin_api::Plugin, gui_impl, hachimi_impl, il2cpp::{self, hoo
 
 use super::{game::{Game, Region}, ipc, plurals, template, template_filters, tl_repo, utils, Error, Interceptor};
 
+pub const REPO_PATH: &str = "kairusds/Hachimi-Experiment";
+pub const GITHUB_API: &str = "https://api.github.com/repos";
+pub const CODEBERG_API: &str = "https://codeberg.org/api/v1/repos";
+pub const WEBSITE_URL: &str = "https://hachimi.noccu.art"
+
 pub struct Hachimi {
     // Hooking stuff
     pub interceptor: Interceptor,
@@ -324,6 +329,8 @@ pub struct Config {
     pub force_allow_dynamic_camera: bool,
     #[serde(default)]
     pub live_theater_allow_same_chara: bool,
+    #[serde(default = "Config::default_live_vocals_swap")]
+    pub live_vocals_swap: [i32; 6],
     pub sugoi_url: Option<String>,
     #[serde(default)]
     pub auto_translate_stories: bool,
@@ -362,6 +369,7 @@ impl Config {
     fn default_story_tcps_multiplier() -> f32 { 3.0 }
     fn default_meta_index_url() -> String { "https://gitlab.com/umatl/hachimi-meta/-/raw/main/meta.json".to_owned() }
     fn default_ui_animation_scale() -> f32 { 1.0 }
+    fn default_live_vocals_swap() -> [i32; 6] { [0; 6] }
 }
 
 impl Default for Config {

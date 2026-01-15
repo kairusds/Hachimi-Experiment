@@ -59,12 +59,12 @@ impl CharacterData {
                 return name.clone();
             }
         }
-    
+
         // fallback to default Japanese name from mdb
         if let Some(name) = self.chara_names.get(&id) {
             return name.clone();
         }
-    
+
         // unknown character name
         "???".to_string()
     }
