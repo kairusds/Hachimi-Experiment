@@ -93,7 +93,7 @@ first_time_setup:
 
 about:
   title: "Tentang"
-  copyright: "© 2024-%{year} LeadRDRK dan kontributor"
+  copyright: "© 2024-%{year} LeadRDRK, kairusds dan kontributor"
   view_license: "Lihat lisensi"
   check_for_updates: "Cek pembaruan"
 

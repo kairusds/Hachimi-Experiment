@@ -96,7 +96,7 @@ first_time_setup:
 
 about:
   title: "Acerca de"
-  copyright: "© 2024-%{year} LeadRDRK y contribuidores"
+  copyright: "© 2024-%{year} LeadRDRK, kairusds y contribuidores"
   view_license: "Ver licencia"
   check_for_updates: "Buscar actualizaciones"
 
