@@ -3,7 +3,7 @@ use rusqlite::{Connection, OpenFlags};
 use fnv::{FnvHashMap, FnvHashSet};
 use sqlparser::ast;
 use crate::{
-    core::{utils::{get_persistent_path, fit_text, wrap_fit_text}, Hachimi},
+    core::{utils::{get_masterdb_path, fit_text, wrap_fit_text}, Hachimi},
     il2cpp::{ext::StringExt, hook::LibNative_Runtime, types::{Il2CppObject, Il2CppString}}
 };
 
@@ -17,12 +17,10 @@ impl CharacterData {
     pub fn load_from_db() -> Result<Self, rusqlite::Error> {
         let mut chara_ids = FnvHashSet::default();
         let mut chara_names = FnvHashMap::default();
-
-        let db_path = format!("{}/master/master.mdb", get_persistent_path());
         
         // open read-only + no mutex for maximum performance and zero game interference
         let conn = Connection::open_with_flags(
-            &db_path, 
+            get_masterdb_path, 
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX
         )?;
 

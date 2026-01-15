@@ -523,8 +523,17 @@ pub fn get_file_modified_time<P: AsRef<Path>>(path: P) -> Option<SystemTime> {
     metadata.modified().ok()
 }
 
-pub fn get_persistent_path() -> String {
-    unsafe { (*Application::get_persistentDataPath()).as_utf16str() }.to_string()
+pub fn get_masterdb_path() -> String {
+    #[cfg(target_os = "android")]
+    {
+        format!("/data/data/{}/files/master/master.mdb", Hachimi::instance().game.package_name)
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let base = unsafe { (*Application::get_persistentDataPath()).as_utf16str() }.to_string();
+        format!("{}/master/master.mdb", base)
+    }
 }
 
 // Intentionally dumb png loader implementation that only loads RGBA8 images
