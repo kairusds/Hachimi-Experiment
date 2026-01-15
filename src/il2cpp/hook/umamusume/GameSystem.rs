@@ -27,15 +27,15 @@ pub fn on_game_initialized() {
         if data.exists(1001) {
             info!("Test Lookup (1001): {}", data.get_name(1001));
         }
+        let sample = data.chara_ids.iter()
+            .take(5)
+            .map(|&id| format!("{}: {}", id, data.get_name(id)))
+            .collect::<Vec<_>>()
+            .join(", ");
+        info!("Sample Character Data: [{}]", sample);
     } else {
         error!("Character database is empty after initialization!");
     }
-    let sample: String = data.chara_ids.iter()
-        .take(5)
-        .map(|&id| format!("{}: {}", id, data.get_name(id)))
-        .collect::<Vec<_>>()
-        .join(", ");
-    info!("Sample Character Data: [{}]", sample);
 
     #[cfg(target_os = "windows")]
     super::UIManager::apply_ui_scale();
