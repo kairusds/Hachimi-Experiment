@@ -20,7 +20,7 @@ impl CharacterData {
         
         // open read-only + no mutex for maximum performance and zero game interference
         let conn = Connection::open_with_flags(
-            get_masterdb_path, 
+            get_masterdb_path(), 
             OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX
         )?;
 
