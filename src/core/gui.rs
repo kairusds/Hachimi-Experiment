@@ -1625,9 +1625,12 @@ impl LiveVocalsSwapWindow {
 impl Window for LiveVocalsSwapWindow {
     fn run(&mut self, ctx: &egui::Context) -> bool {
         let mut open = true;
+        let mut open2 = true
+
         let chara_data_guard = Hachimi::instance().chara_data.load();
         let mut chara_choices: Vec<(i32, &str)> = Vec::new();
-        chara_choices.push((0, t!("default").as_ref()));
+        // this leaks the string so it lives forever, fixing the borrow checker error
+        chara_choices.push((0, Box::leak(t!("default").into_owned().into_boxed_str())));
 
         if let Some(data) = chara_data_guard.as_ref() {
             for (&id, name) in &data.chara_names {
@@ -1652,14 +1655,15 @@ impl Window for LiveVocalsSwapWindow {
             ui.horizontal(|ui| {
                 if ui.button(t!("save")).clicked() {
                     // save_and_reload_config(self.config.clone());
-                    open = false;
+                    open2 = false;
                 }
                 if ui.button(t!("cancel")).clicked() {
-                    open = false;
+                    open2 = false;
                 }
             });
         });
 
+        open &= open2;
         open
     }
 }
