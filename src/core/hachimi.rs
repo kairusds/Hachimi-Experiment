@@ -106,6 +106,9 @@ impl Hachimi {
             localized_data: ArcSwap::default(),
             tl_updater: Arc::default(),
 
+            // Same with chara_data
+            chara_data: ArcSwap::default(),
+
             game,
             template_parser: template::Parser::new(&template_filters::LIST),
 

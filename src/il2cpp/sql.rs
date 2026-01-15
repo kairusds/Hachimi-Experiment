@@ -18,7 +18,7 @@ impl CharacterData {
         let mut chara_ids = FnvHashSet::default();
         let mut chara_names = FnvHashMap::default();
 
-        let db_path = format!("{}/master/master.mdb", utils::get_persistent_path());
+        let db_path = format!("{}/master/master.mdb", get_persistent_path());
         
         // open read-only + no mutex for maximum performance and zero game interference
         let conn = Connection::open_with_flags(
@@ -206,8 +206,8 @@ impl TextDataQuery {
                     cfg.name.as_ref()
                 })
                 .and_then(|name| { match name.line_count {
-                    1 => utils::fit_text(text, name.line_len, name.font_size),
-                    _ => utils::wrap_fit_text(text, name.line_len, name.line_count, name.font_size)
+                    1 => fit_text(text, name.line_len, name.font_size),
+                    _ => wrap_fit_text(text, name.line_len, name.line_count, name.font_size)
                     }
                 })
                 .map_or_else(
@@ -235,7 +235,7 @@ impl TextDataQuery {
                     cfg.is_localized = true;
                     cfg.desc.as_ref()
                 })
-                .and_then(|desc| utils::wrap_fit_text(text, desc.line_len, desc.line_count, desc.font_size))
+                .and_then(|desc| wrap_fit_text(text, desc.line_len, desc.line_count, desc.font_size))
                 .map_or_else(
                     || Some(text.to_il2cpp_string()),
                     |fitted| Some(fitted.to_il2cpp_string()),
