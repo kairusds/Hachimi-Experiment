@@ -1649,7 +1649,7 @@ impl Window for LiveVocalsSwapWindow {
             egui::Grid::new(self.id.with("live_vocals_swap_grid")).show(ui, |ui| {
                 for i in 0..6 {
                     ui.label(t!("config_editor.live_vocals_swap_character_n", index = i + 1));
-                    Gui::run_combo(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &chara_choices);
+                    Gui::run_combo(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &combo_items);
                     ui.end_row();
                 }
             });
