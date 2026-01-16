@@ -582,7 +582,7 @@ impl Gui {
         let mut changed = false;
         let scale = get_scale(ui.ctx());
         let fixed_width = 140.0 * scale;
-        let row_height = 35.0 * scale;
+        let row_height = 20.0 * scale;
 
         let button_id = ui.make_persistent_id(id_salt);
         let popup_id = button_id.with("popup");
@@ -1128,6 +1128,7 @@ impl Window for SimpleOkDialog {
 }
 
 struct ConfigEditor {
+    last_ptr_config: *const hachimi::Config,
     config: hachimi::Config,
     id: egui::Id,
     current_tab: ConfigEditorTab
@@ -1153,6 +1154,8 @@ impl ConfigEditorTab {
 impl ConfigEditor {
     pub fn new() -> ConfigEditor {
         ConfigEditor {
+            let handle = Hachimi::instance().config.load();
+            last_ptr_config: Arc::as_ptr(&handle),
             config: (**Hachimi::instance().config.load()).clone(),
             id: random_id(),
             current_tab: ConfigEditorTab::General
@@ -1459,7 +1462,15 @@ impl Window for ConfigEditor {
 
         let mut open = true;
         let mut open2 = true;
-        let mut config = self.config.clone();
+        let global_handle = Hachimi::instance().config.load();
+        let global_ptr = Arc::as_ptr(&global_handle);
+
+        if global_ptr != self.last_ptr_config {
+            // the global config was updated by another window
+            self.config = (**global_handle).clone();
+            self.last_ptr_config = global_ptr;
+        }
+        let config = &mut self.config;
         #[cfg(target_os = "windows")]
         {
             config.windows.menu_open_key = Hachimi::instance().config.load().windows.menu_open_key;
