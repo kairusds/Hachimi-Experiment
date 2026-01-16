@@ -643,13 +643,15 @@ impl Gui {
                 );
                 #[cfg(target_os = "android")]
                 if res.gained_focus() {
-                    TouchScreenKeyboard::Open(
-                        search_term.to_il2cpp_string(), 
-                        TouchScreenKeyboardType::KeyboardType::Search,
-                        false,
-                        false,
-                        false
-                    );
+                    Thread::main_thread().schedule(|| {
+                        TouchScreenKeyboard::Open(
+                            search_term.to_il2cpp_string(), 
+                            TouchScreenKeyboardType::KeyboardType::Search,
+                            false,
+                            false,
+                            false
+                        );
+                    });
                 }
 
                 if ui.button("X").clicked() {
