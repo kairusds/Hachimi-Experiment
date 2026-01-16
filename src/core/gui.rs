@@ -648,7 +648,7 @@ impl Gui {
                     let pos = ui.input(|i| i.pointer.interact_pos()).unwrap_or(egui::Pos2::ZERO);
                     // if the click is NOT on the button and NOT on the popup frame, close it
                     if !frame_res.response.rect.contains(pos) && !button_res.rect.contains(pos) {
-                        ui.memory_mut(|mem| mem.close_popup());
+                        ui.memory_mut(|mem| mem.close_popup(popup_id));
                     }
                 }
             });
