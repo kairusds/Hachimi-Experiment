@@ -16,7 +16,7 @@ use crate::il2cpp::{
 };
 
 #[cfg(not(target_os = "windows"))]
-use crate::il2cpp::hook::{umamusume::WebViewManager, UnityEngine_CoreModule::{TouchScreenKeyboard, TouchScreenKeyboardType};
+use crate::il2cpp::hook::{umamusume::WebViewManager, UnityEngine_CoreModule::{TouchScreenKeyboard, TouchScreenKeyboardType}};
 
 #[cfg(target_os = "windows")]
 use crate::il2cpp::hook::UnityEngine_CoreModule::QualitySettings;
