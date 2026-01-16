@@ -19,7 +19,7 @@ use crate::il2cpp::{
 #[cfg(target_os = "android")]
 use crate::il2cpp::{
     ext::Il2CppStringExt,
-    hook::{umamusume::WebViewManager, UnityEngine_CoreModule::{TouchScreenKeyboard, TouchScreenKeyboardType},
+    hook::{umamusume::WebViewManager, UnityEngine_CoreModule::{TouchScreenKeyboard, TouchScreenKeyboardType}},
     types::Il2CppString
 };
 
