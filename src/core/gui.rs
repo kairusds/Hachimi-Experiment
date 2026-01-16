@@ -1153,8 +1153,8 @@ impl ConfigEditorTab {
 
 impl ConfigEditor {
     pub fn new() -> ConfigEditor {
+        let handle = Hachimi::instance().config.load();
         ConfigEditor {
-            let handle = Hachimi::instance().config.load();
             last_ptr_config: Arc::as_ptr(&handle),
             config: (**Hachimi::instance().config.load()).clone(),
             id: random_id(),
