@@ -592,13 +592,39 @@ impl Gui {
             .map(|(_, s)| *s)
             .unwrap_or("Unknown");
 
-        let button_res = ui.add_sized(
-            [fixed_width, row_height],
-            egui::Button::new(selected_text).truncate()
-        );
-    
-        if button_res.clicked() {
-            ui.memory_mut(|mem| mem.open_popup(popup_id));
+        let button_res = ui.allocate_ui_at_rect(
+            ui.available_rect_before_wrap(),
+            |ui| {
+                let (_, rect) = ui.allocate_space(egui::vec2(fixed_width, row_height));
+                ui.interact(rect, button_id, egui::Sense::click())
+            }
+        ).inner;
+
+        ui.advance_cursor_after_rect(button_res.rect);
+
+        if ui.is_rect_visible(button_res.rect) {
+            let is_open = egui::Popup::is_id_open(ui.ctx(), popup_id);
+            let visuals = if is_open {
+                &ui.visuals().widgets.open
+            } else {
+                ui.style().interact(&button_res)
+            };
+
+            ui.painter().rect(
+                button_res.rect.expand(visuals.expansion),
+                visuals.corner_radius,
+                visuals.weak_bg_fill,
+                visuals.bg_stroke,
+                egui::epaint::StrokeKind::Inside,
+            );
+            
+            let galley = ui.painter().layout_no_wrap(
+                selected_text.to_owned(),
+                egui::TextStyle::Button.resolve(ui.style()),
+                visuals.text_color()
+            );
+            let text_pos = button_res.rect.center() - galley.size() / 2.0;
+            ui.painter().galley(text_pos, galley, visuals.text_color());
         }
 
         egui::Popup::menu(&button_res)
@@ -614,10 +640,6 @@ impl Gui {
                     [ui.available_width() - 30.0 * scale, row_height],
                     egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
                 );
-
-                if !res.has_focus() {
-                    res.request_focus();
-                }
 
                 if ui.button("X").clicked() {
                     search_term.clear();
