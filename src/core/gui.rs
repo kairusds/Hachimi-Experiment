@@ -581,8 +581,8 @@ impl Gui {
     ) -> bool {
         let mut changed = false;
         let scale = get_scale(ui.ctx());
-        let fixed_width = 120.0 * scale;
-        let row_height = 20.0 * scale;
+        let fixed_width = 140.0 * scale;
+        let row_height = 35.0 * scale;
 
         let button_id = ui.make_persistent_id(id_salt);
         let popup_id = button_id.with("popup");
@@ -1765,7 +1765,7 @@ impl Window for LiveVocalsSwapWindow {
 
             ui.horizontal(|ui| {
                 if ui.button(t!("save")).clicked() {
-                    // save_and_reload_config(self.config.clone());
+                    save_and_reload_config(self.config.clone());
                     open2 = false;
                 }
                 if ui.button(t!("cancel")).clicked() {
