@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
-use crate::{il2cpp::{symbols::get_method_overload_addr, types::*}};
+use crate::{il2cpp::{symbols::{get_method_addr, get_method_overload_addr}, types::*}};
 use super::TouchScreenKeyboardType;
 
 static mut TOUCHSCREENKEYBOARD_OPEN_ADDR: usize = 0;
-
 impl_addr_wrapper_fn!(
     Open, 
     TOUCHSCREENKEYBOARD_OPEN_ADDR, 
@@ -14,6 +13,21 @@ impl_addr_wrapper_fn!(
     multiline: bool,
     secure: bool
 );
+
+static mut TOUCHSCREENKEYBOARD_GET_TEXT_ADDR: usize = 0;
+impl_addr_wrapper_fn!(get_text, TOUCHSCREENKEYBOARD_GET_TEXT_ADDR, *mut Il2CppString, this: *mut Il2CppObject);
+
+#[repr(i32)]
+#[allow(non_camel_case_types, dead_code)]
+pub enum Status {
+    Visible,
+    Done,
+    Canceled,
+    LostFocus
+}
+
+static mut TOUCHSCREENKEYBOARD_GET_STATUS_ADDR: usize = 0;
+impl_addr_wrapper_fn!(get_status, TOUCHSCREENKEYBOARD_GET_STATUS_ADDR, Status, this: *mut Il2CppObject);
 
 pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
     get_class_or_return!(UnityEngine_CoreModule, UnityEngine, TouchScreenKeyboard);
