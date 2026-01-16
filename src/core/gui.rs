@@ -1736,7 +1736,7 @@ impl Window for LiveVocalsSwapWindow {
                 for i in 0..6 {
                     ui.label(t!("config_editor.live_vocals_swap_character_n", index = i + 1));
                     // Gui::run_combo(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &combo_items);
-                    Gui::run_combo_menu(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &combo_items, &mut self.search_term);
+                    Gui::run_combo_menu(ui, egui::Id::new("vocals_swap").with(i), &mut self.config.live_vocals_swap[i], &combo_items, &mut self.search_term);
                     ui.end_row();
                 }
             });
