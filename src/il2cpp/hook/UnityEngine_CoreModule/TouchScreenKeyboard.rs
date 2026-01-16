@@ -1,3 +1,4 @@
+use serde::{Deserialize, Serialize};
 use crate::{il2cpp::{symbols::get_method_overload_addr, types::*}};
 
 static mut TOUCHSCREENKEYBOARD_OPEN_ADDR: usize = 0;
@@ -6,7 +7,7 @@ static mut TOUCHSCREENKEYBOARD_OPEN_ADDR: usize = 0;
 #[derive(Default, Copy, Clone, Serialize, Deserialize, Eq, PartialEq)]
 #[repr(i32)]
 pub enum TouchScreenKeyboardType {
-    Default = 0,
+    #[default] Default = 0,
     ASCIICapable = 1,
     NumbersAndPunctuation = 2,
     URL = 3,

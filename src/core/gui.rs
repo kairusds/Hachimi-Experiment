@@ -642,7 +642,7 @@ impl Gui {
                     egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
                 );
                 #[cfg(target_os = "android")]
-                if response.gained_focus() {
+                if res.gained_focus() {
                     TouchScreenKeyboard::Open(
                         search_term.to_il2cpp_string(), 
                         TouchScreenKeyboard::TouchScreenKeyboardType::Search,
