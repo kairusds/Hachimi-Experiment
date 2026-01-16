@@ -560,47 +560,18 @@ impl Gui {
         }
 
         let mut changed = false;
-        let scale = get_scale(ui.ctx());
-        let fixed_width = 50.0 * scale;
-        let button_id = ui.make_persistent_id(id_child);
-        let popup_id = button_id.with("popup");
-        let button_res = ui.add_sized(
-            [fixed_width, 20.0 * scale],
-            egui::Button::new(selected).truncate()
-        );
+        egui::ComboBox::new(ui.id().with(id_child), "")
+        .selected_text(selected)
+        .show_ui(ui, |ui| {
+            let mut clip_rect = ui.clip_rect();
+            clip_rect.set_width(60.0 * get_scale(ui.ctx()));
+            ui.set_clip_rect(clip_rect);
 
-        if button_res.clicked() {
-            ui.memory_mut(|mem| mem.toggle_popup(popup_id));
-        }
+            for choice in choices.iter() {
+                changed |= ui.selectable_value(value, choice.0, choice.1).changed();
+            }
+        });
 
-        if ui.memory(|mem| mem.is_popup_open(popup_id)) {
-            egui::Popup::menu(&button_res)
-                .id(popup_id)
-                .width(fixed_width)
-                .show(|ui| { 
-                    ui.set_max_width(fixed_width);
-    
-                    egui::ScrollArea::vertical()
-                        .max_height(250.0 * scale)
-                        .hscroll(false) 
-                        .show(ui, |ui| {
-                            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                            
-                            ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
-                                for (choice_val, choice_text) in choices {
-                                    let is_selected = *value == *choice_val;
-                                    
-                                    if ui.selectable_label(is_selected, *choice_text).clicked() {
-                                        *value = *choice_val;
-                                        changed = true;
-                                        ui.memory_mut(|mem| mem.close_popup(popup_id));
-                                    }
-                                }
-                            });
-                        });
-                });
-        }
-    
         changed
     }
 
