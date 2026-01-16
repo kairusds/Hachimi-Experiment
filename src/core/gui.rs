@@ -16,7 +16,7 @@ use crate::il2cpp::{
 };
 
 #[cfg(not(target_os = "windows"))]
-use crate::il2cpp::hook::{umamusume::WebViewManager, UnityEngine_CoreModule::TouchScreenKeyboard};
+use crate::il2cpp::hook::{umamusume::WebViewManager, UnityEngine_CoreModule::{TouchScreenKeyboard, TouchScreenKeyboardType};
 
 #[cfg(target_os = "windows")]
 use crate::il2cpp::hook::UnityEngine_CoreModule::QualitySettings;
@@ -645,13 +645,10 @@ impl Gui {
                 if res.gained_focus() {
                     TouchScreenKeyboard::Open(
                         search_term.to_il2cpp_string(), 
-                        TouchScreenKeyboard::TouchScreenKeyboardType::Search,
+                        TouchScreenKeyboardType::KeyboardType::Search,
                         false,
                         false,
-                        false,
-                        false,
-                        "".to_string().to_il2cpp_string(),
-                        256
+                        false
                     );
                 }
 

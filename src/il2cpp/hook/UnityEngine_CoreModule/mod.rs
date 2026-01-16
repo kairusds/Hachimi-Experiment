@@ -13,6 +13,8 @@ pub mod Behaviour;
 pub mod Component;
 #[cfg(target_os = "android")]
 pub mod TouchScreenKeyboard;
+#[cfg(target_os = "android")]
+pub mod TouchScreenKeyboardType;
 
 #[cfg(target_os = "windows")]
 pub mod QualitySettings;
@@ -43,7 +45,10 @@ pub fn init() {
     Behaviour::init(image);
     Component::init(image);
     #[cfg(target_os = "android")]
-    TouchScreenKeyboard::init(image);
+    {
+        TouchScreenKeyboard::init(image);
+        TouchScreenKeyboardType::init(image);
+    }
 
     #[cfg(target_os = "windows")]
     {
