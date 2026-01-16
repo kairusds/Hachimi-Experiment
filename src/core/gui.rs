@@ -1469,7 +1469,7 @@ impl Window for ConfigEditor {
             self.config = (**global_handle).clone();
             self.last_ptr_config = global_ptr;
         }
-        let config = &mut self.config;
+        let config = self.config;
         #[cfg(target_os = "windows")]
         {
             config.windows.menu_open_key = Hachimi::instance().config.load().windows.menu_open_key;
