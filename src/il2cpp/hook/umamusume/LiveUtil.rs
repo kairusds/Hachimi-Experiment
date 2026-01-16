@@ -17,7 +17,10 @@ extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArr
             let data_ptr = vocalCharaIdArray.add(1) as *mut i32;
             
             for i in 0..len.min(chara_vo_ids.len()) {
-                info!("chara_vo_ids index {}: {}", i, Hachimi::instance().chara_data.load().get_name(chara_vo_ids[i]));
+                if let Some(data) = Hachimi::instance().chara_data.load().as_ref() {
+                    info!("chara_vo_ids index {}: {}", i, data.get_name(chara_vo_ids[i]));
+                }
+
                 if chara_vo_ids[i] != 0 {
                     *data_ptr.add(i) = chara_vo_ids[i];
                 }
