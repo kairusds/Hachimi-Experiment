@@ -10,7 +10,7 @@ unsafe fn force_array_ids(array_ptr: *mut Il2CppArray, ids: &[i32]) {
 
     let len = (*array_ptr).max_length as usize;
     // Il2CppArray data starts right after the header (which is why it needs to add 1)
-    let data_ptr = array_ptr.add(1) as *mut i32;
+    let data_ptr = (array_ptr as *mut u8).add(std::mem::size_of::<Il2CppArray>()) as *mut i32;
     for i in 0..len.min(ids.len()) {
         if ids[i] == 0 {
             continue;
