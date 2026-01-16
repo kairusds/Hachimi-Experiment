@@ -5,30 +5,40 @@ use crate::{
 
 type GetSingCharaIdListFn = extern "C" fn(songId: i32, songPartNumber: i32, allCharaIdArray: *mut Il2CppArray, vocalCharaIdArray: *mut Il2CppArray, shuffledCharaDataList: *mut Il2CppObject) -> *mut Il2CppObject;
 extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArray: *mut Il2CppArray, vocalCharaIdArray: *mut Il2CppArray, shuffledCharaDataList: *mut Il2CppObject) -> *mut Il2CppObject {
-    let result = get_orig_fn!(GetSingCharaIdList, GetSingCharaIdListFn)(
-        songId, songPartNumber, allCharaIdArray, vocalCharaIdArray, shuffledCharaDataList
-    );
     let chara_vo_ids = &Hachimi::instance().config.load().live_vocals_swap;
 
-    unsafe {
-        if !vocalCharaIdArray.is_null() {
-            let len = (*vocalCharaIdArray).max_length as usize;
-            info!("vocalCharaIdArray len {}", len);
-            let data_ptr = vocalCharaIdArray.add(1) as *mut i32;
-            
-            for i in 0..len.min(chara_vo_ids.len()) {
-                if let Some(data) = Hachimi::instance().chara_data.load().as_ref() {
-                    info!("chara_vo_ids index {}: {}", i, data.get_name(chara_vo_ids[i]));
-                }
+    if songId > 0 {
+        unsafe {
+            if !vocalCharaIdArray.is_null() {
+                let len = (*vocalCharaIdArray).max_length as usize;
+                info!("vocalCharaIdArray len {}", len);
+                let data_ptr = vocalCharaIdArray.add(1) as *mut i32;
 
-                if chara_vo_ids[i] != 0 {
-                    *data_ptr.add(i) = chara_vo_ids[i];
+                for i in 0..len.min(chara_vo_ids.len()) {
+                    if chara_vo_ids[i] != 0 {
+                        if let Some(data) = Hachimi::instance().chara_data.load().as_ref() {
+                            info!("chara_vo_ids index {}: {}", i, data.get_name(chara_vo_ids[i]));
+                        }
+                        *data_ptr.add(i) = chara_vo_ids[i];              
+                    }
+                }
+            }
+
+            if !allCharaIdArray.is_null() {
+                let len = (*allCharaIdArray).max_length as usize;
+                let data_ptr = allCharaIdArray.add(1) as *mut i32;
+
+                for i in 0..len.min(chara_vo_ids.len()) {
+                    let new_id = chara_vo_ids[i];
+                    if new_id != 0 {
+                        *data_ptr.add(i) = new_id;
+                    }
                 }
             }
         }
     }
 
-    result
+    get_orig_fn!(GetSingCharaIdList, GetSingCharaIdListFn)(songId, songPartNumber, allCharaIdArray, vocalCharaIdArray, shuffledCharaDataList);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
