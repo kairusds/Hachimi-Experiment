@@ -641,10 +641,11 @@ impl Gui {
                                     ui.memory_mut(|mem| mem.close_popup(popup_id));
                                     search_term.clear();
                                 }
-                            });
+                            }
                         });
                     });
                 });
+            });
         }
     
         changed
