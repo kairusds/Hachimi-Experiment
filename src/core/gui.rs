@@ -614,9 +614,11 @@ impl Gui {
                             [ui.available_width() - 30.0 * scale, row_height],
                             egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
                         );
-                        if ui.memory(|mem| mem.is_popup_open(popup_id)) && search_term.is_empty() {
+
+                        if !res.has_focus() {
                             res.request_focus();
                         }
+
                         if ui.button("X").clicked() {
                             search_term.clear();
                         }
@@ -645,12 +647,16 @@ impl Gui {
                     });
                 });
 
-                if ui.input(|i| i.pointer.any_click()) {
+                if ui.input(|i| i.pointer.any_pressed()) {
                     if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
                         if !frame_res.response.rect.contains(pos) && !button_res.rect.contains(pos) {
                             ui.memory_mut(|mem| mem.close_popup(popup_id));
                         }
                     }
+                }
+
+                if ui.memory(|mem| !mem.is_popup_open(popup_id)) {
+                    // safety close if memory state changes externally
                 }
             });
         }
