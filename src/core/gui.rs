@@ -561,6 +561,7 @@ impl Gui {
 
         let mut changed = false;
         egui::ComboBox::new(ui.id().with(id_child), "")
+        .wrap_mode(egui::TextWrapMode::Wrap)
         .selected_text(selected)
         .show_ui(ui, |ui| {
             for choice in choices.iter() {
@@ -600,64 +601,55 @@ impl Gui {
             ui.memory_mut(|mem| mem.open_popup(popup_id));
         }
 
-        if ui.memory(|mem| mem.is_popup_open(popup_id)) {
-            egui::Area::new(popup_id.with("area")).order(egui::Order::Foreground).fixed_pos(button_res.rect.left_bottom() + egui::vec2(0.0, 1.0)).show(ui.ctx(), |ui| {
-                let frame_res = egui::Frame::popup(ui.style()).show(ui, |ui| {
-                    ui.set_width(fixed_width);
-                    ui.set_max_width(fixed_width);
+        egui::Popup::menu(&button_res)
+        .id(popup_id)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+        .show(|ui| {
+            ui.set_width(fixed_width);
+            ui.set_max_width(fixed_width);
 
-                    ui.horizontal(|ui| {
-                        // ui.label("Search");
-                        let res = ui.add_sized(
-                            [ui.available_width() - 30.0 * scale, row_height],
-                            egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
-                        );
+            ui.horizontal(|ui| {
+                // ui.label("Search");
+                let res = ui.add_sized(
+                    [ui.available_width() - 30.0 * scale, row_height],
+                    egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
+                );
 
-                        if !res.has_focus() {
-                            res.request_focus();
-                        }
-
-                        if ui.button("X").clicked() {
-                            search_term.clear();
-                        }
-                    });
-
-                    ui.separator();
-
-                    egui::ScrollArea::vertical().max_height(250.0 * scale).hscroll(false).auto_shrink([false, false]).show(ui, |ui| {
-                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-
-                        ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
-                            for (choice_val, label) in choices {
-                                if !search_term.is_empty() && !label.to_lowercase().contains(&search_term.to_lowercase()) {
-                                    continue;
-                                }
-
-                                let is_selected = value == choice_val;
-                                if ui.add(egui::Button::selectable(is_selected, *label)).clicked() {
-                                    *value = *choice_val;
-                                    changed = true;
-                                    ui.memory_mut(|mem| mem.close_popup(popup_id));
-                                    search_term.clear();
-                                }
-                            }
-                        });
-                    });
-                });
-
-                if ui.input(|i| i.pointer.any_pressed()) {
-                    if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
-                        if !frame_res.response.rect.contains(pos) && !button_res.rect.contains(pos) {
-                            ui.memory_mut(|mem| mem.close_popup(popup_id));
-                        }
-                    }
+                if !res.has_focus() {
+                    res.request_focus();
                 }
 
-                if ui.memory(|mem| !mem.is_popup_open(popup_id)) {
-                    // safety close if memory state changes externally
+                if ui.button("X").clicked() {
+                    search_term.clear();
                 }
             });
-        }
+
+            ui.separator();
+
+            egui::ScrollArea::vertical()
+            .max_height(250.0 * scale)
+            .hscroll(false)
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+
+                ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
+                    for (choice_val, label) in choices {
+                        if !search_term.is_empty() && !label.to_lowercase().contains(&search_term.to_lowercase()) {
+                            continue;
+                        }
+    
+                        let is_selected = value == choice_val;
+                        if ui.add(egui::Button::selectable(is_selected, *label)).clicked() {
+                            *value = *choice_val;
+                            changed = true;
+                            ui.memory_mut(|mem| mem.close_popup(popup_id));
+                            search_term.clear();
+                        }
+                    }
+                });
+            });
+        });
     
         changed
     }
