@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{il2cpp::{symbols::get_method_overload_addr, types::*}};
+use crate::{il2cpp::{api::il2cpp_resolve_icall, types::*}};
 
 static mut TOUCHSCREENKEYBOARD_OPEN_ADDR: usize = 0;
 
