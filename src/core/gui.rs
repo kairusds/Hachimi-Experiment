@@ -560,14 +560,46 @@ impl Gui {
         }
 
         let mut changed = false;
-        egui::ComboBox::new(ui.id().with(id_child), "")
-        .selected_text(selected)
-        .show_ui(ui, |ui| {
-            for choice in choices.iter() {
-                changed |= ui.selectable_value(value, choice.0, choice.1).changed();
-            }
-        });
+        let scale = get_scale(ui.ctx());
+        let fixed_width = 180.0 * scale;
+        let button_id = ui.make_persistent_id(id_child);
+        let popup_id = button_id.with("popup");
 
+        let button_res = ui.add_sized(
+            [fixed_width, 20.0 * scale],
+            egui::Button::new(selected).truncate()
+        );
+    
+        if button_res.clicked() {
+            ui.memory_mut(|mem| mem.toggle_popup(popup_id));
+        }
+
+        if ui.memory(|mem| mem.is_popup_open(popup_id)) {
+            egui::Popup::menu(&button_res)
+                .id(popup_id)
+                .width(fixed_width)
+                .show(ui, |ui| {
+                    ui.set_max_width(fixed_width);
+    
+                    egui::ScrollArea::vertical()
+                        .max_height(250.0 * scale)
+                        .hscroll(false)
+                        .show(ui, |ui| {
+                            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                            ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
+                                for (choice_val, choice_text) in choices {
+                                    let is_selected = *value == *choice_val;
+
+                                    if ui.selectable_label(is_selected, *choice_text).clicked() {
+                                        *value = *choice_val;
+                                        changed = true;
+                                        ui.memory_mut(|mem| mem.close_popup());
+                                    }
+                                }
+                            });
+                        });
+                });
+        }
         changed
     }
 
@@ -1649,9 +1681,7 @@ impl Window for LiveVocalsSwapWindow {
             egui::Grid::new(self.id.with("live_vocals_swap_grid")).show(ui, |ui| {
                 for i in 0..6 {
                     ui.label(t!("config_editor.live_vocals_swap_character_n", index = i + 1));
-                    ui.add_sized([180.0 * get_scale(ctx), 0.0], |ui| {
-                        Gui::run_combo(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &combo_items);
-                    });
+                    Gui::run_combo(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &combo_items);
                     ui.end_row();
                 }
             });
