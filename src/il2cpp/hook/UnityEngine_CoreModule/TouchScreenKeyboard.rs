@@ -18,7 +18,7 @@ static mut TOUCHSCREENKEYBOARD_GET_TEXT_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_text, TOUCHSCREENKEYBOARD_GET_TEXT_ADDR, *mut Il2CppString, this: *mut Il2CppObject);
 
 #[repr(i32)]
-#[allow(non_camel_case_types, dead_code)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Status {
     Visible,
     Done,

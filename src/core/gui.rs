@@ -667,7 +667,7 @@ impl Gui {
                                         ptr, 
                                         TouchScreenKeyboardType::KeyboardType::Search,
                                         false, false, false
-                                    );
+                                    )
                                 };
                                 ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
                             }
@@ -679,10 +679,10 @@ impl Gui {
                         unsafe {
                             let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
                             // update search_term in realtime as user types only if it's different
-                            if !kb_txt_ptr.is_null() {
-                                let kb_txt_ptr = kb_txt_ptr.as_utf16str().to_string();
-                                if *search_term != kb_txt_ptr {
-                                    *search_term = kb_txt_ptr;
+                            if let Some(kb_ref) = kb_txt_ptr.as_ref() {
+                                let kb_txt_str = kb_ref.as_utf16str().to_string();
+                                if *search_term != kb_txt_str {
+                                    *search_term = kb_txt_str;
                                 }
                             }
 
