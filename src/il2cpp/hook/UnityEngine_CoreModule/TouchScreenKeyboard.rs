@@ -42,7 +42,7 @@ pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
             "Open", 
             &[
                 Il2CppTypeEnum_IL2CPP_TYPE_STRING,   // String text
-                Il2CppTypeEnum_IL2CPP_TYPE_VALUETYPE, // TouchScreenKeyboardType (Enum)
+                Il2CppTypeEnum_IL2CPP_TYPE_I4, // TouchScreenKeyboardType (Enum with i32)
                 Il2CppTypeEnum_IL2CPP_TYPE_BOOLEAN,  // Boolean autocorrection
                 Il2CppTypeEnum_IL2CPP_TYPE_BOOLEAN,  // Boolean multiline
                 Il2CppTypeEnum_IL2CPP_TYPE_BOOLEAN,  // Boolean secure
