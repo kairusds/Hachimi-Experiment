@@ -1540,8 +1540,6 @@ impl Window for ConfigEditor {
             );
         });
 
-        self.config = config;
-
         if reset_clicked {
             self.restore_defaults();
         }
