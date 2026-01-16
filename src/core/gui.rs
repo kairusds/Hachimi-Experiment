@@ -580,7 +580,7 @@ impl Gui {
     ) -> bool {
         let mut changed = false;
         let scale = get_scale(ui.ctx());
-        let fixed_width = 180.0 * scale;
+        let fixed_width = 120.0 * scale;
         let row_height = 20.0 * scale;
 
         let button_id = ui.make_persistent_id(id_salt);
@@ -602,6 +602,8 @@ impl Gui {
 
         if ui.memory(|mem| mem.is_popup_open(popup_id)) {
             egui::Area::new(popup_id.with("area")).order(egui::Order::Foreground).fixed_pos(button_res.rect.left_bottom() + egui::vec2(0.0, 1.0)).show(ui.ctx(), |ui| {
+                ui.memory_mut(|mem| mem.set_focus_lock_id(popup_id));
+
                 let frame_res = egui::Frame::popup(ui.style()).show(ui, |ui| {
                     ui.set_width(fixed_width);
                     ui.set_max_width(fixed_width);
@@ -612,8 +614,8 @@ impl Gui {
                             [ui.available_width() - 30.0 * scale, row_height],
                             egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
                         );
-                        if res.has_focus() {
-                            // prevents the popup from closing while typing on some platforms
+                        if ui.memory(|mem| mem.is_popup_open(popup_id)) && search_term.is_empty() {
+                            res.request_focus();
                         }
                         if ui.button("X").clicked() {
                             search_term.clear();
@@ -622,8 +624,7 @@ impl Gui {
 
                     ui.separator();
 
-                    let scroll_height = 250.0 * scale;
-                    egui::ScrollArea::vertical().max_height(scroll_height).hscroll(false).auto_shrink([false, false]).show(ui, |ui| {
+                    egui::ScrollArea::vertical().max_height(250.0 * scale).hscroll(false).auto_shrink([false, false]).show(ui, |ui| {
                         ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
 
                         ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
@@ -645,10 +646,10 @@ impl Gui {
                 });
 
                 if ui.input(|i| i.pointer.any_click()) {
-                    let pos = ui.input(|i| i.pointer.interact_pos()).unwrap_or(egui::Pos2::ZERO);
-                    // if the click is NOT on the button and NOT on the popup frame, close it
-                    if !frame_res.response.rect.contains(pos) && !button_res.rect.contains(pos) {
-                        ui.memory_mut(|mem| mem.close_popup(popup_id));
+                    if let Some(pos) = ui.input(|i| i.pointer.interact_pos()) {
+                        if !frame_res.response.rect.contains(pos) && !button_res.rect.contains(pos) {
+                            ui.memory_mut(|mem| mem.close_popup(popup_id));
+                        }
                     }
                 }
             });
