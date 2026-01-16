@@ -580,7 +580,7 @@ impl Gui {
     ) -> bool {
         let mut changed = false;
         let scale = get_scale(ui.ctx());
-        let fixed_width = 120.0 * scale;
+        let fixed_width = 180.0 * scale;
         let row_height = 20.0 * scale;
 
         let button_id = ui.make_persistent_id(id_salt);
@@ -593,7 +593,7 @@ impl Gui {
 
         let button_res = ui.add_sized(
             [fixed_width, row_height],
-            egui::Button::new(selected_text).wrap()
+            egui::Button::new(selected_text).truncate()
         );
     
         if button_res.clicked() {
@@ -633,12 +633,10 @@ impl Gui {
                                 }
 
                                 let is_selected = value == choice_val;
-                                let btn = egui::Button::selectable(is_selected, *label);
-
-                                if ui.add(btn).clicked() {
+                                if ui.add(egui::Button::selectable(is_selected, *label)).clicked() {
                                     *value = *choice_val;
                                     changed = true;
-                                    ui.memory_mut(|mem| mem.close_popup(popup_id));
+                                    ui.memory_mut(|mem| mem.close_popup());
                                     search_term.clear();
                                 }
                             }
@@ -646,20 +644,14 @@ impl Gui {
                     });
                 });
 
-                if ui.interact(frame_res.response.rect, popup_id.with("interact"), egui::Sense::click()).clicked() {
-                    // prevents the frame from closing when clicking the scrollbar/search
+                if ui.input(|i| i.pointer.any_click()) {
+                    let pos = ui.input(|i| i.pointer.interact_pos()).unwrap_or(egui::Pos2::ZERO);
+                    // if the click is NOT on the button and NOT on the popup frame, close it
+                    if !frame_res.response.rect.contains(pos) && !button_res.rect.contains(pos) {
+                        ui.memory_mut(|mem| mem.close_popup());
+                    }
                 }
             });
-
-            // only close if there was a click AND it wasnt the button that just opened it
-            if ui.input(|i| i.pointer.any_click()) && !button_res.clicked() {
-                let pos = ui.input(|i| i.pointer.interact_pos()).unwrap_or(egui::Pos2::ZERO);
-
-                // need to check if the click was outside the popup area too
-                if !button_res.rect.contains(pos) {
-                    ui.memory_mut(|mem| mem.close_popup(popup_id));
-                }
-            }
         }
     
         changed
