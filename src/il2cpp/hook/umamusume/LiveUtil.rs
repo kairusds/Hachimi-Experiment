@@ -7,10 +7,12 @@ unsafe fn force_array_ids(array_ptr: *mut Il2CppArray, ids: &[i32]) {
     if array_ptr.is_null() {
         return;
     }
+    let array_len = (*array_ptr).max_length as usize;
 
     // Il2CppArray data starts right after the header (which is why it needs to add 1)
-    let data_ptr = array_ptr.add(1) as *mut i32;
-    for (i, &new_id) in ids.iter().enumerate() {
+    let data_ptr = (array_ptr as *mut u8).add(std::mem::size_of::<Il2CppArray>()) as *mut i32;
+    for i in 0..array_len.min(ids.len()) {
+        let new_id = ids[i];
         if new_id == 0 {
             continue;
         }
@@ -24,8 +26,11 @@ extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArr
 
     unsafe {
         let vo_chara_len = (*vocalCharaIdArray).max_length as usize;
+        info!("vo_chara_len: {)", vo_chara_len);
         let limit = vo_chara_len.min(chara_vo_ids.len());
+        info!("limit: {)", limit);
         let truncated_ids = &chara_vo_ids[..limit];
+        info!("truncated_ids len: {)", truncated_ids.len());
 
         force_array_ids(vocalCharaIdArray, truncated_ids);
     }
