@@ -329,10 +329,10 @@ impl Gui {
                 ui.horizontal(|ui| {
                     ui.add(Self::icon(ctx));
                     ui.heading(t!("hachimi"));
-                    if ui.button(" \u{f29c} ").clicked() {
-                        show_window = Some(Box::new(AboutWindow::new()));
-                    }
                 });
+                if ui.button(" \u{f29c} ").clicked() {
+                    show_window = Some(Box::new(AboutWindow::new()));
+                }
                 ui.label(env!("HACHIMI_DISPLAY_VERSION"));
                 if ui.button(t!("menu.close_menu")).clicked() {
                     self.show_menu = false;
@@ -1816,7 +1816,7 @@ impl Window for AboutWindow {
                 });
             });
             ui.label(t!("about.copyright", year = Utc::now().year()));
-            ui.vertical(|ui| {
+            ui.horizontal(|ui| {
                 if ui.button(t!("about.view_license")).clicked() {
                     thread::spawn(|| {
                         Gui::instance().unwrap()
@@ -1829,13 +1829,9 @@ impl Window for AboutWindow {
                 if ui.button(t!("about.open_website")).clicked() {
                     Application::OpenURL(WEBSITE_URL.to_il2cpp_string());
                 }
-                ui.end_row(); 
-
                 if ui.button(t!("about.view_source_code")).clicked() {
                     Application::OpenURL(format!("https://github.com/{}", REPO_PATH).to_il2cpp_string());
                 }
-                ui.end_row(); 
- 
                 // TODO: add central updater for both Android(only version check) and Windows
                 #[cfg(target_os = "windows")]
                 if ui.button(t!("about.check_for_updates")).clicked() {
