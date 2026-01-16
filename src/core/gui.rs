@@ -580,7 +580,7 @@ impl Gui {
     ) -> bool {
         let mut changed = false;
         let scale = get_scale(ui.ctx());
-        let fixed_width = 70.0 * scale;
+        let fixed_width = 120.0 * scale;
         let row_height = 20.0 * scale;
 
         let button_id = ui.make_persistent_id(id_salt);
@@ -597,12 +597,12 @@ impl Gui {
         );
     
         if button_res.clicked() {
-            ui.memory_mut(|mem| mem.toggle_popup(popup_id));
+            ui.memory_mut(|mem| mem.open_popup(popup_id));
         }
 
         if ui.memory(|mem| mem.is_popup_open(popup_id)) {
-            egui::Area::new(popup_id.with("area")).order(egui::Order::Foreground).fixed_pos(button_res.rect.left_bottom()).show(ui.ctx(), |ui| {
-                egui::Frame::popup(ui.style()).show(ui, |ui| {
+            egui::Area::new(popup_id.with("area")).order(egui::Order::Foreground).fixed_pos(button_res.rect.left_bottom() + egui::vec2(0.0, 1.0)).show(ui.ctx(), |ui| {
+                let frame_res = egui::Frame::popup(ui.style()).show(ui, |ui| {
                     ui.set_width(fixed_width);
                     ui.set_max_width(fixed_width);
 
@@ -645,7 +645,21 @@ impl Gui {
                         });
                     });
                 });
+
+                if ui.interact(frame_res.response.rect, popup_id.with("interact"), egui::Sense::click()).clicked() {
+                    // prevents the frame from closing when clicking the scrollbar/search
+                }
             });
+
+            // only close if there was a click AND it wasnt the button that just opened it
+            if ui.input(|i| i.pointer.any_click()) && !button_res.clicked() {
+                let pos = ui.input(|i| i.pointer.interact_pos()).unwrap_or(egui::Pos2::ZERO);
+
+                // need to check if the click was outside the popup area too
+                if !button_res.rect.contains(pos) {
+                    ui.memory_mut(|mem| mem.close_popup(popup_id));
+                }
+            }
         }
     
         changed
