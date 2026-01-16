@@ -1128,7 +1128,7 @@ impl Window for SimpleOkDialog {
 }
 
 struct ConfigEditor {
-    last_ptr_config: *const hachimi::Config,
+    last_ptr_config: usize,
     config: hachimi::Config,
     id: egui::Id,
     current_tab: ConfigEditorTab
@@ -1155,7 +1155,7 @@ impl ConfigEditor {
     pub fn new() -> ConfigEditor {
         let handle = Hachimi::instance().config.load();
         ConfigEditor {
-            last_ptr_config: Arc::as_ptr(&handle),
+            last_ptr_config: Arc::as_ptr(&handle) as usize,
             config: (**Hachimi::instance().config.load()).clone(),
             id: random_id(),
             current_tab: ConfigEditorTab::General
@@ -1463,10 +1463,9 @@ impl Window for ConfigEditor {
         let mut open = true;
         let mut open2 = true;
         let global_handle = Hachimi::instance().config.load();
-        let global_ptr = Arc::as_ptr(&global_handle);
+        let global_ptr = Arc::as_ptr(&global_handle) as usize;
 
         if global_ptr != self.last_ptr_config {
-            // the global config was updated by another window
             self.config = (**global_handle).clone();
             self.last_ptr_config = global_ptr;
         }
@@ -1539,6 +1538,8 @@ impl Window for ConfigEditor {
                 }
             );
         });
+
+        self.config = config;
 
         if reset_clicked {
             self.restore_defaults();
