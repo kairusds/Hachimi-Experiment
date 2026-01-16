@@ -16,7 +16,7 @@ use crate::il2cpp::{
 };
 
 #[cfg(not(target_os = "windows"))]
-use crate::il2cpp::hook::umamusume::WebViewManager;
+use crate::il2cpp::hook::{umamusume::WebViewManager, UnityEngine_CoreModule::TouchScreenKeyboard};
 
 #[cfg(target_os = "windows")]
 use crate::il2cpp::hook::UnityEngine_CoreModule::QualitySettings;
@@ -330,14 +330,16 @@ impl Gui {
                     ui.add(Self::icon(ctx));
                     ui.heading(t!("hachimi"));
                 });
-                if ui.button(" \u{f29c} ").clicked() {
-                    show_window = Some(Box::new(AboutWindow::new()));
-                }
                 ui.label(env!("HACHIMI_DISPLAY_VERSION"));
-                if ui.button(t!("menu.close_menu")).clicked() {
-                    self.show_menu = false;
-                    self.menu_anim_time = None;
-                }
+                ui.horizontal(|ui| {
+                    if ui.button(" \u{f29c} ").clicked() {
+                        show_window = Some(Box::new(AboutWindow::new()));
+                    }
+                    if ui.button(t!("menu.close_menu")).clicked() {
+                        self.show_menu = false;
+                        self.menu_anim_time = None;
+                    }
+                });
                 ui.separator();
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
@@ -635,11 +637,20 @@ impl Gui {
             ui.set_max_width(fixed_width);
 
             ui.horizontal(|ui| {
-                // ui.label("Search");
                 let res = ui.add_sized(
                     [ui.available_width() - 30.0 * scale, row_height],
                     egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
                 );
+                #[cfg(target_os = "android")]
+                if response.gained_focus() {
+                    TouchScreenKeyboard::Open(
+                        search_term.to_il2cpp_string(), 
+                        TouchScreenKeyboard::TouchScreenKeyboardType::Search,
+                        false,
+                        false,
+                        false
+                    );
+                }
 
                 if ui.button("X").clicked() {
                     search_term.clear();

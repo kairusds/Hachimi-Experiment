@@ -11,6 +11,8 @@ pub mod RenderTexture;
 pub mod Graphics;
 pub mod Behaviour;
 pub mod Component;
+#[cfg(target_os = "android")]
+pub mod TouchScreenKeyboard;
 
 #[cfg(target_os = "windows")]
 pub mod QualitySettings;
@@ -40,6 +42,8 @@ pub fn init() {
     Graphics::init(image);
     Behaviour::init(image);
     Component::init(image);
+    #[cfg(target_os = "android")]
+    TouchScreenKeyboard::init(image);
 
     #[cfg(target_os = "windows")]
     {

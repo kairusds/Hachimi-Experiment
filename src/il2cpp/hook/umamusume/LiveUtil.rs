@@ -24,7 +24,6 @@ extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArr
                 }
             }
 
-            /*
             if !allCharaIdArray.is_null() {
                 let len = (*allCharaIdArray).max_length as usize;
                 let data_ptr = allCharaIdArray.add(1) as *mut i32;
@@ -35,7 +34,7 @@ extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArr
                         *data_ptr.add(i) = new_id;
                     }
                 }
-            } */
+            }
         }
     }
 
