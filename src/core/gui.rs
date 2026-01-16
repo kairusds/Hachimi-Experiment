@@ -602,8 +602,6 @@ impl Gui {
 
         if ui.memory(|mem| mem.is_popup_open(popup_id)) {
             egui::Area::new(popup_id.with("area")).order(egui::Order::Foreground).fixed_pos(button_res.rect.left_bottom() + egui::vec2(0.0, 1.0)).show(ui.ctx(), |ui| {
-                ui.memory_mut(|mem| mem.set_focus_lock_id(popup_id));
-
                 let frame_res = egui::Frame::popup(ui.style()).show(ui, |ui| {
                     ui.set_width(fixed_width);
                     ui.set_max_width(fixed_width);
