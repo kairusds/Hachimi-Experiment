@@ -563,15 +563,94 @@ impl Gui {
         egui::ComboBox::new(ui.id().with(id_child), "")
         .selected_text(selected)
         .show_ui(ui, |ui| {
-            let mut clip_rect = ui.clip_rect();
-            clip_rect.set_width(60.0 * get_scale(ui.ctx()));
-            ui.set_clip_rect(clip_rect);
-
             for choice in choices.iter() {
                 changed |= ui.selectable_value(value, choice.0, choice.1).changed();
             }
         });
 
+        changed
+    }
+
+    fn run_combo_menu<T: PartialEq + Copy>(
+        ui: &mut egui::Ui,
+        id_salt: impl std::hash::Hash,
+        value: &mut T,
+        choices: &[(T, &str)],
+        search_term: &mut String,
+    ) -> bool {
+        let mut changed = false;
+        let scale = get_scale(ui.ctx());
+        let fixed_width = 70.0 * scale;
+        let row_height = 20.0 * scale;
+
+        let button_id = ui.make_persistent_id(id_salt);
+        let popup_id = button_id.with("popup");
+
+        let selected_text = choices.iter()
+            .find(|(v, _)| v == value)
+            .map(|(_, s)| *s)
+            .unwrap_or("Unknown");
+
+        let button_res = ui.add_sized(
+            [fixed_width, row_height],
+            egui::Button::new(selected_text).wrap()
+        );
+    
+        if button_res.clicked() {
+            ui.memory_mut(|mem| mem.toggle_popup(popup_id));
+        }
+
+        if ui.memory(|mem| mem.is_popup_open(popup_id)) {
+            egui::Popup::menu(&button_res)
+                .id(popup_id)
+                .width(fixed_width)
+                .show(|ui| {
+                    ui.set_width(fixed_width);
+                    ui.set_max_width(fixed_width);
+
+                    ui.horizontal(|ui| {
+                        ui.label("Search");
+                        let res = ui.add_sized(
+                            [ui.available_width(), row_height],
+                            egui::TextEdit::singleline(search_term)
+                                .hint_text(t!("filter"))
+                        );
+                        if res.has_focus() {
+                            // prevents the popup from closing while typing on some platforms
+                        }
+                    });
+                    
+                    ui.separator();
+
+                    let scroll_height = 250.0 * scale;
+                    egui::ScrollArea::vertical()
+                        .max_height(scroll_height)
+                        .hscroll(false)
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                            
+                            ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
+                                for (choice_val, label) in choices {
+                                    if !search_term.is_empty() && !label.to_lowercase().contains(&search_term.to_lowercase()) {
+                                        continue;
+                                    }
+    
+                                    let is_selected = value == choice_val;
+                                    let btn = egui::Button::selectable(is_selected, *label);
+    
+                                    if ui.add(btn).clicked() {
+                                        *value = *choice_val;
+                                        changed = true;
+                                        ui.memory_mut(|mem| mem.close_popup(popup_id));
+                                        search_term.clear();
+                                    }
+                                }
+                            });
+                        });
+                });
+        }
+    
         changed
     }
 
@@ -1613,8 +1692,8 @@ impl Window for FirstTimeSetupWindow {
 
 struct LiveVocalsSwapWindow {
     id: egui::Id,
-    // Store a local copy to edit, then save on close or via a "Save" button
     config: hachimi::Config, 
+    search_term: String
 }
 
 impl LiveVocalsSwapWindow {
@@ -1653,7 +1732,8 @@ impl Window for LiveVocalsSwapWindow {
             egui::Grid::new(self.id.with("live_vocals_swap_grid")).show(ui, |ui| {
                 for i in 0..6 {
                     ui.label(t!("config_editor.live_vocals_swap_character_n", index = i + 1));
-                    Gui::run_combo(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &combo_items);
+                    // Gui::run_combo(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &combo_items);
+                    Gui::run_combo_menu(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &combo_items, &mut self.search_term);
                     ui.end_row();
                 }
             });
