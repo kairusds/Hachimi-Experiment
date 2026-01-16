@@ -645,7 +645,7 @@ impl Gui {
                 if res.gained_focus() {
                     TouchScreenKeyboard::Open(
                         search_term.to_il2cpp_string(), 
-                        TouchScreenKeyboard::TouchScreenKeyboardType::Search as i32,
+                        TouchScreenKeyboard::TouchScreenKeyboardType::Search,
                         false,
                         false,
                         false

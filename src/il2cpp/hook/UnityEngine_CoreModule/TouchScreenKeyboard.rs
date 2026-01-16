@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use crate::{il2cpp::{api::il2cpp_resolve_icall, types::*}};
+use crate::{il2cpp::{symbols::get_method_addr, types::*}};
 
 static mut TOUCHSCREENKEYBOARD_OPEN_ADDR: usize = 0;
 
@@ -27,7 +27,7 @@ impl_addr_wrapper_fn!(
     TOUCHSCREENKEYBOARD_OPEN_ADDR, 
     *mut Il2CppObject, 
     text: *mut Il2CppString,
-    keyboardType: i32,
+    keyboardType: TouchScreenKeyboardType,
     autocorrection: bool,
     multiline: bool,
     secure: bool
@@ -37,8 +37,6 @@ pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
     get_class_or_return!(UnityEngine_CoreModule, UnityEngine, TouchScreenKeyboard);
 
     unsafe {
-        TOUCHSCREENKEYBOARD_OPEN_ADDR = il2cpp_resolve_icall(
-            c"UnityEngine.TouchScreenKeyboard::Open(System.String,UnityEngine.TouchScreenKeyboardType,System.Boolean,System.Boolean,System.Boolean)".as_ptr()
-        );
+        TOUCHSCREENKEYBOARD_OPEN_ADDR = get_method_addr(TouchScreenKeyboard, c"Open", 5);
     }
 }
