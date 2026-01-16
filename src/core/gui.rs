@@ -82,7 +82,7 @@ static mut DISABLED_GAME_UIS: once_cell::unsync::Lazy<FnvHashSet<*mut crate::il2
     once_cell::unsync::Lazy::new(|| FnvHashSet::default());
 
 #[cfg(target_os = "android")]
-use std::sync::atomic::AtomicPtr;
+use std::sync::atomic::{AtomicPtr, Ordering};
 #[cfg(target_os = "android")]
 static PENDING_KEYBOARD_TEXT: AtomicPtr<crate::il2cpp::types::Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
 
