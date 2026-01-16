@@ -558,27 +558,26 @@ impl Gui {
                 selected = choice.1;
             }
         }
-    
+
         let mut changed = false;
         let scale = get_scale(ui.ctx());
-        let fixed_width = 180.0 * scale;
+        let fixed_width = 50.0 * scale;
         let button_id = ui.make_persistent_id(id_child);
         let popup_id = button_id.with("popup");
-
         let button_res = ui.add_sized(
             [fixed_width, 20.0 * scale],
             egui::Button::new(selected).truncate()
         );
 
         if button_res.clicked() {
-            ui.ctx().toggle_popup(popup_id);
+            ui.memory_mut(|mem| mem.toggle_popup(popup_id));
         }
-    
-        if ui.ctx().is_popup_open(popup_id) {
+
+        if ui.memory(|mem| mem.is_popup_open(popup_id)) {
             egui::Popup::menu(&button_res)
                 .id(popup_id)
                 .width(fixed_width)
-                .show(|ui| {
+                .show(|ui| { 
                     ui.set_max_width(fixed_width);
     
                     egui::ScrollArea::vertical()
@@ -594,7 +593,7 @@ impl Gui {
                                     if ui.selectable_label(is_selected, *choice_text).clicked() {
                                         *value = *choice_val;
                                         changed = true;
-                                        ui.ctx().close_popup(popup_id);
+                                        ui.memory_mut(|mem| mem.close_popup(popup_id));
                                     }
                                 }
                             });
