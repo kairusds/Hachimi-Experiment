@@ -636,7 +636,7 @@ impl Gui {
                                 if ui.add(egui::Button::selectable(is_selected, *label)).clicked() {
                                     *value = *choice_val;
                                     changed = true;
-                                    ui.memory_mut(|mem| mem.close_popup());
+                                    ui.memory_mut(|mem| mem.close_popup(popup_id));
                                     search_term.clear();
                                 }
                             }
