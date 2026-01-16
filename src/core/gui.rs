@@ -609,14 +609,16 @@ impl Gui {
                     ui.set_max_width(fixed_width);
 
                     ui.horizontal(|ui| {
-                        ui.label("Search");
+                        // ui.label("Search");
                         let res = ui.add_sized(
-                            [ui.available_width(), row_height],
-                            egui::TextEdit::singleline(search_term)
-                                .hint_text(t!("filter"))
+                            [ui.available_width() - 30.0 * scale, row_height],
+                            egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
                         );
                         if res.has_focus() {
                             // prevents the popup from closing while typing on some platforms
+                        }
+                        if ui.button("X").clicked() {
+                            search_term.clear();
                         }
                     });
                     
@@ -1700,7 +1702,8 @@ impl LiveVocalsSwapWindow {
     fn new() -> LiveVocalsSwapWindow {
         LiveVocalsSwapWindow {
             id: random_id(),
-            config: (**Hachimi::instance().config.load()).clone()
+            config: (**Hachimi::instance().config.load()).clone(),
+            search_term: String::new()
         }
     }
 }
