@@ -558,7 +558,7 @@ impl Gui {
                 selected = choice.1;
             }
         }
-
+    
         let mut changed = false;
         let scale = get_scale(ui.ctx());
         let fixed_width = 180.0 * scale;
@@ -569,37 +569,39 @@ impl Gui {
             [fixed_width, 20.0 * scale],
             egui::Button::new(selected).truncate()
         );
-    
-        if button_res.clicked() {
-            ui.memory_mut(|mem| mem.toggle_popup(popup_id));
-        }
 
-        if ui.memory(|mem| mem.is_popup_open(popup_id)) {
+        if button_res.clicked() {
+            ui.ctx().toggle_popup(popup_id);
+        }
+    
+        if ui.ctx().is_popup_open(popup_id) {
             egui::Popup::menu(&button_res)
                 .id(popup_id)
                 .width(fixed_width)
-                .show(ui, |ui| {
+                .show(|ui| {
                     ui.set_max_width(fixed_width);
     
                     egui::ScrollArea::vertical()
                         .max_height(250.0 * scale)
-                        .hscroll(false)
+                        .hscroll(false) 
                         .show(ui, |ui| {
                             ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                            
                             ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
                                 for (choice_val, choice_text) in choices {
                                     let is_selected = *value == *choice_val;
-
+                                    
                                     if ui.selectable_label(is_selected, *choice_text).clicked() {
                                         *value = *choice_val;
                                         changed = true;
-                                        ui.memory_mut(|mem| mem.close_popup());
+                                        ui.ctx().close_popup(popup_id);
                                     }
                                 }
                             });
                         });
                 });
         }
+    
         changed
     }
 
