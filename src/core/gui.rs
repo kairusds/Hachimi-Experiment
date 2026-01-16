@@ -601,55 +601,46 @@ impl Gui {
         }
 
         if ui.memory(|mem| mem.is_popup_open(popup_id)) {
-            egui::Area::new(popup_id.with("area"))
-                .order(egui::Order::Foreground)
-                .fixed_pos(button_res.rect.left_bottom())
-                .show(ui.ctx(), |ui| {
-                    egui::Frame::popup(ui.style()).show(ui, |ui| {
-                        ui.set_width(fixed_width);
-                        ui.set_max_width(fixed_width);
+            egui::Area::new(popup_id.with("area")).order(egui::Order::Foreground).fixed_pos(button_res.rect.left_bottom()).show(ui.ctx(), |ui| {
+                egui::Frame::popup(ui.style()).show(ui, |ui| {
+                    ui.set_width(fixed_width);
+                    ui.set_max_width(fixed_width);
 
-                        ui.horizontal(|ui| {
-                            // ui.label("Search");
-                            let res = ui.add_sized(
-                                [ui.available_width() - 30.0 * scale, row_height],
-                                egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
-                            );
-                            if res.has_focus() {
-                                // prevents the popup from closing while typing on some platforms
-                            }
-                            if ui.button("X").clicked() {
-                                search_term.clear();
-                            }
-                        });
-                        
-                        ui.separator();
+                    ui.horizontal(|ui| {
+                        // ui.label("Search");
+                        let res = ui.add_sized(
+                            [ui.available_width() - 30.0 * scale, row_height],
+                            egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
+                        );
+                        if res.has_focus() {
+                            // prevents the popup from closing while typing on some platforms
+                        }
+                        if ui.button("X").clicked() {
+                            search_term.clear();
+                        }
+                    });
 
-                        let scroll_height = 250.0 * scale;
-                        egui::ScrollArea::vertical()
-                            .max_height(scroll_height)
-                            .hscroll(false)
-                            .auto_shrink([false, false])
-                            .show(ui, |ui| {
-                                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-    
-                                ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
-                                    for (choice_val, label) in choices {
-                                        if !search_term.is_empty() && !label.to_lowercase().contains(&search_term.to_lowercase()) {
-                                            continue;
-                                        }
-        
-                                        let is_selected = value == choice_val;
-                                        let btn = egui::Button::selectable(is_selected, *label);
-        
-                                        if ui.add(btn).clicked() {
-                                            *value = *choice_val;
-                                            changed = true;
-                                            ui.memory_mut(|mem| mem.close_popup(popup_id));
-                                            search_term.clear();
-                                        }
-                                    }
-                                });
+                    ui.separator();
+
+                    let scroll_height = 250.0 * scale;
+                    egui::ScrollArea::vertical().max_height(scroll_height).hscroll(false).auto_shrink([false, false]).show(ui, |ui| {
+                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+
+                        ui.with_layout(egui::Layout::top_down_justified(egui::Align::Min), |ui| {
+                            for (choice_val, label) in choices {
+                                if !search_term.is_empty() && !label.to_lowercase().contains(&search_term.to_lowercase()) {
+                                    continue;
+                                }
+
+                                let is_selected = value == choice_val;
+                                let btn = egui::Button::selectable(is_selected, *label);
+
+                                if ui.add(btn).clicked() {
+                                    *value = *choice_val;
+                                    changed = true;
+                                    ui.memory_mut(|mem| mem.close_popup(popup_id));
+                                    search_term.clear();
+                                }
                             });
                         });
                     });
