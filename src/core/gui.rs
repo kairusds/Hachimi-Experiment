@@ -648,7 +648,10 @@ impl Gui {
                         TouchScreenKeyboard::TouchScreenKeyboardType::Search,
                         false,
                         false,
-                        false
+                        false,
+                        false,
+                        "".to_string().to_il2cpp_string(),
+                        256
                     );
                 }
 

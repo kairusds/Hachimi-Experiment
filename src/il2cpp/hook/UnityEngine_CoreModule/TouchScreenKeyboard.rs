@@ -30,13 +30,16 @@ impl_addr_wrapper_fn!(
     keyboardType: TouchScreenKeyboardType,
     autocorrection: bool,
     multiline: bool,
-    secure: bool
+    secure: bool,
+    alert: bool,
+    textPlaceholder: *mut Il2CppString,
+    characterLimit: i32
 );
 
 pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
     get_class_or_return!(UnityEngine_CoreModule, UnityEngine, TouchScreenKeyboard);
 
     unsafe {
-        TOUCHSCREENKEYBOARD_OPEN_ADDR = get_method_addr(TouchScreenKeyboard, c"Open", 5);
+        TOUCHSCREENKEYBOARD_OPEN_ADDR = get_method_addr(TouchScreenKeyboard, c"Open", 8);
     }
 }
