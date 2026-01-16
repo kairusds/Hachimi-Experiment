@@ -26,11 +26,11 @@ extern "C" fn GetSingCharaIdList(songId: i32, songPartNumber: i32, allCharaIdArr
 
     unsafe {
         let vo_chara_len = (*vocalCharaIdArray).max_length as usize;
-        info!("vo_chara_len: {)", vo_chara_len);
+        info!("vo_chara_len: {}", vo_chara_len);
         let limit = vo_chara_len.min(chara_vo_ids.len());
-        info!("limit: {)", limit);
+        info!("limit: {}", limit);
         let truncated_ids = &chara_vo_ids[..limit];
-        info!("truncated_ids len: {)", truncated_ids.len());
+        info!("truncated_ids len: {}", truncated_ids.len());
 
         force_array_ids(vocalCharaIdArray, truncated_ids);
     }
