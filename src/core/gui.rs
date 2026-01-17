@@ -605,8 +605,8 @@ impl Gui {
                             TouchScreenKeyboardType::KeyboardType::Search,
                             false, false, false
                         );
+                        info!("softkey init - ptr: {:p}", kb_ptr);
                         ACTIVE_KEYBOARD.store(kb_ptr, Ordering::Relaxed);
-                        info!("softkey init");
                     }
                 }
 
@@ -621,6 +621,7 @@ impl Gui {
                     }
 
                     let status = TouchScreenKeyboard::get_status(kb_ptr);
+                    info!("softkey status: {:?}", status);
                     if status == TouchScreenKeyboard::Status::Visible || status == TouchScreenKeyboard::Status::Done {
                         Self::start_keyboard_watcher();
                         info!("softkey visible");
