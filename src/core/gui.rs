@@ -616,7 +616,7 @@ impl Gui {
                         let rust_str = txt_ref.as_utf16str().to_string();
                         if let Ok(mut guard) = SHARED_KEYBOARD_TEXT.lock() {
                             *guard = rust_str;
-                            info!("softkey string {}", rust_str);
+                            info!("softkey string {}", *guard);
                         }
                     }
 
