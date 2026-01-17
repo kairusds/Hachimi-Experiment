@@ -605,10 +605,10 @@ impl Gui {
                     }
                 }
 
-                let txt = TouchScreenKeyboard::get_text(kb_ptr);
-                KEYBOARD_SHUTTLE_TEXT.store(txt, Ordering::Relaxed);
-
                 if !kb_ptr.is_null() {
+                    let txt = TouchScreenKeyboard::get_text(kb_ptr);
+                    KEYBOARD_SHUTTLE_TEXT.store(txt, Ordering::Relaxed);
+
                     if TouchScreenKeyboard::get_status(kb_ptr) == TouchScreenKeyboard::Status::Visible {
                         Gui::start_keyboard_watcher();
                     } else {
