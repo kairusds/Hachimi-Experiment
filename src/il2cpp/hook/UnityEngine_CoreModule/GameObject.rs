@@ -4,6 +4,7 @@ use crate::{
     core::{Hachimi, ext::Utf16StringExt},
     il2cpp::{
         api::il2cpp_resolve_icall,
+        ext::Il2CppObjectExt,
         hook::{
             umamusume::{CameraData::{self, ShadowResolution}, FlashActionPlayer}, Plugins::AnimateToUnity::AnRoot,
             UnityEngine_AssetBundleModule::AssetBundle
@@ -123,7 +124,6 @@ extern "C" fn TryGetComponentFastPath(this: *mut Il2CppObject, type_: *mut Il2Cp
     }
 }
 
-=======
 fn customize(component: *mut Il2CppObject) {
     let shadow_resolution = Hachimi::instance().config.load().shadow_resolution;
     if shadow_resolution != ShadowResolution::Default {
