@@ -621,7 +621,7 @@ impl Gui {
                     }
 
                     let status = TouchScreenKeyboard::get_status(kb_ptr);
-                    if status == Status::Visible || status == Status::Done {
+                    if status == TouchScreenKeyboard::Status::Visible || status == TouchScreenKeyboard::Status::Done {
                         Self::start_keyboard_watcher();
                         info!("softkey visible");
                     } else {
