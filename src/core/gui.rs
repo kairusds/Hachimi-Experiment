@@ -707,7 +707,7 @@ impl Gui {
                         KEYBOARD_ACTIVE_FLAG.store(true, Ordering::Relaxed);
                         let ptr = search_term.to_il2cpp_string();
                         PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
-                        start_keyboard_watcher();
+                        Self::start_keyboard_watcher();
                     }
 
                     if KEYBOARD_ACTIVE_FLAG.load(Ordering::Relaxed) {
