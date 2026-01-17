@@ -93,6 +93,12 @@ extern "C" fn Internal_AddComponentWithType(this: *mut Il2CppObject, componentTy
     component
 }
 
+#[repr(C)]
+struct FastPath {
+    component: *mut Il2CppObject,
+    oneFurtherThanResultValue: usize,
+}
+
 type TryGetComponentFastPathFn = extern "C" fn(this: *mut Il2CppObject, type_: *mut Il2CppType, oneFurtherThanResultValue: usize);
 extern "C" fn TryGetComponentFastPath(this: *mut Il2CppObject, type_: *mut Il2CppType, oneFurtherThanResultValue: usize) {
     get_orig_fn!(TryGetComponentFastPath, TryGetComponentFastPathFn)(this, type_, oneFurtherThanResultValue);
