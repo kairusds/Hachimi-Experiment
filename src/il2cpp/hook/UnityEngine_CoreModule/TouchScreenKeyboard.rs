@@ -44,5 +44,7 @@ pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
                 Il2CppTypeEnum_IL2CPP_TYPE_BOOLEAN,  // Boolean secure
             ]
         );
+        TOUCHSCREENKEYBOARD_GET_TEXT_ADDR = get_method_addr(TouchScreenKeyboard, c"get_text", 0);
+        TOUCHSCREENKEYBOARD_GET_STATUS_ADDR = get_method_addr(TouchScreenKeyboard, c"get_status", 0);
     }
 }
