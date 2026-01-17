@@ -87,9 +87,23 @@ pub fn on_LoadAsset(bundle: *mut Il2CppObject, this: *mut Il2CppObject, name: &U
     }
 }
 
+fn customize(component: *mut Il2CppObject) {
+    match unsafe { (*component).klass() } {
+        // graphics quality - shadow resolution
+        CameraData if CameraData == CameraData::class() => {
+            CameraData::set_IsOverrideShadowResolution(component, true);
+            CameraData::set_OverrideShadowResolution(component, ShadowResolution::_4096);
+        }
+        _ => return
+    }
+}
+
 type Internal_AddComponentWithTypeFn = extern "C" fn(this: *mut Il2CppObject, componentType: *mut Il2CppType) -> *mut Il2CppObject;
 extern "C" fn Internal_AddComponentWithType(this: *mut Il2CppObject, componentType: *mut Il2CppType) -> *mut Il2CppObject {
     let component = get_orig_fn!(Internal_AddComponentWithType, Internal_AddComponentWithTypeFn)(this, componentType);
+    if !component.is_null() {
+        customize(component);
+    }
     component
 }
 
@@ -102,6 +116,12 @@ struct FastPath {
 type TryGetComponentFastPathFn = extern "C" fn(this: *mut Il2CppObject, type_: *mut Il2CppType, oneFurtherThanResultValue: usize);
 extern "C" fn TryGetComponentFastPath(this: *mut Il2CppObject, type_: *mut Il2CppType, oneFurtherThanResultValue: usize) {
     get_orig_fn!(TryGetComponentFastPath, TryGetComponentFastPathFn)(this, type_, oneFurtherThanResultValue);
+    let fastPath = (oneFurtherThanResultValue - std::mem::size_of::<*mut Il2CppObject>())
+        as *mut FastPath;
+    let component = unsafe { (*fastPath).component };
+    if !component.is_null() {
+        customize(component);
+    }
 }
 
 pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
