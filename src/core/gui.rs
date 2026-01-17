@@ -87,13 +87,17 @@ static mut DISABLED_GAME_UIS: once_cell::unsync::Lazy<FnvHashSet<*mut Il2CppObje
     once_cell::unsync::Lazy::new(|| FnvHashSet::default());
 
 #[cfg(target_os = "android")]
-use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
+#[cfg(target_os = "android")]
+use once_cell::sync::Lazy;
 #[cfg(target_os = "android")]
 static PENDING_KEYBOARD_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
 static ACTIVE_KEYBOARD: AtomicPtr<Il2CppObject> = AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
-static KEYBOARD_SHUTTLE_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
+static SHARED_KEYBOARD_TEXT: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(String::new()));
+#[cfg(target_os = "android")]
+static KEYBOARD_ACTIVE_FLAG: AtomicBool = AtomicBool::new(false);
 
 fn get_scale_salt(ctx: &egui::Context) -> f32 {
     ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale_salt"))).unwrap_or(1.0)
@@ -602,20 +606,28 @@ impl Gui {
                             false, false, false
                         );
                         ACTIVE_KEYBOARD.store(kb_ptr, Ordering::Relaxed);
+                        info!("softkey init");
                     }
                 }
 
                 if !kb_ptr.is_null() {
-                    let txt = TouchScreenKeyboard::get_text(kb_ptr);
-                    KEYBOARD_SHUTTLE_TEXT.store(txt, Ordering::Relaxed);
+                    let txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
+                    if let Some(txt_ref) = txt_ptr.as_ref() {
+                        let rust_str = txt_ref.as_utf16str().to_string();
+                        if let Ok(mut guard) = SHARED_KEYBOARD_TEXT.lock() {
+                            *guard = rust_str;
+                            info!("softkey string {}", rust_str);
+                        }
+                    }
 
-                    if TouchScreenKeyboard::get_status(kb_ptr) == TouchScreenKeyboard::Status::Visible {
-                        Gui::start_keyboard_watcher();
+                    let status = TouchScreenKeyboard::get_status(kb_ptr);
+                    if status == Status::Visible || status == Status::Done {
+                        Self::start_keyboard_watcher();
+                        info!("softkey visible");
                     } else {
-                        let txt = TouchScreenKeyboard::get_text(kb_ptr);
-                        KEYBOARD_SHUTTLE_TEXT.store(txt, Ordering::Relaxed);
-                        // OK/CANCEL/BACK 
+                        KEYBOARD_ACTIVE_FLAG.store(false, Ordering::Relaxed);
                         ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+                        info!("softkey destroy");
                     }
                 }
             }
@@ -667,7 +679,7 @@ impl Gui {
                 visuals.bg_stroke,
                 egui::epaint::StrokeKind::Inside,
             );
-            
+
             let galley = ui.painter().layout_no_wrap(
                 selected_text.to_owned(),
                 egui::TextStyle::Button.resolve(ui.style()),
@@ -692,21 +704,16 @@ impl Gui {
                 #[cfg(target_os = "android")]
                 {
                     if res.gained_focus() {
+                        KEYBOARD_ACTIVE_FLAG.store(true, Ordering::Relaxed);
                         let ptr = search_term.to_il2cpp_string();
                         PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
-                        Gui::start_keyboard_watcher();
+                        start_keyboard_watcher();
                     }
 
-                    let res_ptr = KEYBOARD_SHUTTLE_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
-                    if !res_ptr.is_null() {
-                        *search_term = "TEST".to_string();
-
-                        unsafe {
-                            if let Some(txt_ref) = res_ptr.as_ref() {
-                                let new_text = txt_ref.as_utf16str().to_string();
-                                if *search_term != new_text {
-                                    *search_term = new_text;
-                                }
+                    if KEYBOARD_ACTIVE_FLAG.load(Ordering::Relaxed) {
+                        if let Ok(guard) = SHARED_KEYBOARD_TEXT.lock() {
+                            if *search_term != *guard {
+                                *search_term = guard.clone();
                             }
                         }
                     }
