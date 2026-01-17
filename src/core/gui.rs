@@ -92,6 +92,8 @@ use std::sync::atomic::{AtomicPtr, Ordering};
 static PENDING_KEYBOARD_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
 static ACTIVE_KEYBOARD: AtomicPtr<Il2CppObject> = AtomicPtr::new(std::ptr::null_mut());
+#[cfg(target_os = "android")]
+static KEYBOARD_SHUTTLE_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
 
 fn get_scale_salt(ctx: &egui::Context) -> f32 {
     ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale_salt"))).unwrap_or(1.0)
@@ -586,6 +588,37 @@ impl Gui {
         changed
     }
 
+    #[cfg(target_os = "android")]
+    fn start_keyboard_watcher() {
+        Thread::main_thread().schedule(|| {
+            unsafe {
+                let mut kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+                if kb_ptr.is_null() {
+                    let init_text = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
+                    if !init_text.is_null() {
+                        kb_ptr = TouchScreenKeyboard::Open(
+                            init_text, 
+                            TouchScreenKeyboardType::KeyboardType::Search,
+                            false, false, false
+                        );
+                        ACTIVE_KEYBOARD.store(kb_ptr, Ordering::Relaxed);
+                    }
+                }
+
+                if !kb_ptr.is_null() {
+                    let txt = TouchScreenKeyboard::get_text(kb_ptr);
+                    KEYBOARD_SHUTTLE_TEXT.store(txt, Ordering::Relaxed);
+
+                    if TouchScreenKeyboard::get_status(kb_ptr) == TouchScreenKeyboard::Status::Visible {
+                        Gui::start_keyboard_watcher();
+                    } else {
+                        ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+                    }
+                }
+            }
+        });
+    }
+
     fn run_combo_menu<T: PartialEq + Copy>(
         ui: &mut egui::Ui,
         id_salt: impl std::hash::Hash,
@@ -658,36 +691,17 @@ impl Gui {
                     if res.gained_focus() {
                         let ptr = search_term.to_il2cpp_string();
                         PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
-
-                        Thread::main_thread().schedule(|| {
-                            let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
-                            if !ptr.is_null() {
-                                let keyboard = unsafe {
-                                    TouchScreenKeyboard::Open(
-                                        ptr, 
-                                        TouchScreenKeyboardType::KeyboardType::Search,
-                                        false, false, false
-                                    )
-                                };
-                                ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
-                            }
-                        });
+                        Gui::start_keyboard_watcher();
                     }
 
-                    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-                    if !kb_ptr.is_null() {
+                    let res_ptr = KEYBOARD_SHUTTLE_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
+                    if !res_ptr.is_null() {
                         unsafe {
-                            let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
-                            // update search_term in realtime as user types only if it's different
-                            if let Some(kb_ref) = kb_txt_ptr.as_ref() {
-                                let kb_txt_str = kb_ref.as_utf16str().to_string();
-                                if *search_term != kb_txt_str {
-                                    *search_term = kb_txt_str;
+                            if let Some(txt_ref) = res_ptr.as_ref() {
+                                let new_text = txt_ref.as_utf16str().to_string();
+                                if *search_term != new_text {
+                                    *search_term = new_text;
                                 }
-                            }
-
-                            if TouchScreenKeyboard::get_status(kb_ptr) != TouchScreenKeyboard::Status::Visible {
-                                ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
                             }
                         }
                     }
