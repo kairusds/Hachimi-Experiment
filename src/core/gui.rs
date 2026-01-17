@@ -697,12 +697,12 @@ impl Gui {
                     search_term.clear();
                     #[cfg(target_os = "android")]
                     {
-                        let kb_ptr = ACTIVE_KEYBOARD.swap(std::ptr::null_mut(), Ordering::Relaxed);
-                        if !kb_ptr.is_null() {
-                            Thread::main_thread().schedule(|| {
+                        Thread::main_thread().schedule(|| {
+                            let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+                            if !kb_ptr.is_null() {
                                 TouchScreenKeyboard::set_active(kb_ptr, false);
-                            });
-                        }
+                            }
+                        });
                     }
                 }
             });
