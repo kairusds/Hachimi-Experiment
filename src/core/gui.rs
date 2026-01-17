@@ -87,7 +87,7 @@ static mut DISABLED_GAME_UIS: once_cell::unsync::Lazy<FnvHashSet<*mut Il2CppObje
     once_cell::unsync::Lazy::new(|| FnvHashSet::default());
 
 #[cfg(target_os = "android")]
-use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
+use std::sync::atomic::{AtomicPtr, Ordering};
 #[cfg(target_os = "android")]
 use once_cell::sync::Lazy;
 #[cfg(target_os = "android")]
