@@ -605,13 +605,16 @@ impl Gui {
                     }
                 }
 
-                if !kb_ptr.is_null() {
-                    let txt = TouchScreenKeyboard::get_text(kb_ptr);
-                    KEYBOARD_SHUTTLE_TEXT.store(txt, Ordering::Relaxed);
+                let txt = TouchScreenKeyboard::get_text(kb_ptr);
+                KEYBOARD_SHUTTLE_TEXT.store(txt, Ordering::Relaxed);
 
+                if !kb_ptr.is_null() {
                     if TouchScreenKeyboard::get_status(kb_ptr) == TouchScreenKeyboard::Status::Visible {
                         Gui::start_keyboard_watcher();
                     } else {
+                        let txt = TouchScreenKeyboard::get_text(kb_ptr);
+                        KEYBOARD_SHUTTLE_TEXT.store(txt, Ordering::Relaxed);
+                        // OK/CANCEL/BACK 
                         ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
                     }
                 }
@@ -696,6 +699,8 @@ impl Gui {
 
                     let res_ptr = KEYBOARD_SHUTTLE_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
                     if !res_ptr.is_null() {
+                        *search_term = "TEST".to_string();
+
                         unsafe {
                             if let Some(txt_ref) = res_ptr.as_ref() {
                                 let new_text = txt_ref.as_utf16str().to_string();
