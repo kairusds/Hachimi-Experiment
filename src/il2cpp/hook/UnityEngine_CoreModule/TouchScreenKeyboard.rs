@@ -29,6 +29,9 @@ pub enum Status {
 static mut TOUCHSCREENKEYBOARD_GET_STATUS_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_status, TOUCHSCREENKEYBOARD_GET_STATUS_ADDR, Status, this: *mut Il2CppObject);
 
+static mut TOUCHSCREENKEYBOARD_SET_ACTIVE_ADDR: usize = 0;
+impl_addr_wrapper_fn!(set_active, TOUCHSCREENKEYBOARD_SET_ACTIVE_ADDR, (), this: *mut Il2CppObject, value: bool);
+
 pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
     get_class_or_return!(UnityEngine_CoreModule, UnityEngine, TouchScreenKeyboard);
 
@@ -46,5 +49,6 @@ pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
         );
         TOUCHSCREENKEYBOARD_GET_TEXT_ADDR = get_method_addr(TouchScreenKeyboard, c"get_text", 0);
         TOUCHSCREENKEYBOARD_GET_STATUS_ADDR = get_method_addr(TouchScreenKeyboard, c"get_status", 0);
+        TOUCHSCREENKEYBOARD_SET_ACTIVE_ADDR = get_method_addr(TouchScreenKeyboard, c"set_active", 1);
     }
 }

@@ -693,8 +693,17 @@ impl Gui {
                     }
                 }
 
-                if ui.button("X").clicked() {
+                if ui.button("X").clicked() || res.lost_focus() {
                     search_term.clear();
+                    #[cfg(target_os = "android")]
+                    {
+                        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+                        if !kb_ptr.is_null() {
+                            Thread::main_thread().schedule(|| {
+                                TouchScreenKeyboard::set_active(kb_ptr, false);
+                            });
+                        }
+                    }
                 }
             });
 
