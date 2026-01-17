@@ -697,7 +697,7 @@ impl Gui {
                     search_term.clear();
                     #[cfg(target_os = "android")]
                     {
-                        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+                        let kb_ptr = ACTIVE_KEYBOARD.swap(std::ptr::null_mut(), Ordering::Relaxed);
                         if !kb_ptr.is_null() {
                             Thread::main_thread().schedule(|| {
                                 TouchScreenKeyboard::set_active(kb_ptr, false);
