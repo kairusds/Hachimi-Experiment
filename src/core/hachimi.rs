@@ -30,6 +30,7 @@ pub struct Hachimi {
     // Shared properties
     pub game: Game,
     pub config: ArcSwap<Config>,
+    pub config_error: bool,
     pub template_parser: template::Parser,
 
     /// -1 = default
