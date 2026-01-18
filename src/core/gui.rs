@@ -1676,8 +1676,8 @@ struct FirstTimeSetupWindow {
 }
 
 impl FirstTimeSetupWindow {
-    let config = (**Hachimi::instance().config.load()).clone();
     fn new() -> FirstTimeSetupWindow {
+        let config = (**Hachimi::instance().config.load()).clone();
         FirstTimeSetupWindow {
             id: random_id(),
             config,
@@ -1831,17 +1831,20 @@ impl Window for FirstTimeSetupWindow {
 struct LiveVocalsSwapWindow {
     id: egui::Id,
     config: hachimi::Config,
-    chara_data: CharacterData,
+    chara_data: Option<Arc<CharacterData>>,
     search_term: String
 }
 
 impl LiveVocalsSwapWindow {
     fn new() -> LiveVocalsSwapWindow {
         let hachimi = Hachimi::instance();
+        let chara_guard = hachimi.chara_data.load();
+        let chara_data = (*chara_guard).as_ref().cloned();
+
         LiveVocalsSwapWindow {
             id: random_id(),
             config: (**hachimi.config.load()).clone(),
-            chara_data: hachimi.chara_data.load(),
+            chara_data,
             search_term: String::new()
         }
     }
@@ -1855,7 +1858,7 @@ impl Window for LiveVocalsSwapWindow {
         let mut chara_choices: Vec<(i32, String)> = Vec::new();
         chara_choices.push((0, t!("default").into_owned()));
 
-        if let Some(data) = self.chara_data.as_ref() {
+        if let Some(data) = &self.chara_data {
             for &id in &data.chara_ids {
                 chara_choices.push((id, data.get_name(id)));
             }
