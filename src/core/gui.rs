@@ -1716,6 +1716,7 @@ impl Window for FirstTimeSetupWindow {
                             if lang_changed {
                                 self.config.language = language;
                                 save_and_reload_config(self.config.clone());
+                                self.current_tl_repo = None;
                             }
                         });
                         ui.horizontal(|ui| {
@@ -1727,6 +1728,7 @@ impl Window for FirstTimeSetupWindow {
                                 if self.meta_index_url != self.config.meta_index_url {
                                     self.config.meta_index_url = self.meta_index_url.clone();
                                     save_and_reload_config(self.config.clone());
+                                    self.index_request = Arc::new(tl_repo::new_meta_index_request());
                                 }
                             }
                         });
