@@ -645,9 +645,11 @@ impl Gui {
             }
         }
 
-        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-        if !kb_ptr.is_null() {
-            TouchScreenKeyboard::set_active(kb_ptr, false);
+        if res.lost_focus() {
+            let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+            if !kb_ptr.is_null() {
+                TouchScreenKeyboard::set_active(kb_ptr, false);
+            }
         }
     }
 
