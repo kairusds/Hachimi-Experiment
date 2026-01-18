@@ -1727,7 +1727,7 @@ impl Window for FirstTimeSetupWindow {
                             #[cfg(target_os = "android")]
                             Gui::handle_android_keyboard(&res, &mut self.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
                             if res.lost_focus() {
-                                if url != config.meta_index_url {
+                                if self.meta_index_url != config.meta_index_url {
                                     let mut config = config.clone();
                                     config.meta_index_url = self.meta_index_url.clone();
                                     save_and_reload_config(config);
