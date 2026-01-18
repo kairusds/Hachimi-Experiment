@@ -172,6 +172,9 @@ config_editor:
   aniso_level: "Filter Anisotropik"
   live_vocals_swap: "Tukar Vokal Langsung"
   live_vocals_swap_character_n: "Karakter %{index}"
+  skill_info_dialog: "Tampilkan info skill di GUI"
+  homescreen_bgseason: "Musim Latar Belakang\nLayar Beranda"
+  shadow_resolution: "Resolusi Bayangan"
 
 tl_update_dialog:
   title: "Pembaruan Translasi Tersedia"

@@ -151,6 +151,9 @@ config_editor:
   aniso_level: "Lọc dị hướng"
   live_vocals_swap: "Thay đổi giọng hát trực tiếp"
   live_vocals_swap_character_n: "Nhân vật %{index}"
+  skill_info_dialog: "Hiện thông tin\nkỹ năng trên GUI"
+  homescreen_bgseason: "Mùa nền\nMàn hình chính"
+  shadow_resolution: "Độ phân giải bóng đổ"
 
 tl_update_dialog:
   title: "Bản cập nhật mới"
