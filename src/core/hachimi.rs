@@ -140,7 +140,7 @@ impl Hachimi {
         if fs::metadata(&config_path).is_ok() {
             let json = fs::read_to_string(&config_path)?;
             match serde_json::from_str::<Config>(&json) {
-                Ok(config) => config,
+                Ok(config) => Ok(config),
                 Err(e) => {
                     eprintln!("Failed to parse config: {}", e);
                     /*
