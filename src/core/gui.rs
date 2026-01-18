@@ -622,36 +622,32 @@ impl Gui {
         kb_type: TouchScreenKeyboardType::KeyboardType
     ) -> egui::Response {
         ui.horizontal(|ui| {
-            let round_to_step = |val: f64| -> f64 {
-                (val / step).round() * step
-            };
+            let (min, max) = (range.start().to_f64(), range.end().to_f64());
+            let mut val_f64 = value.to_f64();
 
-            let mut slider_val = value.to_f64();
-            let slider_res = ui.add(
-                egui::Slider::new(&mut slider_val, range.start().to_f64()..=range.end().to_f64())
-                    .show_value(false)
-            );
-            if slider_res.changed() {
-                *value = N::from_f64(round_to_step(slider_val));
-            }
+            let slider_res = ui.add(egui::Slider::new(&mut val_f64, min..=max).show_value(false));
+            let dv_res = ui.add(egui::DragValue::new(&mut val_f64)
+                .speed(step)
+                .max_decimals(if step != 1.0 { 2 } else { 0 }));
 
-            let mut dv_val = value.to_f64();
-            let dv_res = ui.add(egui::DragValue::new(&mut dv_val).speed(step));
-            if dv_res.changed() {
-                *value = N::from_f64(round_to_step(dv_val));
-            }
+            let mut kb_str = val_f64.to_string();
+            Self::handle_android_keyboard(&dv_res, &mut kb_str, kb_type);
 
-            let mut temp_str = value.to_f64().to_string();
-            Self::handle_android_keyboard(&dv_res, &mut temp_str, kb_type);
-
-            if dv_res.has_focus() && !temp_str.is_empty() {
-                if let Ok(parsed) = temp_str.parse::<f64>() {
-                    *value = N::from_f64(round_to_step(parsed));
-                    ui.ctx().memory_mut(|mem| {
-                        mem.data.remove::<egui::widgets::text_edit::TextEditState>(dv_res.id);
-                    });
+            if dv_res.has_focus() && !kb_str.is_empty() {
+                if let Ok(parsed) = kb_str.parse::<f64>() {
+                    val_f64 = (parsed / step).round() * step;
                 }
             }
+            val_f64 = val_f64.clamp(min, max);
+            
+            // only update if something actually changed (slider, dragvalue, or keyboard)
+            if (val_f64 - value.to_f64()).abs() > (step * 0.1) {
+                *value = N::from_f64(val_f64);
+                ui.ctx().memory_mut(|mem| {
+                    mem.data.remove::<egui::widgets::text_edit::TextEditState>(dv_res.id);
+                });
+            }
+    
             slider_res.union(dv_res)
         }).inner
     }
