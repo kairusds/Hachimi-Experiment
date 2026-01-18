@@ -647,10 +647,8 @@ impl Gui {
             if dv_res.has_focus() && !temp_str.is_empty() {
                 if let Ok(parsed) = temp_str.parse::<f64>() {
                     *value = N::from_f64(round_to_step(parsed));
-                    ui.memory_mut(|mem| {
-                        if let Some(mut state) = egui::widgets::text_edit::TextEditState::load(&ui.ctx, dv_res.id) {
-                            mem.stop_text_input(); 
-                        }
+                    ui.ctx().memory_mut(|mem| {
+                        mem.data.remove::<egui::widgets::text_edit::TextEditState>(dv_res.id);
                     });
                 }
             }
