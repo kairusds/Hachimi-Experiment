@@ -1831,16 +1831,14 @@ impl Window for FirstTimeSetupWindow {
 struct LiveVocalsSwapWindow {
     id: egui::Id,
     config: hachimi::Config,
-    chara_data: Option<Arc<CharacterData>>,
+    chara_data: Arc<Option<CharacterData>>,
     search_term: String
 }
 
 impl LiveVocalsSwapWindow {
     fn new() -> LiveVocalsSwapWindow {
         let hachimi = Hachimi::instance();
-        let chara_data_arc = hachimi.chara_data.load_full();
-        let chara_data = chara_data_arc.as_ref().map(Arc::clone);
-
+        let chara_data = hachimi.chara_data.load_full();
         LiveVocalsSwapWindow {
             id: random_id(),
             config: (**hachimi.config.load()).clone(),
