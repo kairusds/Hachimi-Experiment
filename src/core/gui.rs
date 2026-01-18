@@ -401,9 +401,6 @@ impl Gui {
                     ui.heading(t!("menu.graphics_heading"));
                     ui.horizontal(|ui| {
                         ui.label(t!("menu.fps_label"));
-                        #[cfg(target_os = "android")]
-                        let res = Self::android_slider(ui, &mut self.menu_fps_value, 30..=240, 1.0, TouchScreenKeyboardType::KeyboardType::NumberPad);
-                        #[cfg(target_os = "windows")]
                         let res = ui.add(egui::Slider::new(&mut self.menu_fps_value, 30..=240));
                         if res.lost_focus() || res.drag_stopped() {
                             hachimi.target_fps.store(self.menu_fps_value, atomic::Ordering::Relaxed);
@@ -611,45 +608,6 @@ impl Gui {
         });
 
         changed
-    }
-
-    #[cfg(target_os = "android")]
-    pub fn android_slider<N: egui::emath::Numeric>(
-        ui: &mut egui::Ui,
-        value: &mut N,
-        range: RangeInclusive<N>,
-        step: f64,
-        kb_type: TouchScreenKeyboardType::KeyboardType
-    ) -> egui::Response {
-        ui.horizontal(|ui| {
-            let (min, max) = (range.start().to_f64(), range.end().to_f64());
-            let mut val_f64 = value.to_f64();
-
-            let slider_res = ui.add(egui::Slider::new(&mut val_f64, min..=max).show_value(false));
-            let dv_res = ui.add(egui::DragValue::new(&mut val_f64)
-                .speed(step)
-                .max_decimals(if step != 1.0 { 2 } else { 0 }));
-
-            let mut kb_str = val_f64.to_string();
-            Self::handle_android_keyboard(&dv_res, &mut kb_str, kb_type);
-
-            if dv_res.has_focus() && !kb_str.is_empty() {
-                if let Ok(parsed) = kb_str.parse::<f64>() {
-                    val_f64 = (parsed / step).round() * step;
-                }
-            }
-            val_f64 = val_f64.clamp(min, max);
-            
-            // only update if something actually changed (slider, dragvalue, or keyboard)
-            if (val_f64 - value.to_f64()).abs() > (step * 0.1) {
-                *value = N::from_f64(val_f64);
-                ui.ctx().memory_mut(|mem| {
-                    mem.data.remove::<egui::widgets::text_edit::TextEditState>(dv_res.id);
-                });
-            }
-    
-            slider_res.union(dv_res)
-        }).inner
     }
 
     #[cfg(target_os = "android")]
