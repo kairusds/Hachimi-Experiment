@@ -1718,9 +1718,9 @@ impl Window for FirstTimeSetupWindow {
                             ui.label(t!("config_editor.meta_index_url"));
                             let config = &**Hachimi::instance().config.load();
                             let mut url = config.meta_index_url.clone();
-                            let res = ui.add(egui::TextEdit::singleline(&mut config.meta_index_url));
+                            let res = ui.add(egui::TextEdit::singleline(&mut url));
                             #[cfg(target_os = "android")]
-                            Gui::handle_android_keyboard(&res, &mut config.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
+                            Gui::handle_android_keyboard(&res, &mut url, TouchScreenKeyboardType::KeyboardType::URL);
                             if res.lost_focus() {
                                 if url != config.meta_index_url {
                                     let mut config = config.clone();
