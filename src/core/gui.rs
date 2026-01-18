@@ -1298,6 +1298,12 @@ impl ConfigEditor {
                 }
                 ui.end_row();
 
+                ui.label(t!("config_editor.meta_index_url"));
+                let res = ui.add(egui::TextEdit::singleline(&mut config.meta_index_url));
+                #[cfg(target_os = "android")]
+                Self::handle_android_keyboard(&res, &mut config.meta_index_url);
+                ui.end_row();
+
                 ui.label(t!("config_editor.gui_scale"));
                 ui.add(egui::Slider::new(&mut config.gui_scale, 0.25..=2.0).step_by(0.05));
                 ui.end_row();
