@@ -647,16 +647,7 @@ impl Gui {
             if dv_res.has_focus() && !temp_str.is_empty() {
                 if let Ok(parsed) = temp_str.parse::<f64>() {
                     *value = N::from_f64(round_to_step(parsed));
-                    let id = dv_res.id;
-                    ui.memory_mut(|mem| {
-                        if let Some(mut state) = egui::widgets::text_edit::TextEditState::load(ui.ctx(), id) {
-                            state.set_ccursor_range(Some(egui::widgets::text_edit::CCursorRange::two(
-                                egui::widgets::text_edit::CCursor::new(0),
-                                egui::widgets::text_edit::CCursor::new(temp_str.len())
-                            )));
-                            state.cursor.set_char_range(None);
-                        }
-                    });
+                    ctx.memory_mut(|mem| mem.data.remove::<egui::widgets::text_edit::TextEditState>(dv_res.id));
                 }
             }
             slider_res.union(dv_res)
