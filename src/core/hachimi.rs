@@ -145,7 +145,7 @@ impl Hachimi {
                 Ok(config) => Ok(config),
                 Err(e) => {
                     eprintln!("Failed to parse config: {}", e);
-                    self.config_error.store(true, std::sync::atomic::Ordering::Relaxed);
+                    Hachimi::instance().config_error.store(true, std::sync::atomic::Ordering::Relaxed);
                     Ok(Config::default())
                 }
             }
