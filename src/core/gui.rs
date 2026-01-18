@@ -630,7 +630,7 @@ impl Gui {
         if !kb_ptr.is_null() {
             let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
             // update text in realtime as user types only if it's different
-            if let Some(kb_ref) = kb_txt_ptr.as_ref() {
+            if let Some(kb_ref) = unsafe { kb_txt_ptr }.as_ref() {
                 let kb_txt_str = unsafe { kb_ref.as_utf16str() }.to_string();
                 if *text != kb_txt_str {
                     *text = kb_txt_str;
