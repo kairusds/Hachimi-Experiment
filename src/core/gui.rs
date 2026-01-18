@@ -647,7 +647,7 @@ impl Gui {
                     *value = N::from_f64(round_to_step(parsed));
                 }
             }
-            slider_res.union(dv_res);
+            slider_res.union(dv_res)
         }).inner
     }
 
