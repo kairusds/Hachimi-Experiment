@@ -133,7 +133,7 @@ impl Hachimi {
             updater: Arc::default(),
 
             config: ArcSwap::new(Arc::new(config)),
-            pub config_error: bool
+            config_error: false
         })
     }
 
