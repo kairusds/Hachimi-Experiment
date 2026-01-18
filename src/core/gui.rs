@@ -402,7 +402,7 @@ impl Gui {
                     ui.horizontal(|ui| {
                         ui.label(t!("menu.fps_label"));
                         #[cfg(target_os = "android")]
-                        let res = Self::android_slider(ui, &mut self.menu_fps_value, 30..=240, TouchScreenKeyboardType::KeyboardType::NumberPad);
+                        let res = Self::android_slider(ui, &mut self.menu_fps_value, 30..=240, 1.0, TouchScreenKeyboardType::KeyboardType::NumberPad);
                         #[cfg(target_os = "windows")]
                         let res = ui.add(egui::Slider::new(&mut self.menu_fps_value, 30..=240));
                         if res.lost_focus() || res.drag_stopped() {
