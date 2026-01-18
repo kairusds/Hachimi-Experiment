@@ -153,7 +153,7 @@ impl Hachimi {
                 }
             }
         }else {
-            Ok(Config::default())))
+            Ok(Config::default())
         }
     }
 
