@@ -1669,7 +1669,8 @@ struct FirstTimeSetupWindow {
     id: egui::Id,
     index_request: Arc<AsyncRequest<Vec<RepoInfo>>>,
     current_page: usize,
-    current_tl_repo: Option<String>
+    current_tl_repo: Option<String>,
+    meta_index_url: String
 }
 
 impl FirstTimeSetupWindow {
@@ -1678,7 +1679,8 @@ impl FirstTimeSetupWindow {
             id: random_id(),
             index_request: Arc::new(tl_repo::new_meta_index_request()),
             current_page: 0,
-            current_tl_repo: None
+            current_tl_repo: None,
+            meta_index_url: String::new()
         }
     }
 }
@@ -1717,14 +1719,16 @@ impl Window for FirstTimeSetupWindow {
                         ui.horizontal(|ui| {
                             ui.label(t!("config_editor.meta_index_url"));
                             let config = &**Hachimi::instance().config.load();
-                            let mut url = config.meta_index_url.clone();
-                            let res = ui.add(egui::TextEdit::singleline(&mut url));
+                            if self.meta_index_url.is_empty() && !config.meta_index_url.is_empty() {
+                                self.meta_index_url = config.meta_index_url.clone();
+                            }
+                            let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url)));
                             #[cfg(target_os = "android")]
-                            Gui::handle_android_keyboard(&res, &mut url, TouchScreenKeyboardType::KeyboardType::URL);
+                            Gui::handle_android_keyboard(&res, &mut self.meta_index_url), TouchScreenKeyboardType::KeyboardType::URL);
                             if res.lost_focus() {
                                 if url != config.meta_index_url {
                                     let mut config = config.clone();
-                                    config.meta_index_url = url;
+                                    config.meta_index_url = self.meta_index_url.clone();
                                     save_and_reload_config(config);
                                 }
                             }
