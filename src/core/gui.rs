@@ -1838,11 +1838,8 @@ struct LiveVocalsSwapWindow {
 impl LiveVocalsSwapWindow {
     fn new() -> LiveVocalsSwapWindow {
         let hachimi = Hachimi::instance();
-        let chara_guard = hachimi.chara_data.load();
-        let chara_data = match &**hachimi.chara_data.load() {
-            Some(arc) => Some(Arc::clone(arc)),
-            None => None
-        };
+        let chara_data_arc = hachimi.chara_data.load_full();
+        let chara_data = chara_data_arc.as_ref().map(Arc::clone);
 
         LiveVocalsSwapWindow {
             id: random_id(),
