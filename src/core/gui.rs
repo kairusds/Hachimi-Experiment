@@ -64,8 +64,6 @@ pub struct Gui {
     splash_tween: TweenInOutWithDelay,
     splash_sub_str: String,
 
-    pub config_error_visible: bool,
-
     menu_visible: bool,
     menu_anim_time: Option<Instant>,
     menu_fps_value: i32,
@@ -170,8 +168,6 @@ impl Gui {
                 }
             },
 
-            config_error_visible: false,
-
             menu_visible: false,
             menu_anim_time: None,
             menu_fps_value: fps_value,
@@ -271,15 +267,18 @@ impl Gui {
         if self.menu_visible { self.run_menu(); }
         if self.update_progress_visible { self.run_update_progress(); }
 
-        if self.config_error_visible {
-            self.show_notification(&t!("notification.config_error"));
-            self.config_error_visible = false;
-        }
-
         self.run_windows();
         self.run_notifications();
 
         if self.splash_visible { self.run_splash(); }
+        if Hachimi::instance().config_error {
+            thread::spawn(|| {
+                Self::instance().unwrap()
+                .lock().unwrap()
+                .show_notification(&t!("notification.config_error"));
+            });
+            Hachimi::instance().config_error = false;
+        }
 
         // Store this as an atomic value so the input thread can check it without locking the gui
         IS_CONSUMING_INPUT.store(self.is_consuming_input(), atomic::Ordering::Relaxed);

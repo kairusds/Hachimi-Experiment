@@ -131,7 +131,8 @@ impl Hachimi {
             #[cfg(target_os = "windows")]
             updater: Arc::default(),
 
-            config: ArcSwap::new(Arc::new(config))
+            config: ArcSwap::new(Arc::new(config)),
+            pub config_error: bool
         })
     }
 
@@ -143,11 +144,7 @@ impl Hachimi {
                 Ok(config) => Ok(config),
                 Err(e) => {
                     eprintln!("Failed to parse config: {}", e);
-                    if let Some(mutex) = Gui::instance() {
-                        if let Ok(mut gui) = mutex.lock() {
-                            gui.config_error_visible = true;
-                        }
-                    }
+                    self.config_error = true;
                     Ok(Config::default())
                 }
             }
