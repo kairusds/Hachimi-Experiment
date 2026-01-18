@@ -1716,13 +1716,14 @@ impl Window for FirstTimeSetupWindow {
                                 save_and_reload_config(config);
                             }
                         });
+                        ui.end_row();
                         ui.horizontal(|ui| {
                             ui.label(t!("config_editor.meta_index_url"));
                             let config = &**Hachimi::instance().config.load();
                             if self.meta_index_url.is_empty() && !config.meta_index_url.is_empty() {
                                 self.meta_index_url = config.meta_index_url.clone();
                             }
-                            let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url)));
+                            let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url));
                             #[cfg(target_os = "android")]
                             Gui::handle_android_keyboard(&res, &mut self.meta_index_url), TouchScreenKeyboardType::KeyboardType::URL);
                             if res.lost_focus() {
@@ -1733,6 +1734,7 @@ impl Window for FirstTimeSetupWindow {
                                 }
                             }
                         });
+                        ui.end_row();
                         ui.label(t!("first_time_setup.welcome_content"));
                     }
                     1 => {
