@@ -338,18 +338,37 @@ impl Gui {
             .default_width(200.0 * scale)
             .show_animated(ctx, self.show_menu, |ui| {
             ui.with_layout(egui::Layout::top_down_justified(egui::Align::TOP), |ui| {
-                ui.horizontal(|ui| {
-                    ui.add(Self::icon(ctx));
-                    ui.heading(t!("hachimi"));
-                });
-                ui.label(env!("HACHIMI_DISPLAY_VERSION"));
-                ui.horizontal(|ui| {
-                    if ui.button(" \u{f29c} ").clicked() {
-                        show_window = Some(Box::new(AboutWindow::new()));
-                    }
+                #[cfg(target_os = "windows")]
+                {
+                    ui.horizontal(|ui| {
+                        ui.add(Self::icon(ctx));
+                        ui.heading(t!("hachimi"));
+                        if ui.button(" \u{f29c} ").clicked() {
+                            show_window = Some(Box::new(AboutWindow::new()));
+                        }
+                    });
+                    ui.label(env!("HACHIMI_DISPLAY_VERSION"));
                     if ui.button(t!("menu.close_menu")).clicked() {
                         self.show_menu = false;
                         self.menu_anim_time = None;
+                    }
+                }
+                // did this because android phones have a notch
+                #[cfg(target_os = "android")]
+                {
+                    ui.horizontal(|ui| {
+                        ui.add(Self::icon(ctx));
+                        ui.heading(t!("hachimi"));
+                    });
+                    ui.label(env!("HACHIMI_DISPLAY_VERSION"));
+                    ui.horizontal(|ui| {
+                        if ui.add_sized([ui.available_width() - 30.0 * scale, 0.0], egui::Button::new("menu.close_menu")).clicked() {
+                            self.show_menu = false;
+                            self.menu_anim_time = None;
+                        }
+                        if ui.button(" \u{f29c} ").clicked() {
+                            show_window = Some(Box::new(AboutWindow::new()));
+                        }
                     }
                 });
                 ui.separator();
@@ -651,7 +670,7 @@ impl Gui {
             ui.horizontal(|ui| {
                 let res = ui.add_sized(
                     [ui.available_width() - 30.0 * scale, row_height],
-                    egui::TextEdit::singleline(search_term).hint_text(t!("filter"))
+                    egui::TextEdit::singleline(search_term).hint_text(t!("search_filter"))
                 );
                 #[cfg(target_os = "android")]
                 {

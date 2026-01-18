@@ -8,6 +8,7 @@ android:
 
 splash_sub: "\uf015 Nhấn nút %{open_key_str} để mở menu."
 loading_label: "Đang tải..."
+search_filter: "Nhập để tìm kiếm..."
 open: "Mở"
 cancel: "Hủy"
 save: "Lưu"

@@ -8,6 +8,7 @@ android:
 
 splash_sub: "\uf015 按下 %{open_key_str} 來打開選單。"
 loading_label: "載入中"
+search_filter: "輸入以搜尋..."
 open: "開啟"
 cancel: "取消"
 save: "儲存"

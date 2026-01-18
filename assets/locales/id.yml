@@ -8,6 +8,7 @@ android:
 
 splash_sub: "\uf015 Tekan %{open_key_str} untuk buka menu."
 loading_label: "Memuat..."
+search_filter: "Ketik untuk mencari..."
 open: "Buka"
 cancel: "Batal"
 save: "Simpan"

@@ -8,6 +8,7 @@ android:
 
 splash_sub: "\uf015 按 %{open_key_str} 打开菜单"
 loading_label: "加载中..."
+search_filter: "输入以搜索..."
 open: "打开"
 cancel: "取消"
 save: "保存"

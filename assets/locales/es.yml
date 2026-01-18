@@ -8,6 +8,7 @@ android:
 
 splash_sub: "\uf015 Pulsa %{open_key_str} para abrir el menú."
 loading_label: "Cargando..."
+search_filter: "Escribe para buscar..."
 open: "Abrir"
 cancel: "Cancelar"
 save: "Guardar"
