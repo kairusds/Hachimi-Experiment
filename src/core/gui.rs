@@ -272,11 +272,7 @@ impl Gui {
 
         if self.splash_visible { self.run_splash(); }
         if Hachimi::instance().config_error.swap(false, Ordering::Relaxed) {
-            thread::spawn(|| {
-                Self::instance().unwrap()
-                .lock().unwrap()
-                .show_notification(&t!("notification.config_error"));
-            });
+            self.show_notification(&t!("notification.config_error"));
         }
 
         // Store this as an atomic value so the input thread can check it without locking the gui
