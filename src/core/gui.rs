@@ -1856,7 +1856,7 @@ impl Window for LiveVocalsSwapWindow {
         let mut chara_choices: Vec<(i32, String)> = Vec::new();
         chara_choices.push((0, t!("default").into_owned()));
 
-        if let Some(data) = &self.chara_data {
+        if let Some(data) = self.chara_data.as_ref() {
             for &id in &data.chara_ids {
                 chara_choices.push((id, data.get_name(id)));
             }
