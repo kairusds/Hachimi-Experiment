@@ -649,9 +649,12 @@ impl Gui {
                     *value = N::from_f64(round_to_step(parsed));
                     let id = dv_res.id;
                     ui.memory_mut(|mem| {
-                        if let Some(mut state) = egui::widgets::text_edit::TextEditState::load(mem.ctx(), id) {
-                            state.set_text(temp_str);
-                            state.store(mem.ctx(), id);
+                        if let Some(mut state) = egui::widgets::text_edit::TextEditState::load(ui.ctx(), id) {
+                            state.set_ccursor_range(Some(egui::widgets::text_edit::CCursorRange::two(
+                                egui::widgets::text_edit::CCursor::new(0),
+                                egui::widgets::text_edit::CCursor::new(temp_str.len())
+                            )));
+                            state.cursor.set_char_range(None);
                         }
                     });
                 }
