@@ -87,9 +87,11 @@ static mut DISABLED_GAME_UIS: once_cell::unsync::Lazy<FnvHashSet<*mut Il2CppObje
     once_cell::unsync::Lazy::new(|| FnvHashSet::default());
 
 #[cfg(target_os = "android")]
-use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
 #[cfg(target_os = "android")]
 static PENDING_KEYBOARD_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
+#[cfg(target_os = "android")]
+static PENDING_KB_TYPE: AtomicI32 = AtomicI32::new(0);
 #[cfg(target_os = "android")]
 static ACTIVE_KEYBOARD: AtomicPtr<Il2CppObject> = AtomicPtr::new(std::ptr::null_mut());
 
@@ -400,7 +402,7 @@ impl Gui {
                     ui.horizontal(|ui| {
                         ui.label(t!("menu.fps_label"));
                         #[cfg(target_os = "android")]
-                        let res = Self::android_slider(ui, &mut self.menu_fps_value, 30..=240, TouchScreenKeyboard::KeyboardType::NumberPad);
+                        let res = Self::android_slider(ui, &mut self.menu_fps_value, 30..=240, TouchScreenKeyboardType::KeyboardType::NumberPad);
                         #[cfg(target_os = "windows")]
                         let res = ui.add(egui::Slider::new(&mut self.menu_fps_value, 30..=240));
                         if res.lost_focus() || res.drag_stopped() {
@@ -656,14 +658,17 @@ impl Gui {
         if res.gained_focus() {
             let ptr = text.to_il2cpp_string();
             PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
+            PENDING_KB_TYPE.store(kb_type as i32, Ordering::Relaxed);
 
             Thread::main_thread().schedule(|| {
                 let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
+                let typ_i32 = PENDING_KB_TYPE.load(Ordering::Relaxed);
+                let typ = unsafe { std::mem::transmute::<i32, TouchScreenKeyboardType::KeyboardType>(typ_i32) };
                 if !ptr.is_null() {
                     let keyboard = unsafe {
                         TouchScreenKeyboard::Open(
                             ptr, 
-                            kb_type,
+                            typ,
                             false, false, false
                         )
                     };
