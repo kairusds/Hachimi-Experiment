@@ -369,7 +369,7 @@ impl Gui {
                         if ui.button(" \u{f29c} ").clicked() {
                             show_window = Some(Box::new(AboutWindow::new()));
                         }
-                    }
+                    });
                 });
                 ui.separator();
 
