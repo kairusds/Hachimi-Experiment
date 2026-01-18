@@ -697,12 +697,10 @@ impl Gui {
                     search_term.clear();
                     #[cfg(target_os = "android")]
                     {
-                        Thread::main_thread().schedule(|| {
-                            let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-                            if !kb_ptr.is_null() {
-                                TouchScreenKeyboard::set_active(kb_ptr, false);
-                            }
-                        });
+                        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+                        if !kb_ptr.is_null() {
+                            TouchScreenKeyboard::set_active(kb_ptr, false);
+                        }
                     }
                 }
             });
@@ -733,7 +731,15 @@ impl Gui {
                 });
             });
         });
-    
+
+        #[cfg(target_os = "android")]
+        {
+            let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+            if !egui::Popup::is_id_open(ui.ctx(), popup_id) && !kb_ptr.is_null() {
+                TouchScreenKeyboard::set_active(kb_ptr, false);
+            }
+        }
+
         changed
     }
 
