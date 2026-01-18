@@ -139,7 +139,7 @@ impl Hachimi {
         let config_path = data_dir.join("config.json");
         if fs::metadata(&config_path).is_ok() {
             let json = fs::read_to_string(&config_path)?;
-            match serde_json::from_str(&content)? {
+            match serde_json::from_str(&json)? {
                 Ok(config) => config,
                 Err(e) => {
                     eprintln!("Failed to parse config: {}", e);
