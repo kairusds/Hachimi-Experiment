@@ -676,19 +676,17 @@ impl Gui {
 
                     let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
                     if !kb_ptr.is_null() {
-                        unsafe {
-                            let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
-                            // update search_term in realtime as user types only if it's different
-                            if let Some(kb_ref) = kb_txt_ptr.as_ref() {
-                                let kb_txt_str = kb_ref.as_utf16str().to_string();
-                                if *search_term != kb_txt_str {
-                                    *search_term = kb_txt_str;
-                                }
+                        let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
+                        // update search_term in realtime as user types only if it's different
+                        if let Some(kb_ref) = kb_txt_ptr.as_ref() {
+                            let kb_txt_str = kb_ref.as_utf16str().to_string();
+                            if *search_term != kb_txt_str {
+                                *search_term = kb_txt_str;
                             }
+                        }
 
-                            if TouchScreenKeyboard::get_status(kb_ptr) != TouchScreenKeyboard::Status::Visible {
-                                ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
-                            }
+                        if TouchScreenKeyboard::get_status(kb_ptr) != TouchScreenKeyboard::Status::Visible {
+                            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
                         }
                     }
                 }
@@ -731,14 +729,6 @@ impl Gui {
                 });
             });
         });
-
-        #[cfg(target_os = "android")]
-        {
-            let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-            if !egui::Popup::is_id_open(ui.ctx(), popup_id) && !kb_ptr.is_null() {
-                TouchScreenKeyboard::set_active(kb_ptr, false);
-            }
-        }
 
         changed
     }
