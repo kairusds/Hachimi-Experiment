@@ -64,6 +64,8 @@ pub struct Gui {
     splash_tween: TweenInOutWithDelay,
     splash_sub_str: String,
 
+    config_error_visible: bool,
+
     menu_visible: bool,
     menu_anim_time: Option<Instant>,
     menu_fps_value: i32,
