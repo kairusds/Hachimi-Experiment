@@ -112,6 +112,7 @@ config_editor:
     此選項會在您重新啟動遊戲後停用 Hachimi 覆蓋層，
     這意味著您將無法訪問設置編輯器。
     如果是不小心誤觸此選項，請關閉此對話框並禁用該選項。
+  meta_index_url: "翻譯 Meta URL"
   debug_mode: "除錯模式"
   translator_mode: "翻譯者模式"
   skip_first_time_setup: "跳過設定精靈"

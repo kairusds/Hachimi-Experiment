@@ -117,11 +117,11 @@ config_editor:
   language: "Language"
   restore_defaults: "Restore Defaults"
   disable_overlay: "Disable overlay (GUI)"
-  meta_index_url: "Meta index URL"
   disable_overlay_warning: >-
     This option will disable the Hachimi overlay after you restart the game,
     which means that you will NOT be able to access the Config Editor after this.
     If this was not intentional, close this dialog and DISABLE the option.
+  meta_index_url: "Translations Meta URL"
   debug_mode: "Debug mode"
   translator_mode: "Translator mode"
   skip_first_time_setup: "Skip first time setup"

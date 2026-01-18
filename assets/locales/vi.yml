@@ -109,6 +109,7 @@ config_editor:
     Tùy chọn này sẽ tắt GUI của Hachimi sau khi bạn khởi động lại game,
     nghĩa là bạn sẽ KHÔNG thể truy cập trình chỉnh sửa cài đặt nữa.
     Nếu như bạn không có ý định này, hãy đóng hộp thoại và TẮT tùy chọn.
+  meta_index_url: "URL Meta bản dịch"
   debug_mode: "Chế độ gỡ lỗi"
   translator_mode: "Chế độ dịch"
   skip_first_time_setup: "Bỏ qua thiết lập\nlần đầu"

@@ -120,6 +120,7 @@ config_editor:
     此选项将在游戏重启后禁用Hachimi的GUI，
     您将无法再访问配置编辑器。
     如非本意，请关闭此窗口并禁用此选项。
+  meta_index_url: "翻译 Meta URL"
   debug_mode: "调试模式"
   translator_mode: "翻译者模式"
   skip_first_time_setup: "跳过初始化设置"

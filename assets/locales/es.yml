@@ -123,6 +123,7 @@ config_editor:
     Esta opción desactivará el overlay de Hachimi una vez reinicies el juego.
     Esto se traduce en que NO podrás acceder al Editor de Configuración tras ello.
     Si no es un cambio intencional, cierra este diálogo y DESACTIVA esta opción.
+  meta_index_url: "URL meta de traducciones"
   debug_mode: "Modo depuración"
   translator_mode: "Modo traductor"
   skip_first_time_setup: "Omitir instalación inicial"

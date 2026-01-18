@@ -120,6 +120,7 @@ config_editor:
     Opsi ini akan mematikan overlay (GUI) Hachimi.
     Kamu tidak bisa mengakses editor konfigurasi setelah kamu memulai ulang game.
     Jika tidak disengaja dinyalakan, mohon tutup dialog ini dan matikan opsinya!
+  meta_index_url: "URL Meta Terjemahan"
   debug_mode: "Mode Debug"
   translator_mode: "Mode Translasi"
   skip_first_time_setup: "Lewati setup\npertama kali"
