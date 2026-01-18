@@ -605,6 +605,49 @@ impl Gui {
         changed
     }
 
+    #[cfg(target_os = "android")]
+    pub fn handle_android_keyboard(res: &egui::Response, txt: &mut String) {
+        if res.gained_focus() {
+            let ptr = search_term.to_il2cpp_string();
+            PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
+
+            Thread::main_thread().schedule(|| {
+                let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
+                if !ptr.is_null() {
+                    let keyboard = unsafe {
+                        TouchScreenKeyboard::Open(
+                            ptr, 
+                            TouchScreenKeyboardType::KeyboardType::Search,
+                            false, false, false
+                        )
+                    };
+                    ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
+                }
+            });
+        }
+
+        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+        if !kb_ptr.is_null() {
+            let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
+            // update search_term in realtime as user types only if it's different
+            if let Some(kb_ref) = kb_txt_ptr.as_ref() {
+                let kb_txt_str = kb_ref.as_utf16str().to_string();
+                if *search_term != kb_txt_str {
+                    *search_term = kb_txt_str;
+                }
+            }
+
+            if TouchScreenKeyboard::get_status(kb_ptr) != TouchScreenKeyboard::Status::Visible {
+                ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+            }
+        }
+        
+        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+        if !kb_ptr.is_null() {
+            TouchScreenKeyboard::set_active(kb_ptr, false);
+        }
+    }
+
     fn run_combo_menu<T: PartialEq + Copy>(
         ui: &mut egui::Ui,
         id_salt: impl std::hash::Hash,
@@ -672,53 +715,12 @@ impl Gui {
                     [ui.available_width() - 30.0 * scale, row_height],
                     egui::TextEdit::singleline(search_term).hint_text(t!("search_filter"))
                 );
+
                 #[cfg(target_os = "android")]
-                {
-                    if res.gained_focus() {
-                        let ptr = search_term.to_il2cpp_string();
-                        PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
+                Self::handle_android_keyboard(&res, search_term);
 
-                        Thread::main_thread().schedule(|| {
-                            let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
-                            if !ptr.is_null() {
-                                let keyboard = unsafe {
-                                    TouchScreenKeyboard::Open(
-                                        ptr, 
-                                        TouchScreenKeyboardType::KeyboardType::Search,
-                                        false, false, false
-                                    )
-                                };
-                                ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
-                            }
-                        });
-                    }
-
-                    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-                    if !kb_ptr.is_null() {
-                        let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
-                        // update search_term in realtime as user types only if it's different
-                        if let Some(kb_ref) = kb_txt_ptr.as_ref() {
-                            let kb_txt_str = kb_ref.as_utf16str().to_string();
-                            if *search_term != kb_txt_str {
-                                *search_term = kb_txt_str;
-                            }
-                        }
-
-                        if TouchScreenKeyboard::get_status(kb_ptr) != TouchScreenKeyboard::Status::Visible {
-                            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
-                        }
-                    }
-                }
-
-                if ui.button("X").clicked() || res.lost_focus() {
+                if ui.button("X").clicked() {
                     search_term.clear();
-                    #[cfg(target_os = "android")]
-                    {
-                        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-                        if !kb_ptr.is_null() {
-                            TouchScreenKeyboard::set_active(kb_ptr, false);
-                        }
-                    }
                 }
             });
 
