@@ -614,47 +614,37 @@ impl Gui {
     #[cfg(target_os = "android")]
     pub fn handle_android_keyboard(res: &egui::Response, text: &mut String, kb_type: TouchScreenKeyboardType::KeyboardType) {
         if res.gained_focus() {
-            let ptr = text.to_il2cpp_string();
-            PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
+            let text = text.clone(); 
             PENDING_KB_TYPE.store(kb_type as i32, Ordering::Relaxed);
-
-            Thread::main_thread().schedule(|| {
-                let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
+    
+            Thread::main_thread().schedule(move || {
                 let typ_i32 = PENDING_KB_TYPE.load(Ordering::Relaxed);
-                let typ = unsafe { std::mem::transmute::<i32, TouchScreenKeyboardType::KeyboardType>(typ_i32) };
-                if !ptr.is_null() {
-                    let keyboard = unsafe {
-                        TouchScreenKeyboard::Open(
-                            ptr, 
-                            typ,
-                            false, false, false
-                        )
-                    };
-                    ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
-                }
+                let typ: TouchScreenKeyboardType::KeyboardType = unsafe { std::mem::transmute(typ_i32) };
+                let keyboard = TouchScreenKeyboard::Open(unsafe { text.to_il2cpp_string() }, typ, false, false, false);
+                ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
             });
         }
-
+    
         let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
         if !kb_ptr.is_null() {
-            let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
-            // update text in realtime as user types only if it's different
-            if let Some(kb_ref) = unsafe { kb_txt_ptr.as_ref() } {
-                let kb_txt_str = unsafe { kb_ref.as_utf16str() }.to_string();
-                if *text != kb_txt_str {
-                    *text = kb_txt_str;
+            let status = TouchScreenKeyboard::get_status(kb_ptr);
+            if status == TouchScreenKeyboard::Status::Visible || status == TouchScreenKeyboard::Status::Done {
+                let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
+                if !kb_txt_ptr.is_null() {
+                    if let Some(kb_ref) = unsafe { kb_txt_ptr.as_ref() } {
+                        let kb_txt_str = unsafe { kb_ref.as_utf16str() }.to_string();
+                        if *text != kb_txt_str {
+                            *text = kb_txt_str;
+                        }
+                    }
                 }
-            }
-
-            if TouchScreenKeyboard::get_status(kb_ptr) != TouchScreenKeyboard::Status::Visible {
+            } else {
                 ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
             }
         }
-
-        if res.lost_focus() {
-            if !kb_ptr.is_null() {
-                TouchScreenKeyboard::set_active(kb_ptr, false);
-            }
+    
+        if res.lost_focus() && !kb_ptr.is_null() {
+            TouchScreenKeyboard::set_active(kb_ptr, false);
         }
     }
 
