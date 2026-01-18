@@ -399,6 +399,9 @@ impl Gui {
                     ui.heading(t!("menu.graphics_heading"));
                     ui.horizontal(|ui| {
                         ui.label(t!("menu.fps_label"));
+                        #[cfg(target_os = "android")]
+                        let res = Self::android_slider(ui, &mut self.menu_fps_value, 30..=240, TouchScreenKeyboard::KeyboardType::NumberPad);
+                        #[cfg(target_os = "windows")]
                         let res = ui.add(egui::Slider::new(&mut self.menu_fps_value, 30..=240));
                         if res.lost_focus() || res.drag_stopped() {
                             hachimi.target_fps.store(self.menu_fps_value, atomic::Ordering::Relaxed);
@@ -609,7 +612,47 @@ impl Gui {
     }
 
     #[cfg(target_os = "android")]
-    pub fn handle_android_keyboard(res: &egui::Response, text: &mut String) {
+    pub fn android_slider<N: egui::emath::Numeric>(
+        ui: &mut egui::Ui,
+        value: &mut N,
+        range: RangeInclusive<N>,
+        step: f64,
+        kb_type: TouchScreenKeyboardType::KeyboardType
+    ) -> egui::Response {
+        ui.horizontal(|ui| {
+            let round_to_step = |val: f64| -> f64 {
+                (val / step).round() * step
+            };
+
+            let mut slider_val = value.to_f64();
+            let slider_res = ui.add(
+                egui::Slider::new(&mut slider_val, range.start().to_f64()..=range.end().to_f64())
+                    .show_value(false)
+            );
+            if slider_res.changed() {
+                *value = N::from_f64(round_to_step(slider_val));
+            }
+
+            let mut dv_val = value.to_f64();
+            let dv_res = ui.add(egui::DragValue::new(&mut dv_val).speed(step));
+            if dv_res.changed() {
+                *value = N::from_f64(round_to_step(dv_val));
+            }
+
+            let mut temp_str = value.to_f64().to_string();
+            Self::handle_android_keyboard(&dv_res, &mut temp_str, kb_type);
+
+            if dv_res.has_focus() && !temp_str.is_empty() {
+                if let Ok(parsed) = temp_str.parse::<f64>() {
+                    *value = N::from_f64(round_to_step(parsed));
+                }
+            }
+            slider_res.union(dv_res);
+        }).inner
+    }
+
+    #[cfg(target_os = "android")]
+    pub fn handle_android_keyboard(res: &egui::Response, text: &mut String, kb_type: TouchScreenKeyboardType::KeyboardType) {
         if res.gained_focus() {
             let ptr = text.to_il2cpp_string();
             PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
@@ -620,7 +663,7 @@ impl Gui {
                     let keyboard = unsafe {
                         TouchScreenKeyboard::Open(
                             ptr, 
-                            TouchScreenKeyboardType::KeyboardType::Search,
+                            kb_type,
                             false, false, false
                         )
                     };
@@ -721,7 +764,7 @@ impl Gui {
                 );
 
                 #[cfg(target_os = "android")]
-                Self::handle_android_keyboard(&res, search_term);
+                Self::handle_android_keyboard(&res, search_term, TouchScreenKeyboardType::KeyboardType::Search);
 
                 if ui.button("X").clicked() {
                     search_term.clear();
@@ -1301,7 +1344,7 @@ impl ConfigEditor {
                 ui.label(t!("config_editor.meta_index_url"));
                 let res = ui.add(egui::TextEdit::singleline(&mut config.meta_index_url));
                 #[cfg(target_os = "android")]
-                Gui::handle_android_keyboard(&res, &mut config.meta_index_url);
+                Gui::handle_android_keyboard(&res, &mut config.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
                 ui.end_row();
 
                 ui.label(t!("config_editor.gui_scale"));
@@ -1920,8 +1963,10 @@ impl Window for AboutWindow {
                 if ui.button(t!("about.view_source_code")).clicked() {
                     Application::OpenURL(format!("https://github.com/{}", REPO_PATH).to_il2cpp_string());
                 }
-                // TODO: add central updater for both Android(only version check) and Windows
-                #[cfg(target_os = "windows")]
+            });
+            // TODO: add central updater for both Android(only version check) and Windows
+            #[cfg(target_os = "windows")]
+            ui.vertical(|ui| {
                 if ui.button(t!("about.check_for_updates")).clicked() {
                     Hachimi::instance().updater.clone().check_for_updates(|_| {});
                 }
