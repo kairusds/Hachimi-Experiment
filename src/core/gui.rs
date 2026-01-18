@@ -370,7 +370,7 @@ impl Gui {
                             show_window = Some(Box::new(AboutWindow::new()));
                         }
                     });
-                });
+                }
                 ui.separator();
 
                 egui::ScrollArea::vertical().show(ui, |ui| {
