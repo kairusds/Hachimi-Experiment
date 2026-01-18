@@ -647,6 +647,13 @@ impl Gui {
             if dv_res.has_focus() && !temp_str.is_empty() {
                 if let Ok(parsed) = temp_str.parse::<f64>() {
                     *value = N::from_f64(round_to_step(parsed));
+                    let id = dv_res.id;
+                    ui.memory_mut(|mem| {
+                        if let Some(mut state) = egui::widgets::text_edit::TextEditState::load(mem.ctx(), id) {
+                            state.set_text(temp_str);
+                            state.store(mem.ctx(), id);
+                        }
+                    });
                 }
             }
             slider_res.union(dv_res)
