@@ -1668,11 +1668,11 @@ fn save_and_reload_config(config: hachimi::Config) {
 
 struct FirstTimeSetupWindow {
     id: egui::Id,
+    meta_index_url: String,
     config: hachimi::Config,
     index_request: Arc<AsyncRequest<Vec<RepoInfo>>>,
     current_page: usize,
-    current_tl_repo: Option<String>,
-    meta_index_url: String
+    current_tl_repo: Option<String>
 }
 
 impl FirstTimeSetupWindow {
@@ -1680,11 +1680,11 @@ impl FirstTimeSetupWindow {
         let config = (**Hachimi::instance().config.load()).clone();
         FirstTimeSetupWindow {
             id: random_id(),
+            meta_index_url: config.meta_index_url.clone(),
             config,
             index_request: Arc::new(tl_repo::new_meta_index_request()),
             current_page: 0,
-            current_tl_repo: None,
-            meta_index_url: config.meta_index_url.clone()
+            current_tl_repo: None
         }
     }
 }
@@ -1839,7 +1839,7 @@ impl LiveVocalsSwapWindow {
     fn new() -> LiveVocalsSwapWindow {
         let hachimi = Hachimi::instance();
         let chara_guard = hachimi.chara_data.load();
-        let chara_data = (*chara_guard).as_ref().cloned();
+        let chara_data = (*chara_guard).as_ref().map(|arc| arc.clone());
 
         LiveVocalsSwapWindow {
             id: random_id(),
