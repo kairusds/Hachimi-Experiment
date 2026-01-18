@@ -14,7 +14,7 @@ pub const GITHUB_API: &str = "https://api.github.com/repos";
 pub const CODEBERG_API: &str = "https://codeberg.org/api/v1/repos";
 pub const WEBSITE_URL: &str = "https://hachimi.noccu.art";
 
-static CONFIG_LOAD_ERROR: AtomicBool = AtomicBool::new(false);
+pub static CONFIG_LOAD_ERROR: AtomicBool = AtomicBool::new(false);
 
 pub struct Hachimi {
     // Hooking stuff
