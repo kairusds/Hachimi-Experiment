@@ -147,7 +147,7 @@ impl Hachimi {
                     eprintln!("Failed to parse config: {}", e);
                     if let Some(mutex) = Gui::instance() {
                         if let Ok(mut gui) = mutex.lock() {
-                            gui.show_notification(&t!("notifications.config_error"));
+                            gui.show_notification(&rust_i18n::t!("notifications.config_error"));
                         }
                     }
                     Ok(config)
