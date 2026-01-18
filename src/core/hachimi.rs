@@ -14,6 +14,8 @@ pub const GITHUB_API: &str = "https://api.github.com/repos";
 pub const CODEBERG_API: &str = "https://codeberg.org/api/v1/repos";
 pub const WEBSITE_URL: &str = "https://hachimi.noccu.art";
 
+static CONFIG_LOAD_ERROR: AtomicBool = AtomicBool::new(false);
+
 pub struct Hachimi {
     // Hooking stuff
     pub interceptor: Interceptor,
@@ -30,7 +32,6 @@ pub struct Hachimi {
     // Shared properties
     pub game: Game,
     pub config: ArcSwap<Config>,
-    pub config_error: AtomicBool,
     pub template_parser: template::Parser,
 
     /// -1 = default
@@ -132,8 +133,7 @@ impl Hachimi {
             #[cfg(target_os = "windows")]
             updater: Arc::default(),
 
-            config: ArcSwap::new(Arc::new(config)),
-            config_error: AtomicBool::new(false)
+            config: ArcSwap::new(Arc::new(config))
         })
     }
 
@@ -145,7 +145,7 @@ impl Hachimi {
                 Ok(config) => Ok(config),
                 Err(e) => {
                     eprintln!("Failed to parse config: {}", e);
-                    Hachimi::instance().config_error.store(true, std::sync::atomic::Ordering::Relaxed);
+                    CONFIG_LOAD_ERROR.store(true, Ordering::Relaxed);
                     Ok(Config::default())
                 }
             }

@@ -271,7 +271,7 @@ impl Gui {
         self.run_notifications();
 
         if self.splash_visible { self.run_splash(); }
-        if Hachimi::instance().config_error.swap(false, Ordering::Relaxed) {
+        if hachimi::CONFIG_LOAD_ERROR.swap(false, Ordering::Relaxed) {
             self.show_notification(&t!("notification.config_error"));
         }
 
