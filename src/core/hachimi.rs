@@ -143,7 +143,6 @@ impl Hachimi {
                 Ok(config) => Ok(config),
                 Err(e) => {
                     let config = Config::default();
-                    config.language.set_locale();
                     eprintln!("Failed to parse config: {}", e);
                     if let Some(mutex) = Gui::instance() {
                         if let Ok(mut gui) = mutex.lock() {
