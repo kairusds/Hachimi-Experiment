@@ -648,9 +648,10 @@ impl Gui {
                 if let Ok(parsed) = temp_str.parse::<f64>() {
                     *value = N::from_f64(round_to_step(parsed));
                     ui.memory_mut(|mem| {
-                    if let Some(mut state) = egui::widgets::text_edit::TextEditState::load(&ui.ctx, dv_res.id) {
-                        mem.stop_text_input(); 
-                    }
+                        if let Some(mut state) = egui::widgets::text_edit::TextEditState::load(&ui.ctx, dv_res.id) {
+                            mem.stop_text_input(); 
+                        }
+                    });
                 }
             }
             slider_res.union(dv_res)
