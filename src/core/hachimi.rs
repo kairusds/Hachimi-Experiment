@@ -30,7 +30,7 @@ pub struct Hachimi {
     // Shared properties
     pub game: Game,
     pub config: ArcSwap<Config>,
-    pub config_error: bool,
+    pub config_error: AtomicBool,
     pub template_parser: template::Parser,
 
     /// -1 = default
@@ -133,7 +133,7 @@ impl Hachimi {
             updater: Arc::default(),
 
             config: ArcSwap::new(Arc::new(config)),
-            config_error: false
+            config_error: AtomicBool::new(false)
         })
     }
 
@@ -145,7 +145,7 @@ impl Hachimi {
                 Ok(config) => Ok(config),
                 Err(e) => {
                     eprintln!("Failed to parse config: {}", e);
-                    self.config_error = true;
+                    self.config_error.store(true, std::sync::atomic::Ordering::Relaxed);
                     Ok(Config::default())
                 }
             }

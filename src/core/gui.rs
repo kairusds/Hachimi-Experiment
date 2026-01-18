@@ -271,13 +271,12 @@ impl Gui {
         self.run_notifications();
 
         if self.splash_visible { self.run_splash(); }
-        if Hachimi::instance().config_error {
+        if Hachimi::instance().config_error.swap(false, Ordering::Relaxed) {
             thread::spawn(|| {
                 Self::instance().unwrap()
                 .lock().unwrap()
                 .show_notification(&t!("notification.config_error"));
             });
-            Hachimi::instance().config_error = false;
         }
 
         // Store this as an atomic value so the input thread can check it without locking the gui
@@ -649,7 +648,7 @@ impl Gui {
                 ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
             }
         }
-        
+
         let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
         if !kb_ptr.is_null() {
             TouchScreenKeyboard::set_active(kb_ptr, false);
