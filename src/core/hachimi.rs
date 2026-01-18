@@ -137,19 +137,23 @@ impl Hachimi {
 
     fn load_config(data_dir: &Path, region: &Region) -> Result<Config, Error> {
         let config_path = data_dir.join("config.json");
-        let json = fs::read_to_string(&config_path)?;
-        match serde_json::from_str(&content) {
-            Ok(config) => config,
-            Err(e) => {
-                eprintln!("Failed to parse config: {}", e);
-                /*
-                if let Some(mutex) = Gui::instance() {
-                    if let Ok(mut gui) = mutex.lock() {
-                        gui.show_notification(&t!("notifications.config_error"));
-                    }
-                }*/
-                Ok(Config::default())
+        if fs::metadata(&config_path).is_ok() {
+            let json = fs::read_to_string(&config_path)?;
+            match serde_json::from_str(&content)? {
+                Ok(config) => config,
+                Err(e) => {
+                    eprintln!("Failed to parse config: {}", e);
+                    /*
+                    if let Some(mutex) = Gui::instance() {
+                        if let Ok(mut gui) = mutex.lock() {
+                            gui.show_notification(&t!("notifications.config_error"));
+                        }
+                    }*/
+                    Ok(Config::default())
+                }
             }
+        }else {
+            Ok(Config::default())))
         }
     }
 
