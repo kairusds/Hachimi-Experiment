@@ -1703,17 +1703,30 @@ impl Window for FirstTimeSetupWindow {
                     0 => {
                         ui.heading(t!("first_time_setup.welcome_heading"));
                         ui.separator();
+                        let hachimi = Hachimi::instance();
+                        let config = &**hachimi.config.load();
                         ui.horizontal(|ui| {
                             ui.label(t!("config_editor.language"));
-
-                            let hachimi = Hachimi::instance();
-                            let config = &**hachimi.config.load();
                             let mut language = config.language;
                             let lang_changed = Gui::run_combo(ui, "language", &mut language, Language::CHOICES);
                             if lang_changed {
                                 let mut config = config.clone();
                                 config.language = language;
                                 save_and_reload_config(config);
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label(t!("config_editor.meta_index_url"));
+                            let mut url = config.meta_index_url.clone();
+                            let res = ui.add(egui::TextEdit::singleline(&mut config.meta_index_url));
+                            #[cfg(target_os = "android")]
+                            Gui::handle_android_keyboard(&res, &mut config.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
+                            if res.lost_focus() {
+                                if url != config.meta_index_url {
+                                    let mut config = config.clone();
+                                    config.meta_index_url = url;
+                                    save_and_reload_config(config);
+                                }
                             }
                         });
                         ui.label(t!("first_time_setup.welcome_content"));
