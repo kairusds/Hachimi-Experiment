@@ -12,6 +12,7 @@ use crate::il2cpp::{
         umamusume::{CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize},
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
     },
+    sql::CharacterData,
     symbols::Thread,
     types::Il2CppObject
 };
@@ -1667,6 +1668,7 @@ fn save_and_reload_config(config: hachimi::Config) {
 
 struct FirstTimeSetupWindow {
     id: egui::Id,
+    config: hachimi::Config,
     index_request: Arc<AsyncRequest<Vec<RepoInfo>>>,
     current_page: usize,
     current_tl_repo: Option<String>,
@@ -1674,13 +1676,15 @@ struct FirstTimeSetupWindow {
 }
 
 impl FirstTimeSetupWindow {
+    let config = (**Hachimi::instance().config.load()).clone();
     fn new() -> FirstTimeSetupWindow {
         FirstTimeSetupWindow {
             id: random_id(),
+            config,
             index_request: Arc::new(tl_repo::new_meta_index_request()),
             current_page: 0,
             current_tl_repo: None,
-            meta_index_url: String::new()
+            meta_index_url: config.meta_index_url.clone()
         }
     }
 }
@@ -1707,34 +1711,26 @@ impl Window for FirstTimeSetupWindow {
                         ui.separator();
                         ui.horizontal(|ui| {
                             ui.label(t!("config_editor.language"));
-                            let config = &**Hachimi::instance().config.load();
-                            let mut language = config.language;
+                            let mut language = self.config.language;
                             let lang_changed = Gui::run_combo(ui, "language", &mut language, Language::CHOICES);
                             if lang_changed {
-                                let mut config = config.clone();
-                                config.language = language;
-                                save_and_reload_config(config);
+                                self.config.language = language;
+                                save_and_reload_config(self.config.clone());
                             }
                         });
-                        ui.end_row();
                         ui.horizontal(|ui| {
                             ui.label(t!("config_editor.meta_index_url"));
-                            let config = &**Hachimi::instance().config.load();
-                            if self.meta_index_url.is_empty() && !config.meta_index_url.is_empty() {
-                                self.meta_index_url = config.meta_index_url.clone();
-                            }
                             let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url));
                             #[cfg(target_os = "android")]
                             Gui::handle_android_keyboard(&res, &mut self.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
                             if res.lost_focus() {
-                                if self.meta_index_url != config.meta_index_url {
-                                    let mut config = config.clone();
-                                    config.meta_index_url = self.meta_index_url.clone();
-                                    save_and_reload_config(config);
+                                if self.meta_index_url != self.config.meta_index_url {
+                                    self.config.meta_index_url = self.meta_index_url.clone();
+                                    save_and_reload_config(self.config.clone());
                                 }
                             }
                         });
-                        ui.end_row();
+                        ui.separator();
                         ui.label(t!("first_time_setup.welcome_content"));
                     }
                     1 => {
@@ -1745,7 +1741,7 @@ impl Window for FirstTimeSetupWindow {
 
                         async_request_ui_content(ui, self.index_request.clone(), |ui, repo_list| {
                             let hachimi = Hachimi::instance();
-                            let current_lang_str = hachimi.config.load().language.locale_str();
+                            let current_lang_str = self.config.language.locale_str();
 
                             let mut filtered_repos: Vec<_> = repo_list.iter()
                                 .filter(|repo| repo.region == hachimi.game.region)
@@ -1815,18 +1811,16 @@ impl Window for FirstTimeSetupWindow {
 
         let open_res = open && page_open;
         if !open_res {
-            let hachimi = Hachimi::instance();
-            let mut config = (**hachimi.config.load()).clone();
-            config.skip_first_time_setup = true;
+            self.config.skip_first_time_setup = true;
 
             if !page_open {
-                config.translation_repo_index = self.current_tl_repo.clone();
+                self.config.translation_repo_index = self.current_tl_repo.clone();
             }
 
-            save_and_reload_config(config);
+            save_and_reload_config(self.config.clone());
 
             if !page_open {
-                hachimi.tl_updater.clone().check_for_updates(false);
+                Hachimi::instance().tl_updater.clone().check_for_updates(false);
             }
         }
 
@@ -1836,15 +1830,18 @@ impl Window for FirstTimeSetupWindow {
 
 struct LiveVocalsSwapWindow {
     id: egui::Id,
-    config: hachimi::Config, 
+    config: hachimi::Config,
+    chara_data: CharacterData,
     search_term: String
 }
 
 impl LiveVocalsSwapWindow {
     fn new() -> LiveVocalsSwapWindow {
+        let hachimi = Hachimi::instance();
         LiveVocalsSwapWindow {
             id: random_id(),
-            config: (**Hachimi::instance().config.load()).clone(),
+            config: (**hachimi.config.load()).clone(),
+            chara_data: hachimi.chara_data.load(),
             search_term: String::new()
         }
     }
@@ -1855,11 +1852,10 @@ impl Window for LiveVocalsSwapWindow {
         let mut open = true;
         let mut open2 = true;
 
-        let chara_data_guard = Hachimi::instance().chara_data.load();
         let mut chara_choices: Vec<(i32, String)> = Vec::new();
         chara_choices.push((0, t!("default").into_owned()));
 
-        if let Some(data) = chara_data_guard.as_ref() {
+        if let Some(data) = self.chara_data.as_ref() {
             for &id in &data.chara_ids {
                 chara_choices.push((id, data.get_name(id)));
             }
