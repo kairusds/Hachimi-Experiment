@@ -1839,7 +1839,10 @@ impl LiveVocalsSwapWindow {
     fn new() -> LiveVocalsSwapWindow {
         let hachimi = Hachimi::instance();
         let chara_guard = hachimi.chara_data.load();
-        let chara_data = chara_guard.as_ref().as_ref().map(Arc::clone);
+        let chara_data = match &**hachimi.chara_data.load() {
+            Some(arc) => Some(Arc::clone(arc)),
+            None => None
+        };
 
         LiveVocalsSwapWindow {
             id: random_id(),
