@@ -1725,7 +1725,7 @@ impl Window for FirstTimeSetupWindow {
                             }
                             let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url));
                             #[cfg(target_os = "android")]
-                            Gui::handle_android_keyboard(&res, &mut self.meta_index_url), TouchScreenKeyboardType::KeyboardType::URL);
+                            Gui::handle_android_keyboard(&res, &mut self.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
                             if res.lost_focus() {
                                 if url != config.meta_index_url {
                                     let mut config = config.clone();
