@@ -168,6 +168,8 @@ impl Gui {
                 }
             },
 
+            config_error_visible: false,
+
             menu_visible: false,
             menu_anim_time: None,
             menu_fps_value: fps_value,
@@ -266,6 +268,11 @@ impl Gui {
         
         if self.menu_visible { self.run_menu(); }
         if self.update_progress_visible { self.run_update_progress(); }
+
+        if self.config_error_visible {
+            self.show_notification(&t!("notification.config_error"));
+            self.config_error_visible = false;
+        }
 
         self.run_windows();
         self.run_notifications();

@@ -142,15 +142,13 @@ impl Hachimi {
             match serde_json::from_str::<Config>(&json) {
                 Ok(config) => Ok(config),
                 Err(e) => {
-                    let config = Config::default();
-                    config.language.set_locale();
                     eprintln!("Failed to parse config: {}", e);
                     if let Some(mutex) = Gui::instance() {
                         if let Ok(mut gui) = mutex.lock() {
-                            gui.show_notification(&rust_i18n::t!("notifications.config_error"));
+                            gui.config_error_visible = true;
                         }
                     }
-                    Ok(config)
+                    Ok(Config::default())
                 }
             }
         }else {
