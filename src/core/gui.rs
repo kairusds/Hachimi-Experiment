@@ -606,9 +606,9 @@ impl Gui {
     }
 
     #[cfg(target_os = "android")]
-    pub fn handle_android_keyboard(res: &egui::Response, txt: &mut String) {
+    pub fn handle_android_keyboard(res: &egui::Response, text: &mut String) {
         if res.gained_focus() {
-            let ptr = search_term.to_il2cpp_string();
+            let ptr = text.to_il2cpp_string();
             PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
 
             Thread::main_thread().schedule(|| {
@@ -629,11 +629,11 @@ impl Gui {
         let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
         if !kb_ptr.is_null() {
             let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
-            // update search_term in realtime as user types only if it's different
+            // update text in realtime as user types only if it's different
             if let Some(kb_ref) = kb_txt_ptr.as_ref() {
                 let kb_txt_str = kb_ref.as_utf16str().to_string();
-                if *search_term != kb_txt_str {
-                    *search_term = kb_txt_str;
+                if *text != kb_txt_str {
+                    *text = kb_txt_str;
                 }
             }
 
