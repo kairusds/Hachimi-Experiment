@@ -783,17 +783,17 @@ impl Gui {
         changed
     }
 
-    fn down_triangle_icon(painter: &egui::Painter, rect: egui::Rect, visuals: &egui::style::WidgetVisuals) {
-        let rect = rect.shrink(rect.width() * 0.2);
-        let mut points = vec![
-            rect.left_top(),
-            rect.right_top(),
-            rect.center_bottom()
-        ];
+    // egui's code (https://github.com/emilk/egui/blob/main/crates/egui/src/containers/combo_box.rs)
+    fn down_triangle_icon(painter: &egui::Painter, rect: egui::Rect, visuals: &egui::style::WidgetVisuals) 
+        let rect = egui::Rect::from_center_size(
+            rect.center(),
+            egui::vec2(rect.width() * 0.7, rect.height() * 0.45)
+        );
+
         painter.add(egui::Shape::convex_polygon(
-            points,
+            vec![rect.left_top(), rect.right_top(), rect.center_bottom()],
             visuals.fg_stroke.color,
-            visuals.fg_stroke
+            Stroke::NONE
         ));
     }
 
