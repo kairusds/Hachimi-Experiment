@@ -1885,7 +1885,7 @@ impl Window for LiveVocalsSwapWindow {
             .iter()
             .map(|&(id, ref name)| (id, name.as_str()))
             .collect();
-        let mut config = self.config.clone();
+        let LiveVocalsSwapWindow { config } = self;
 
         new_window(ctx, self.id, t!("config_editor.live_vocals_swap"))
         .open(&mut open)
@@ -1915,7 +1915,7 @@ impl Window for LiveVocalsSwapWindow {
                                 open2 = false;
                             }
                             if ui.button(t!("save")).clicked() {
-                                save_and_reload_config(self.config.clone());
+                                save_and_reload_config(config.clone());
                                 open2 = false;
                             }
                         });
