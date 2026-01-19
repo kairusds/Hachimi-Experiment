@@ -1881,28 +1881,28 @@ impl Window for LiveVocalsSwapWindow {
         let mut open = true;
         let mut open2 = true;
 
-        let combo_items: Vec<(i32, &str)> = self.chara_choices
+        let LiveVocalsSwapWindow { id, config, chara_choices, search_term } = self;
+        let combo_items: Vec<(i32, &str)> = chara_choices
             .iter()
             .map(|&(id, ref name)| (id, name.as_str()))
             .collect();
-        let LiveVocalsSwapWindow { config } = self;
 
-        new_window(ctx, self.id, t!("config_editor.live_vocals_swap"))
+        new_window(ctx, id, t!("config_editor.live_vocals_swap"))
         .open(&mut open)
         .show(ctx, |ui| {
-            simple_window_layout(ui, self.id,
+            simple_window_layout(ui, id,
                 |ui| {
                     egui::Frame::NONE
                     .inner_margin(egui::Margin::symmetric(8, 0))
                     .show(ui, |ui| {
-                        egui::Grid::new(self.id.with("live_vocals_swap_grid"))
+                        egui::Grid::new(id.with("live_vocals_swap_grid"))
                         .striped(true)
                         .num_columns(2)
                         .spacing([40.0 * scale, 4.0 * scale])
                         .show(ui, |ui| {
                             for i in 0..6 {
                                 ui.label(t!("config_editor.live_vocals_swap_character_n", index = i + 1));
-                                Gui::run_combo_menu(ui, egui::Id::new("vocals_swap").with(i), &mut config.live_vocals_swap[i], &combo_items, &mut self.search_term);
+                                Gui::run_combo_menu(ui, egui::Id::new("vocals_swap").with(i), &mut config.live_vocals_swap[i], &combo_items, &mut search_term);
                                 ui.end_row();
                             }
                         });
