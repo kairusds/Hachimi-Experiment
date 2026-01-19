@@ -712,10 +712,10 @@ impl Gui {
                 egui::epaint::StrokeKind::Inside
             );
 
-            let icon_size = egui::Vec2::splat(rect.height()); 
+            let icon_size = 12.0 * scale; 
             let icon_rect = egui::Rect::from_center_size(
-                egui::pos2(rect.right() - padding.x - icon_size.x / 2.0, rect.center().y),
-                icon_size,
+                egui::pos2(rect.right() - padding.x - icon_size / 2.0, rect.center().y),
+                egui::vec2(icon_size, icon_size)
             );
             Self::down_triangle_icon(ui.painter(), icon_rect, visuals);
 
