@@ -1869,6 +1869,7 @@ impl LiveVocalsSwapWindow {
 
 impl Window for LiveVocalsSwapWindow {
     fn run(&mut self, ctx: &egui::Context) -> bool {
+        let scale = get_scale(ctx);
         let mut open = true;
         let mut open2 = true;
 
