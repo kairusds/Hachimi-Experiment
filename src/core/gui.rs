@@ -1565,6 +1565,7 @@ impl Window for ConfigEditor {
         let global_handle = Hachimi::instance().config.load();
         let global_ptr = Arc::as_ptr(&global_handle) as usize;
 
+        // sync config between diff windows
         if global_ptr != self.last_ptr_config {
             self.config = (**global_handle).clone();
             self.last_ptr_config = global_ptr;
@@ -1879,26 +1880,38 @@ impl Window for LiveVocalsSwapWindow {
         new_window(ctx, self.id, t!("config_editor.live_vocals_swap"))
         .open(&mut open)
         .show(ctx, |ui| {
-            egui::Grid::new(self.id.with("live_vocals_swap_grid")).show(ui, |ui| {
-                for i in 0..6 {
-                    ui.label(t!("config_editor.live_vocals_swap_character_n", index = i + 1));
-                    // Gui::run_combo(ui, format!("vocals_swap_combo_{}", i), &mut self.config.live_vocals_swap[i], &combo_items);
-                    Gui::run_combo_menu(ui, egui::Id::new("vocals_swap").with(i), &mut self.config.live_vocals_swap[i], &combo_items, &mut self.search_term);
-                    ui.end_row();
+            simple_window_layout(ui, self.id,
+                |ui| {
+                    egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(8, 0))
+                    .show(ui, |ui| {
+                        egui::Grid::new(self.id.with("live_vocals_swap_grid"))
+                        .striped(true)
+                        .num_columns(2)
+                        .spacing([40.0 * scale, 4.0 * scale])
+                        .show(ui, |ui| {
+                            for i in 0..6 {
+                                ui.label(t!("config_editor.live_vocals_swap_character_n", index = i + 1));
+                                Gui::run_combo_menu(ui, egui::Id::new("vocals_swap").with(i), &mut self.config.live_vocals_swap[i], &combo_items, &mut self.search_term);
+                                ui.end_row();
+                            }
+                        });
+                    });
+                },
+                |ui| {
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                            if ui.button(t!("cancel")).clicked() {
+                                open2 = false;
+                            }
+                            if ui.button(t!("save")).clicked() {
+                                save_and_reload_config(self.config.clone());
+                                open2 = false;
+                            }
+                        });
+                    });
                 }
-            });
-
-            ui.separator();
-
-            ui.horizontal(|ui| {
-                if ui.button(t!("save")).clicked() {
-                    save_and_reload_config(self.config.clone());
-                    open2 = false;
-                }
-                if ui.button(t!("cancel")).clicked() {
-                    open2 = false;
-                }
-            });
+            );
         });
 
         open &= open2;
