@@ -793,7 +793,7 @@ impl Gui {
         painter.add(egui::Shape::convex_polygon(
             vec![rect.left_top(), rect.right_top(), rect.center_bottom()],
             visuals.fg_stroke.color,
-            Stroke::NONE
+            egui::Stroke::NONE
         ));
     }
 
