@@ -1839,7 +1839,7 @@ impl Window for FirstTimeSetupWindow {
 struct LiveVocalsSwapWindow {
     id: egui::Id,
     config: hachimi::Config,
-    chara_data: Arc<Option<CharacterData>>,
+    chara_choices: Vec<(i32, String)>,
     search_term: String
 }
 
@@ -1847,10 +1847,20 @@ impl LiveVocalsSwapWindow {
     fn new() -> LiveVocalsSwapWindow {
         let hachimi = Hachimi::instance();
         let chara_data = hachimi.chara_data.load_full();
+        let mut chara_choices: Vec<(i32, String)> = Vec::new();
+        chara_choices.push((0, t!("default").into_owned()));
+
+        if let Some(data) = chara_data.as_ref() {
+            for &id in &data.chara_ids {
+                chara_choices.push((id, data.get_name(id)));
+            }
+        }
+        chara_choices.sort_by_key(|choice| choice.0);
+
         LiveVocalsSwapWindow {
             id: random_id(),
             config: (**hachimi.config.load()).clone(),
-            chara_data,
+            chara_choices,
             search_term: String::new()
         }
     }
@@ -1861,17 +1871,7 @@ impl Window for LiveVocalsSwapWindow {
         let mut open = true;
         let mut open2 = true;
 
-        let mut chara_choices: Vec<(i32, String)> = Vec::new();
-        chara_choices.push((0, t!("default").into_owned()));
-
-        if let Some(data) = self.chara_data.as_ref() {
-            for &id in &data.chara_ids {
-                chara_choices.push((id, data.get_name(id)));
-            }
-        }
-        chara_choices.sort_by_key(|choice| choice.0);
-
-        let combo_items: Vec<(i32, &str)> = chara_choices
+        let combo_items: Vec<(i32, &str)> = self.chara_choices
             .iter()
             .map(|&(id, ref name)| (id, name.as_str()))
             .collect();
