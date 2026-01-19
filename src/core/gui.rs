@@ -683,6 +683,7 @@ impl Gui {
         let scale = get_scale(ui.ctx());
         let fixed_width = 135.0 * scale;
         let row_height = 24.0 * scale;
+        let padding = ui.spacing().button_padding;
 
         let button_id = ui.make_persistent_id(id_salt);
         let popup_id = button_id.with("popup");
@@ -708,12 +709,13 @@ impl Gui {
                 visuals.corner_radius,
                 visuals.weak_bg_fill,
                 visuals.bg_stroke,
-                egui::epaint::StrokeKind::Inside,
+                egui::epaint::StrokeKind::Inside
             );
 
+            let icon_size = egui::vec2(rect.height() * 0.4, rect.height() * 0.2);
             let icon_rect = egui::Rect::from_center_size(
-                pos2(rect.right() - spacing - 8.0 * scale, rect.center().y),
-                vec2(10.0 * scale, 8.0 * scale)
+                egui::pos2(rect.right() - padding.x - icon_size.x / 2.0, rect.center().y),
+                icon_size,
             );
             Self::down_triangle_icon(ui.painter(), icon_rect, visuals);
 
@@ -724,7 +726,7 @@ impl Gui {
             );
 
             let text_pos = egui::pos2(
-                rect.left() + spacing,
+                rect.left() + padding.x,
                 rect.center().y - galley.size().y / 2.0
             );
             ui.painter().galley(text_pos, galley, visuals.text_color());
