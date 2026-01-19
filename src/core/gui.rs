@@ -681,8 +681,8 @@ impl Gui {
     ) -> bool {
         let mut changed = false;
         let scale = get_scale(ui.ctx());
-        let fixed_width = 140.0 * scale;
-        let row_height = 20.0 * scale;
+        let fixed_width = 135.0 * scale;
+        let row_height = 24.0 * scale;
 
         let button_id = ui.make_persistent_id(id_salt);
         let popup_id = button_id.with("popup");
@@ -692,17 +692,10 @@ impl Gui {
             .map(|(_, s)| *s)
             .unwrap_or("Unknown");
 
-        let button_res = ui.allocate_ui_at_rect(
-            ui.available_rect_before_wrap(),
-            |ui| {
-                let (_, rect) = ui.allocate_space(egui::vec2(fixed_width, row_height));
-                ui.interact(rect, button_id, egui::Sense::click())
-            }
-        ).inner;
+        let (rect, _) = ui.allocate_exact_size(egui::vec2(fixed_width, row_height), egui::Sense::hover());
+        let button_res = ui.interact(rect, button_id, egui::Sense::click());
 
-        ui.advance_cursor_after_rect(button_res.rect);
-
-        if ui.is_rect_visible(button_res.rect) {
+        if ui.is_rect_visible(rect) {
             let is_open = egui::Popup::is_id_open(ui.ctx(), popup_id);
             let visuals = if is_open {
                 &ui.visuals().widgets.open
@@ -711,19 +704,29 @@ impl Gui {
             };
 
             ui.painter().rect(
-                button_res.rect.expand(visuals.expansion),
+                rect.expand(visuals.expansion),
                 visuals.corner_radius,
                 visuals.weak_bg_fill,
                 visuals.bg_stroke,
                 egui::epaint::StrokeKind::Inside,
             );
-            
+
+            let icon_rect = egui::Rect::from_center_size(
+                pos2(rect.right() - spacing - 8.0 * scale, rect.center().y),
+                vec2(10.0 * scale, 8.0 * scale)
+            );
+            down_triangle_icon(ui.painter(), icon_rect, visuals);
+
             let galley = ui.painter().layout_no_wrap(
                 selected_text.to_owned(),
                 egui::TextStyle::Button.resolve(ui.style()),
                 visuals.text_color()
             );
-            let text_pos = button_res.rect.center() - galley.size() / 2.0;
+
+            let text_pos = egui::pos2(
+                rect.left() + spacing,
+                rect.center().y - galley.size().y / 2.0
+            );
             ui.painter().galley(text_pos, galley, visuals.text_color());
         }
 
@@ -776,6 +779,20 @@ impl Gui {
         });
 
         changed
+    }
+
+    fn down_triangle_icon(painter: &egui::Painter, rect: egui::Rect, visuals: &egui::style::WidgetVisuals) {
+        let rect = rect.shrink(rect.width() * 0.2);
+        let mut points = vec![
+            rect.left_top(),
+            rect.right_top(),
+            rect.center_bottom()
+        ];
+        painter.add(egui::Shape::convex_polygon(
+            points,
+            visuals.fg_stroke.color,
+            visuals.fg_stroke
+        ));
     }
 
     fn run_update_progress(&mut self) {
