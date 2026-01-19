@@ -5,8 +5,8 @@ fn get__headerText(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { _HEADERTEXT_FIELD })
 }
 
-type SetupRequesterInfoFn = extern "C" fn(this: *mut Il2CppObject, typ: *mut Il2CppObject, headerName: *mut Il2CppObject);
-extern "C" fn SetupRequesterInfo(this: *mut Il2CppObject, typ: *mut Il2CppObject, _headerName: *mut Il2CppObject) {
+type SetupRequesterInfoFn = extern "C" fn(this: *mut Il2CppObject, typ: *mut Il2CppObject, headerName: *mut Il2CppString);
+extern "C" fn SetupRequesterInfo(this: *mut Il2CppObject, typ: *mut Il2CppObject, _headerName: *mut Il2CppString) {
     get_orig_fn!(SetupRequesterInfo, SetupRequesterInfoFn)(this, typ, "hhbbwa".to_string().to_il2cpp_string());
 }
 
