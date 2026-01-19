@@ -1,7 +1,7 @@
 use crate::{core::Hachimi, il2cpp::{ext::StringExt, symbols::get_method_addr, types::*}};
 
 type get_RequestUserNameFn = extern "C" fn(this: *mut Il2CppObject) -> *mut Il2CppString;
-extern "C" fn get_RequestUserName(this: *mut Il2CppObject) -> Il2CppString {
+extern "C" fn get_RequestUserName(this: *mut Il2CppObject) -> *mut Il2CppString {
     "".to_string().to_il2cpp_string()
 }
 
