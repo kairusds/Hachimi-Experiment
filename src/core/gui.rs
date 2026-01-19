@@ -712,7 +712,7 @@ impl Gui {
                 egui::epaint::StrokeKind::Inside
             );
 
-            let icon_size = egui::vec2(rect.height() * 0.4, rect.height() * 0.2);
+            let icon_size = egui::Vec2::splat(rect.height()); 
             let icon_rect = egui::Rect::from_center_size(
                 egui::pos2(rect.right() - padding.x - icon_size.x / 2.0, rect.center().y),
                 icon_size,
@@ -783,7 +783,7 @@ impl Gui {
         changed
     }
 
-    // egui's code (https://github.com/emilk/egui/blob/main/crates/egui/src/containers/combo_box.rs)
+    // egui's code originally (https://github.com/emilk/egui/blob/main/crates/egui/src/containers/combo_box.rs)
     fn down_triangle_icon(painter: &egui::Painter, rect: egui::Rect, visuals: &egui::style::WidgetVisuals) {
         let rect = egui::Rect::from_center_size(
             rect.center(),
@@ -791,9 +791,13 @@ impl Gui {
         );
 
         painter.add(egui::Shape::convex_polygon(
-            vec![rect.left_top(), rect.right_top(), rect.center_bottom()],
+            vec![
+                rect.left_top(),
+                rect.right_top(),
+                rect.center_bottom()
+            ],
             visuals.fg_stroke.color,
-            egui::Stroke::NONE
+            visuals.fg_stroke
         ));
     }
 
