@@ -3,7 +3,7 @@ use crate::{core::Hachimi, il2cpp::{ext::StringExt, symbols::get_method_addr, ty
 type SetupRequesterInfoFn = extern "C" fn(this: *mut Il2CppObject, typ: *mut Il2CppObject, headerName: *mut Il2CppString);
 extern "C" fn SetupRequesterInfo(this: *mut Il2CppObject, typ: *mut Il2CppObject, headerName: *mut Il2CppString) {
     let header_name = if Hachimi::instance().config.load().hide_usernames {
-        "".to_string().to_il2cpp_string();
+        "".to_string().to_il2cpp_string()
     } else {
         headerName
     };
@@ -14,7 +14,7 @@ extern "C" fn SetupRequesterInfo(this: *mut Il2CppObject, typ: *mut Il2CppObject
 type SetupTrainerRequestDataFn = extern "C" fn(this: *mut Il2CppObject, musicId: *mut Il2CppObject, name: *mut Il2CppString, requestTime: *mut Il2CppObject);
 extern "C" fn SetupTrainerRequestData(this: *mut Il2CppObject, musicId: *mut Il2CppObject, name: *mut Il2CppString, requestTime: *mut Il2CppObject) {
     let username = if Hachimi::instance().config.load().hide_usernames {
-        "".to_string().to_il2cpp_string();
+        "".to_string().to_il2cpp_string()
     } else {
         name
     };
