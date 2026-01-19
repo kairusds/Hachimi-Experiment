@@ -1675,7 +1675,6 @@ fn save_and_reload_config(config: hachimi::Config) {
 
 struct FirstTimeSetupWindow {
     id: egui::Id,
-    meta_index_url: String,
     config: hachimi::Config,
     index_request: Arc<AsyncRequest<Vec<RepoInfo>>>,
     current_page: usize,
@@ -1687,7 +1686,6 @@ impl FirstTimeSetupWindow {
         let config = (**Hachimi::instance().config.load()).clone();
         FirstTimeSetupWindow {
             id: random_id(),
-            meta_index_url: config.meta_index_url.clone(),
             config,
             index_request: Arc::new(tl_repo::new_meta_index_request()),
             current_page: 0,
@@ -1726,20 +1724,6 @@ impl Window for FirstTimeSetupWindow {
                                 self.current_tl_repo = None;
                             }
                         });
-                        ui.horizontal(|ui| {
-                            ui.label(t!("config_editor.meta_index_url"));
-                            let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url));
-                            #[cfg(target_os = "android")]
-                            Gui::handle_android_keyboard(&res, &mut self.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
-                            if res.lost_focus() {
-                                if self.meta_index_url != self.config.meta_index_url {
-                                    self.config.meta_index_url = self.meta_index_url.clone();
-                                    save_and_reload_config(self.config.clone());
-                                    self.index_request = Arc::new(tl_repo::new_meta_index_request());
-                                }
-                            }
-                        });
-                        ui.separator();
                         ui.label(t!("first_time_setup.welcome_content"));
                     }
                     1 => {
