@@ -1564,6 +1564,10 @@ impl ConfigEditor {
                 });
                 ui.end_row();
 
+                ui.label(t!("config_editor.disable_skill_name_translation"));
+                ui.checkbox(&mut config.disable_skill_name_translation, "");
+                ui.end_row();
+
                 ui.label(t!("config_editor.hide_ingame_ui_hotkey"));
                 if ui.checkbox(&mut config.hide_ingame_ui_hotkey, "").clicked() {
                     if config.hide_ingame_ui_hotkey {
@@ -1580,8 +1584,8 @@ impl ConfigEditor {
                 }
                 ui.end_row();
 
-                ui.label(t!("config_editor.disable_skill_name_translation"));
-                ui.checkbox(&mut config.disable_skill_name_translation, "");
+                ui.label(t!("config_editor.hide_usernames"));
+                ui.checkbox(&mut config.hide_usernames, "");
                 ui.end_row();
             }
         }
