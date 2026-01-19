@@ -6,7 +6,7 @@ fn get__userName(this: *mut Il2CppObject) -> *mut Il2CppObject {
 }
 
 type SetupRequesterInfoFn = extern "C" fn(this: *mut Il2CppObject, typ: *mut Il2CppObject, headerName: *mut Il2CppObject);
-extern "C" fn SetupRequesterInfo(this: *mut Il2CppObject, typ, headerName) {
+extern "C" fn SetupRequesterInfo(this: *mut Il2CppObject, typ: *mut Il2CppObject, headerName: *mut Il2CppObject) {
     get_orig_fn!(SetupRequesterInfo, SetupRequesterInfoFn)(this, typ, headerName);
     let username = get__userName(this);
     Text::set_text(username, "ウマ娘".to_string().to_il2cpp_string());
