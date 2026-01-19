@@ -1886,7 +1886,6 @@ impl Window for LiveVocalsSwapWindow {
             .iter()
             .map(|&(id, ref name)| (id, name.as_str()))
             .collect();
-        let mut config = self.config.clone();
 
         new_window(ctx, self.id, t!("config_editor.live_vocals_swap"))
         .open(&mut open)
@@ -1903,7 +1902,7 @@ impl Window for LiveVocalsSwapWindow {
                         .show(ui, |ui| {
                             for i in 0..6 {
                                 ui.label(t!("config_editor.live_vocals_swap_character_n", index = i + 1));
-                                Gui::run_combo_menu(ui, egui::Id::new("vocals_swap").with(i), &mut config.live_vocals_swap[i], &combo_items, &mut self.search_term);
+                                Gui::run_combo_menu(ui, egui::Id::new("vocals_swap").with(i), &mut self.config.live_vocals_swap[i], &combo_items, &mut self.search_term);
                                 ui.end_row();
                             }
                         });
