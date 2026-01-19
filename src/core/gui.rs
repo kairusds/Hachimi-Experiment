@@ -13,7 +13,7 @@ use crate::il2cpp::{
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
     },
     sql::CharacterData,
-    symbols::Thread,
+    symbols::{Thread, GCHandle},
     types::Il2CppObject
 };
 
@@ -90,11 +90,15 @@ static mut DISABLED_GAME_UIS: once_cell::unsync::Lazy<FnvHashSet<*mut Il2CppObje
 #[cfg(target_os = "android")]
 use std::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
 #[cfg(target_os = "android")]
+use once_cell::sync::Lazy;
+#[cfg(target_os = "android")]
 static PENDING_KEYBOARD_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
 static PENDING_KB_TYPE: AtomicI32 = AtomicI32::new(0);
 #[cfg(target_os = "android")]
 static ACTIVE_KEYBOARD: AtomicPtr<Il2CppObject> = AtomicPtr::new(std::ptr::null_mut());
+#[cfg(target_os = "android")]
+pub static KEYBOARD_GC_HANDLE: Lazy<Mutex<Option<GCHandle>>> = Lazy::new(|| Mutex::default());
 
 fn get_scale_salt(ctx: &egui::Context) -> f32 {
     ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale_salt"))).unwrap_or(1.0)
@@ -630,6 +634,8 @@ impl Gui {
                             false, false, false
                         )
                     };
+                    let handle = GCHandle::new(keyboard, false);
+                    *KEYBOARD_GC_HANDLE.lock().unwrap() = Some(handle);
                     ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
                 }
             });
@@ -652,6 +658,7 @@ impl Gui {
 
             if status != TouchScreenKeyboard::Status::Visible && status != TouchScreenKeyboard::Status::Done {
                 ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+                *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
             }
         }
 
@@ -660,6 +667,7 @@ impl Gui {
             if !kb_ptr.is_null() {
                 TouchScreenKeyboard::set_active(kb_ptr, false);
                 ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+                *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
             }
         }
     }
@@ -1675,6 +1683,7 @@ fn save_and_reload_config(config: hachimi::Config) {
 
 struct FirstTimeSetupWindow {
     id: egui::Id,
+    meta_index_url: String,
     config: hachimi::Config,
     index_request: Arc<AsyncRequest<Vec<RepoInfo>>>,
     current_page: usize,
@@ -1686,6 +1695,7 @@ impl FirstTimeSetupWindow {
         let config = (**Hachimi::instance().config.load()).clone();
         FirstTimeSetupWindow {
             id: random_id(),
+            meta_index_url: config.meta_index_url.clone(),
             config,
             index_request: Arc::new(tl_repo::new_meta_index_request()),
             current_page: 0,
@@ -1724,6 +1734,20 @@ impl Window for FirstTimeSetupWindow {
                                 self.current_tl_repo = None;
                             }
                         });
+                        ui.horizontal(|ui| {
+                            ui.label(t!("config_editor.meta_index_url"));
+                            let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url));
+                            #[cfg(target_os = "android")]
+                            Gui::handle_android_keyboard(&res, &mut self.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
+                            if res.lost_focus() {
+                                if self.meta_index_url != self.config.meta_index_url {
+                                    self.config.meta_index_url = self.meta_index_url.clone();
+                                    save_and_reload_config(self.config.clone());
+                                    self.index_request = Arc::new(tl_repo::new_meta_index_request());
+                                }
+                            }
+                        });
+                        ui.separator();
                         ui.label(t!("first_time_setup.welcome_content"));
                     }
                     1 => {
