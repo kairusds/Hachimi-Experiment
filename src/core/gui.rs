@@ -1887,10 +1887,10 @@ impl Window for LiveVocalsSwapWindow {
             .map(|&(id, ref name)| (id, name.as_str()))
             .collect();
 
-        new_window(ctx, id, t!("config_editor.live_vocals_swap"))
+        new_window(ctx, *id, t!("config_editor.live_vocals_swap"))
         .open(&mut open)
         .show(ctx, |ui| {
-            simple_window_layout(ui, id,
+            simple_window_layout(ui, *id,
                 |ui| {
                     egui::Frame::NONE
                     .inner_margin(egui::Margin::symmetric(8, 0))
