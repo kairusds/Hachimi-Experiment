@@ -1906,7 +1906,7 @@ impl Window for LiveVocalsSwapWindow {
                                 open2 = false;
                             }
                             if ui.button(t!("save")).clicked() {
-                                save_and_reload_config(&mut self.config.clone());
+                                save_and_reload_config(self.config.clone());
                                 open2 = false;
                             }
                         });
