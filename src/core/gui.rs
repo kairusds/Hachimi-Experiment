@@ -715,7 +715,7 @@ impl Gui {
                 pos2(rect.right() - spacing - 8.0 * scale, rect.center().y),
                 vec2(10.0 * scale, 8.0 * scale)
             );
-            down_triangle_icon(ui.painter(), icon_rect, visuals);
+            Self::down_triangle_icon(ui.painter(), icon_rect, visuals);
 
             let galley = ui.painter().layout_no_wrap(
                 selected_text.to_owned(),
