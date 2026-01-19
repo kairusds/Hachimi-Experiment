@@ -658,6 +658,7 @@ impl Gui {
 
             if status != TouchScreenKeyboard::Status::Visible && status != TouchScreenKeyboard::Status::Done {
                 res.surrender_focus();
+                res.ctx.memory_mut(|mem| mem.stop_text_input());
                 ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
                 *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
             }
