@@ -117,8 +117,8 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
         opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
     };
 
-    let name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| "Skill".to_string());
-    let desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| "No description available.".to_string());
+    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| "Skill".to_string());
+    let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| "No description available.".to_string());
 
     // ACTION_DATA_MAP.lock().unwrap().insert(callback_ptr as usize, (name, desc));
 
@@ -127,7 +127,12 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
 
     let button = get__bgButton(this);
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
-        info!("button press");
+        if let Some(mutex) = Gui::instance() {
+            mutex.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(
+                &skill_name,
+                &skill_desc
+            )));
+        }
     }).unwrap();
     ButtonCommon::SetOnClick(button, delegate);
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
