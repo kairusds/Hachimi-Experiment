@@ -102,8 +102,8 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
 // type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
     let skill_id = get_Id(info);
-    let skill_name = unsafe { TextDataQuery::get_skill_name(id).unwrap().as_utf16str() }.to_string();
-    let skill_desc = unsafe { TextDataQuery::get_skill_desc(id).unwrap().as_utf16str() }.to_string();
+    let skill_name = unsafe { TextDataQuery::get_skill_name(id).unwrap().as_ref().as_utf16str() }.to_string();
+    let skill_desc = unsafe { TextDataQuery::get_skill_desc(id).unwrap().as_ref().as_utf16str() }.to_string();
     if let Some(mutex) = Gui::instance() {
         mutex.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(
             &skill_name,
