@@ -17,9 +17,10 @@ pub fn new(rust_fn: usize) -> *mut UnityAction {
     }
 } */
 
-pub fn new_via_symbols(rust_fn: unsafe extern "C" fn()) -> *mut UnityAction {
+pub fn new_via_symbols<T>(rust_fn: T) -> *mut UnityAction {
     unsafe {
-        create_delegate(UnityAction, 0, rust_fn)
+        let transmuted_fn: fn() = std::mem::transmute_copy(&rust_fn);
+        create_delegate(UnityAction, 0, transmuted_fn)
             .map(|d| d as *mut UnityAction)
             .expect("Failed to create UnityAction delegate")
     }
