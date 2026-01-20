@@ -251,7 +251,7 @@ impl Gui {
         fonts.families.insert(egui::FontFamily::Proportional, regular_stack);
         fonts.families.insert(egui::FontFamily::Name("BoldStack".into()), bold_stack);
         fonts.families.insert(egui::FontFamily::Name("ItalicStack".into()), italic_stack);
-        fonts.families.insert(egui::FontFamily::Name("BoldItalicStack".into()), italic_stack);
+        fonts.families.insert(egui::FontFamily::Name("BoldItalicStack".into()), bold_italic_stack);
 
         fonts
     }
