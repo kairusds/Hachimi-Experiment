@@ -9,7 +9,7 @@ use fnv::FnvHashMap;
 
 static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
 // static mut CURRENT_SKILL: Lazy<Mutex<Option<(String, String)>>> = Lazy::new(|| Mutex::new(None));
-static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, i32>>> = Lazy::new(|| Mutex::default());
+static PENDING_SKILL_DATA: Lazy<Mutex<Option<(String, String)>>> = Lazy::new(|| Mutex::new(None));
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
@@ -113,35 +113,33 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
 // private Void SetupOnClickSkillButton(Info skillInfo) { }
 // type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
-    // ACTION_DATA_MAP.lock().unwrap().insert(callback_ptr as usize, (name, desc));
+    let skill_id = get_Id(info);
+    let name_text = get__nameText(this);
+    let desc_text = get__descText(this);
 
-    // let handle = GCHandle::new(callback_ptr as *mut Il2CppObject, false);
-    // CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(callback_ptr as _, false));
+    let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
+        opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
+    };
+
+    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| unsafe { Text::get_text(name_text).as_utf16str() }.to_string());
+    let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| unsafe { Text::get_text(desc_text).as_utf16str() }.to_string());
+
+    *PENDING_SKILL_DATA.lock().unwrap() = Some((skill_name, skill_desc));
 
     let button = get__bgButton(this);
-    let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, OnSkillClicked);
-    SKILL_DATA_MAP.lock().unwrap().insert(delegate as usize, skill_id);
-    CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(delegate, false));
-    ButtonCommon::SetOnClick(button, delegate);
+    if let Some(delegate_ptr) = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, OnSkillClicked) {
+        CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(delegate_ptr as _, false));
+        ButtonCommon::SetOnClick(button, delegate_ptr);
+    }
+    // let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, OnSkillClicked);
+    // SKILL_DATA_MAP.lock().unwrap().insert(delegate as usize, skill_id);
+    // CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(delegate, false));
+    //ButtonCommon::SetOnClick(button, delegate);
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
 }
 
-fn OnSkillClicked(delegate_obj: *mut Il2CppObject) {
-    let skill_id = {
-        let map = SKILL_DATA_MAP.lock().unwrap();
-        *map.get(&(delegate_obj as usize)).unwrap_or(&0)
-    };
-
-    if skill_id == 0 { return; }
-
-    if let Some(mutex) = Gui::instance() {
-        let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
-            opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
-        };
-
-        let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| "Skill".to_string());
-        let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| "No description".to_string());
-
+fn OnSkillClicked() {
+    if let Some((skill_name, skill_desc)) = PENDING_SKILL_DATA.lock().unwrap().clone() {
         mutex.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(
             &skill_name,
             &skill_desc
