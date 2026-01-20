@@ -105,8 +105,13 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
 
     let button = get__bgButton(this);
     SKILL_DATA_MAP.lock().unwrap().insert(button as usize, (skill_name, skill_desc));
+    info!("button init {}", button as usize);
 
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
+        let current_ev = EventSystem::get_current();
+        let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
+        info!("pressed {}", &clicked_obj as usize);
+        
         if let Some(mutex) = Gui::instance() {
             let current_ev = EventSystem::get_current();
             let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
