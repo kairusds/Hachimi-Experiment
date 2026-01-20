@@ -112,11 +112,6 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
 // private Void SetupOnClickSkillButton(Info skillInfo) { }
 // type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
-    let skill_id = get_Id(info);
-    let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
-        opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
-    };
-
     // ACTION_DATA_MAP.lock().unwrap().insert(callback_ptr as usize, (name, desc));
 
     // let handle = GCHandle::new(callback_ptr as *mut Il2CppObject, false);
@@ -124,7 +119,11 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
 
     let button = get__bgButton(this);
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
+        let skill_id = get_Id(info);
         if let Some(mutex) = Gui::instance() {
+            let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
+                opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
+            };
             let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| "Skill".to_string());
             let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| "No description available.".to_string());
 
