@@ -669,6 +669,7 @@ dependencies = [
  "glow",
  "image",
  "jni",
+ "lazy_static",
  "libc",
  "log",
  "memmap2",
