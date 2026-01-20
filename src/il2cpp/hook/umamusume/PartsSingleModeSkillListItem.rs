@@ -1,6 +1,6 @@
 use crate::{
-    core::{gui::SimpleMessageWindow, Gui, Hachimi, game::Region, utils::mul_int},
-    il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::UnityAction, UnityEngine_UI::Text}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
+    core::{gui::SimpleOkDialog, Gui, Hachimi, game::Region, utils::mul_int},
+    il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::UnityAction, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
 };
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
@@ -8,8 +8,7 @@ use super::ButtonCommon;
 use fnv::FnvHashMap;
 
 // static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
-// static mut CURRENT_SKILL: Lazy<Mutex<Option<(String, String)>>> = Lazy::new(|| Mutex::new(None));
-static PENDING_SKILL_DATA: Lazy<Mutex<Option<(String, String)>>> = Lazy::new(|| Mutex::new(None));
+static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (String, String)>>> = Lazy::new(|| Mutex::default());
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
@@ -94,6 +93,34 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
             Text::set_horizontalOverflow(desc, 1);
         }
     }
+
+    // GUI skill info
+    let skill_id = get_Id(skill_info);
+    let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
+        opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
+    };
+
+    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
+    let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
+
+    let button = get__bgButton(this);
+    SKILL_DATA_MAP.lock().unwrap().insert(button as usize, (skill_name, skill_desc));
+
+    let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
+        if let Some(mutex) = Gui::instance() {
+            let current_ev = EventSystem::get_current();
+            let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
+
+            if let Some((skill_name, skill_desc)) = ACTION_DATA_MAP.lock().unwrap().get(&(clicked_obj as usize)) {
+                mutex.lock().unwrap().show_window(Box::new(SimpleOkDialog::new(
+                    &skill_name,
+                    &skill_desc,
+                    ()
+                )));
+            }
+        }
+    });
+    ButtonCommon::SetOnClick(button, delegate);
 }
 
 type UpdateItemJpFn = extern "C" fn(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, is_plate_effect_enable: bool, resource_hash: i32);
@@ -113,33 +140,7 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
 // private Void SetupOnClickSkillButton(Info skillInfo) { }
 // type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
-    let skill_id = get_Id(info);
-    let name_text = get__nameText(this);
-    let desc_text = get__descText(this);
-
-    let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
-        opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
-    };
-
-    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name_text))).unwrap());
-    let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc_text))).unwrap());
-
-    *PENDING_SKILL_DATA.lock().unwrap() = Some((skill_name, skill_desc));
-
-    let button = get__bgButton(this);
-    if let Some(delegate_ptr) = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
-        if let Some(mutex) = Gui::instance() {
-            if let Some((skill_name, skill_desc)) = PENDING_SKILL_DATA.lock().unwrap().clone() {
-                mutex.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(
-                    &skill_name,
-                    &skill_desc
-                )));
-            }
-        }
-    }) {
-        // CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(delegate_ptr as _, false));
-        ButtonCommon::SetOnClick(button, delegate_ptr);
-    }
+    // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
