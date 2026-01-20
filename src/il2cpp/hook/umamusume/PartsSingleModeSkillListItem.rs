@@ -1,6 +1,6 @@
 use crate::{
     core::{gui::SimpleMessageWindow, Gui, Hachimi, game::Region, utils::mul_int},
-    il2cpp::{ext::StringExt, hook::UnityEngine_UI::Text, sql::{self, TextDataQuery}, symbols::{get_field_from_name, get_field_object_value, get_method_addr}, types::*}
+    il2cpp::{ext::Il2CppStringExt, hook::UnityEngine_UI::Text, sql::{self, TextDataQuery}, symbols::{get_field_from_name, get_field_object_value, get_method_addr}, types::*}
 };
 
 // SkillListItem
