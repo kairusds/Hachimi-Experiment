@@ -11,6 +11,7 @@ pub mod RenderTexture;
 pub mod Graphics;
 pub mod Behaviour;
 pub mod Component;
+pub mod UnityAction;
 #[cfg(target_os = "android")]
 pub mod TouchScreenKeyboard;
 #[cfg(target_os = "android")]
@@ -44,6 +45,7 @@ pub fn init() {
     Graphics::init(image);
     Behaviour::init(image);
     Component::init(image);
+    UnityAction::init(image);
     #[cfg(target_os = "android")]
     {
         TouchScreenKeyboard::init(image);

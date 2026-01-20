@@ -1885,6 +1885,7 @@ impl LiveVocalsSwapWindow {
     fn new() -> LiveVocalsSwapWindow {
         let hachimi = Hachimi::instance();
         let chara_data = hachimi.chara_data.load_full();
+        // TODO: Use with_capacity
         let mut chara_choices: Vec<(i32, String)> = Vec::new();
         chara_choices.push((0, t!("default").into_owned()));
 

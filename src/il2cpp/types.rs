@@ -3078,6 +3078,7 @@ pub struct RenderTextureDescriptor {
     pub bindMS: bool,
     pub useDynamicScale: bool
 }
+pub type UnityAction = Il2CppDelegate;
 
 /************** ACTk (READ-ONLY) **************/
 #[repr(C)]

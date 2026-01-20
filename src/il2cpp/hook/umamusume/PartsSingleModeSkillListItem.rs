@@ -1,7 +1,14 @@
 use crate::{
     core::{gui::SimpleMessageWindow, Gui, Hachimi, game::Region, utils::mul_int},
-    il2cpp::{ext::Il2CppStringExt, hook::UnityEngine_UI::Text, sql::{self, TextDataQuery}, symbols::{get_field_from_name, get_field_object_value, get_method_addr}, types::*}
+    il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::UnityAction, UnityEngine_UI::Text}, sql::{self, TextDataQuery}, symbols::{get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
 };
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
+use super::ButtonCommon;
+use fnv::FnvHashMap;
+
+static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
+static ACTION_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (String, String)>>> = Lazy::new(|| Mutex::default());
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
@@ -11,6 +18,10 @@ fn get__nameText(this: *mut Il2CppObject) -> *mut Il2CppObject {
 static mut DESCTEXT_FIELD: *mut FieldInfo = 0 as _;
 fn get__descText(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { DESCTEXT_FIELD })
+}
+static mut _BGBUTTON_FIELD: *mut FieldInfo = 0 as _;
+fn get__bgButton(this: *mut Il2CppObject) -> *mut Il2CppObject {
+    get_field_object_value(this, unsafe { _BGBUTTON_FIELD })
 }
 
 // SkillInfo
@@ -102,17 +113,32 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
 // type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
     let skill_id = get_Id(info);
-
     let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
         opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
     };
 
-    if let (Some(name), Some(desc)) = (to_s(TextDataQuery::get_skill_name(skill_id)), to_s(TextDataQuery::get_skill_desc(skill_id))) {
+    let name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| "Skill".to_string());
+    let desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| "No description available.".to_string());
+    let callback_ptr = UnityAction::new_via_symbols(OnClickFn);
+
+    ACTION_DATA_MAP.lock().unwrap().insert(callback_ptr as usize, (name, desc));
+
+    let handle = GCHandle::new(callback_ptr as *mut Il2CppObject, false);
+    CALLBACK_HANDLES.lock().unwrap().push(handle);
+
+    let button = get__bgButton(this);
+    ButtonCommon::SetOnClick(button, OnClickFn);
+    // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
+}
+
+extern "C" fn OnClickFn(action_obj: *mut UnityAction) {
+    let map = ACTION_DATA_MAP.lock().unwrap();
+
+    if let Some((name, desc)) = map.get(&(action_obj as usize)) {
         if let Some(gui) = Gui::instance() {
-            gui.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(&name, &desc)));
+            gui.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(name, desc)));
         }
     }
-    // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
@@ -134,6 +160,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     unsafe {
         NAMETEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_nameText");
         DESCTEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_descText");
+        _BGBUTTON_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgButton");
 
         // SkillInfo
         get_IsDrawDesc_addr = get_method_addr(Info, c"get_IsDrawDesc", 0);
