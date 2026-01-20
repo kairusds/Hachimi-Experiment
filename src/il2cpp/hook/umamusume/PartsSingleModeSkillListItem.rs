@@ -115,7 +115,7 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
                 mutex.lock().unwrap().show_window(Box::new(SimpleOkDialog::new(
                     &skill_name,
                     &skill_desc,
-                    fn()
+                    || {}
                 )));
             }
         }
