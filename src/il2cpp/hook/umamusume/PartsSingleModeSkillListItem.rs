@@ -127,7 +127,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     CALLBACK_HANDLES.lock().unwrap().push(handle);
 
     let button = get__bgButton(this);
-    ButtonCommon::SetOnClick(button, OnClickFn);
+    ButtonCommon::SetOnClick(button, callback_ptr as _);
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
 }
 
