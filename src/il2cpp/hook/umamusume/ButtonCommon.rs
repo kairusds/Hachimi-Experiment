@@ -4,7 +4,7 @@ static mut GET_TARGETTEXT_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_TargetText, GET_TARGETTEXT_ADDR, *mut Il2CppObject, this: *mut Il2CppObject);
 
 static mut SETONCLICK_ADDR: usize = 0;
-impl_addr_wrapper_fn!(SetOnClick, SETONCLICK_ADDR, *mut Il2CppObject, this: *mut Il2CppObject, callback: *UnityAction callback);
+impl_addr_wrapper_fn!(SetOnClick, SETONCLICK_ADDR, *mut Il2CppObject, this: *mut Il2CppObject, callback: *mut UnityAction callback);
 
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, ButtonCommon);
