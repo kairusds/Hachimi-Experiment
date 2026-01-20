@@ -121,8 +121,8 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
         opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
     };
 
-    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| unsafe { Text::get_text(name_text).as_ref().as_utf16str() }.to_string());
-    let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| unsafe { Text::get_text(desc_text).as_ref().as_utf16str() }.to_string());
+    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Text::get_text(name_text)));
+    let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Text::get_text(desc_text)));
 
     *PENDING_SKILL_DATA.lock().unwrap() = Some((skill_name, skill_desc));
 
