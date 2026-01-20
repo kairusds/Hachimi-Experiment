@@ -111,16 +111,16 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
             let current_ev = EventSystem::get_current();
             let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
 
-            if let Some((skill_name, skill_desc)) = ACTION_DATA_MAP.lock().unwrap().get(&(clicked_obj as usize)) {
+            if let Some(&(ref skill_name, ref skill_desc)) = SKILL_DATA_MAP.lock().unwrap().get(&(clicked_obj as usize)) {
                 mutex.lock().unwrap().show_window(Box::new(SimpleOkDialog::new(
                     &skill_name,
                     &skill_desc,
-                    ()
+                    fn()
                 )));
             }
         }
     });
-    ButtonCommon::SetOnClick(button, delegate);
+    ButtonCommon::SetOnClick(button, delegate.unwrap());
 }
 
 type UpdateItemJpFn = extern "C" fn(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, is_plate_effect_enable: bool, resource_hash: i32);
