@@ -2047,7 +2047,7 @@ impl Window for LicenseWindow {
     }
 }
 
-struct SimpleMessageWindow {
+pub struct SimpleMessageWindow {
     id: egui::Id,
     title: String,
     content: String
