@@ -1,6 +1,6 @@
 use crate::{
     core::{gui::SimpleOkDialog, Gui, Hachimi, game::Region, utils::mul_int},
-    il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::UnityAction, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
+    il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::{Component, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
 };
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
@@ -104,19 +104,17 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
     let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
 
     let button = get__bgButton(this);
-    SKILL_DATA_MAP.lock().unwrap().insert(button as usize, (skill_name, skill_desc));
-    info!("button init {}", button as usize);
+    let button_obj = Component::get_gameObject(button);
+    SKILL_DATA_MAP.lock().unwrap().insert(button_obj as usize, (skill_name, skill_desc));
+    info!("button init {}", button_obj as usize);
 
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
         let current_ev = EventSystem::get_current();
         let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
         info!("pressed {}", &(clicked_obj as usize));
-        
-        if let Some(mutex) = Gui::instance() {
-            let current_ev = EventSystem::get_current();
-            let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
 
-            if let Some(&(ref skill_name, ref skill_desc)) = SKILL_DATA_MAP.lock().unwrap().get(&(clicked_obj as usize)) {
+        if let Some(&(ref skill_name, ref skill_desc)) = SKILL_DATA_MAP.lock().unwrap().get(&(clicked_obj as usize)) {
+            if let Some(mutex) = Gui::instance() {
                 mutex.lock().unwrap().show_window(Box::new(SimpleOkDialog::new(
                     &skill_name,
                     &skill_desc,
