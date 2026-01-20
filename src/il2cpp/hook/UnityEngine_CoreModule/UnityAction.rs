@@ -16,21 +16,23 @@ pub fn new(rust_fn: usize) -> *mut UnityAction {
         action_obj
     }
 } */
+static mut UNITYACTION_CLASS: *mut Il2CppClass = std::ptr::null_mut();
 
 pub fn new_via_symbols<T>(rust_fn: T) -> *mut UnityActionType {
     unsafe {
         let transmuted_fn: fn() = std::mem::transmute_copy(&rust_fn);
-        create_delegate(UnityAction, 0, transmuted_fn)
-            .map(|d| d as *mut UnityAction)
+        create_delegate(UNITYACTION_CLASS, 0, transmuted_fn)
+            .map(|d| d as *mut UnityActionType)
             .expect("Failed to create UnityAction delegate")
     }
 }
 
 pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
     get_class_or_return!(UnityEngine_CoreModule, "UnityEngine.Events", UnityAction);
-    /*
+
     unsafe {
-        CTOR_ADDR = get_method_addr(UnityAction, c".ctor", 2);
-        INVOKE_ADDR = get_method_addr(UnityAction, c"Invoke", 0);
-    } */
+        UNITYACTION_CLASS = UnityAction;
+        // CTOR_ADDR = get_method_addr(UnityAction, c".ctor", 2);
+        // INVOKE_ADDR = get_method_addr(UnityAction, c"Invoke", 0);
+    }
 }
