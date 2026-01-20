@@ -128,7 +128,7 @@ pub fn init(umamusume: *const Il2CppImage) {
         new_hook!(UpdateItem_addr, UpdateItemOther);
     }
 
-    let SetupOnClickSkillButton_addr = get_method_addr(PartsSingleModeSkillListItem, c"SetupOnClickSkillButton", 0);
+    let SetupOnClickSkillButton_addr = get_method_addr(PartsSingleModeSkillListItem, c"SetupOnClickSkillButton", 1);
     new_hook!(SetupOnClickSkillButton_addr, SetupOnClickSkillButton);
 
     unsafe {
