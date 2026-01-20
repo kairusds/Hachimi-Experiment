@@ -1,6 +1,6 @@
 use crate::{
     core::{gui::SimpleMessageWindow, Gui, Hachimi, game::Region, utils::mul_int},
-    il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::UnityAction, UnityEngine_UI::Text}, sql::{self, TextDataQuery}, symbols::{get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::{UnityAction as UnityActionType, *}}
+    il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::UnityAction, UnityEngine_UI::Text}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
 };
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
@@ -119,27 +119,18 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
 
     let name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| "Skill".to_string());
     let desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| "No description available.".to_string());
-    let callback_ptr = UnityAction::new_via_symbols(OnClickFn);
 
     // ACTION_DATA_MAP.lock().unwrap().insert(callback_ptr as usize, (name, desc));
 
-    let handle = GCHandle::new(callback_ptr as *mut Il2CppObject, false);
-    CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(callback_ptr as _, false));
+    // let handle = GCHandle::new(callback_ptr as *mut Il2CppObject, false);
+    // CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(callback_ptr as _, false));
 
     let button = get__bgButton(this);
-    ButtonCommon::SetOnClick(button, callback_ptr as _);
+    let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
+        info!("button press");
+    }).unwrap();
+    ButtonCommon::SetOnClick(button, delegate);
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
-}
-
-extern "C" fn OnClickFn() {
-    /* let map = ACTION_DATA_MAP.lock().unwrap();
-
-    if let Some((name, desc)) = map.get(&(action_obj as usize)) {
-        if let Some(gui) = Gui::instance() {
-            gui.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(name, desc)));
-        }
-    }*/
-    info!("click");
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
