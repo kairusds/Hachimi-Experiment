@@ -115,7 +115,7 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
 
         if let Some(&(ref skill_name, ref skill_desc)) = SKILL_DATA_MAP.lock().unwrap().get(&(clicked_obj as usize)) {
             if let Some(mutex) = Gui::instance() {
-                mutex.lock().unwrap().show_window(Box::new(SimpleOkDialog::new(
+                mutex.lock().unwrap().show_window(Box::new(SkillInfoDialog::new(
                     &skill_name,
                     &skill_desc
                 )));
