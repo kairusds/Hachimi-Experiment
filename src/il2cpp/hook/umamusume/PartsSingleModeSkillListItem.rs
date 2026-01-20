@@ -9,6 +9,7 @@ use fnv::FnvHashMap;
 
 static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
 // static mut CURRENT_SKILL: Lazy<Mutex<Option<(String, String)>>> = Lazy::new(|| Mutex::new(None));
+static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, i32>>> = Lazy::new(|| Mutex::default());
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
@@ -118,23 +119,34 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     // CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(callback_ptr as _, false));
 
     let button = get__bgButton(this);
-    let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
-        let skill_id = get_Id(info);
-        if let Some(mutex) = Gui::instance() {
-            let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
-                opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
-            };
-            let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| "Skill".to_string());
-            let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| "No description available.".to_string());
-
-            mutex.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(
-                &skill_name,
-                &skill_desc
-            )));
-        }
-    }).unwrap();
+    let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, OnSkillClicked);
+    SKILL_DATA_MAP.lock().unwrap().insert(delegate as usize, skill_id);
+    CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(delegate, false));
     ButtonCommon::SetOnClick(button, delegate);
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
+}
+
+extern "C" fn OnSkillClicked(delegate_obj: *mut Il2CppObject) {
+    let skill_id = {
+        let map = SKILL_DATA_MAP.lock().unwrap();
+        *map.get(&(delegate_obj as usize)).unwrap_or(&0)
+    };
+
+    if skill_id == 0 { return; }
+
+    if let Some(mutex) = Gui::instance() {
+        let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
+            opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
+        };
+
+        let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| "Skill".to_string());
+        let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| "No description".to_string());
+
+        mutex.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(
+            &skill_name,
+            &skill_desc
+        )));
+    }
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
