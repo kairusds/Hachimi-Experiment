@@ -1086,7 +1086,7 @@ struct StyleState {
 fn parse_unity_text(ui: &egui::Ui, text: &str, wrap_width: f32) -> egui::text::LayoutJob {
     let mut job = egui::text::LayoutJob::default();
     job.wrap.max_width = wrap_width;
-    job.halign = Align::Center;
+    job.halign = egui::Align::Center;
 
     // default
     let mut state_stack = vec![StyleState {
