@@ -1,6 +1,6 @@
 use crate::{
-    core::{Hachimi, game::Region, utils::mul_int},
-    il2cpp::{hook::{UnityEngine_UI::Text}, sql::{self, TextDataQuery}, symbols::{get_field_from_name, get_field_object_value, get_method_addr}, types::*}
+    core::{gui::SimpleMessageWindow, Gui, Hachimi, game::Region, utils::mul_int},
+    il2cpp::{ext::StringExt, hook::UnityEngine_UI::Text, sql::{self, TextDataQuery}, symbols::{get_field_from_name, get_field_object_value, get_method_addr}, types::*}
 };
 
 // SkillListItem
@@ -18,6 +18,8 @@ static mut get_IsDrawDesc_addr: usize = 0;
 impl_addr_wrapper_fn!(get_IsDrawDesc, get_IsDrawDesc_addr, bool, this: *mut Il2CppObject);
 static mut get_IsDrawNeedSkillPoint_addr: usize = 0;
 impl_addr_wrapper_fn!(get_IsDrawNeedSkillPoint, get_IsDrawNeedSkillPoint_addr, bool, this: *mut Il2CppObject);
+static mut get_Id_addr: usize = 0;
+impl_addr_wrapper_fn!(get_Id, get_Id_addr, i32, this: *mut Il2CppObject);
 
 fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig_fn_cb: impl FnOnce()) {
     let skill_cfg = &Hachimi::instance().localized_data.load().config.skill_formatting;
@@ -96,6 +98,21 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
     });
 }
 
+// private Void SetupOnClickSkillButton(Info skillInfo) { }
+// type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
+extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
+    let skill_id = get_Id(info);
+    let skill_name = unsafe { TextDataQuery::get_skill_name(id).unwrap().as_utf16str() }.to_string();
+    let skill_desc = unsafe { TextDataQuery::get_skill_desc(id).unwrap().as_utf16str() }.to_string();
+    if let Some(mutex) = Gui::instance() {
+        mutex.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(
+            &skill_name,
+            &skill_desc
+        )));
+    }
+    // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
+}
+
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, PartsSingleModeSkillListItem);
     find_nested_class_or_return!(PartsSingleModeSkillListItem, Info);
@@ -109,6 +126,9 @@ pub fn init(umamusume: *const Il2CppImage) {
         new_hook!(UpdateItem_addr, UpdateItemOther);
     }
 
+    let SetupOnClickSkillButton_addr = get_method_addr(PartsSingleModeSkillListItem, c"SetupOnClickSkillButton", 0);
+    new_hook!(SetupOnClickSkillButton_addr, SetupOnClickSkillButton);
+
     unsafe {
         NAMETEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_nameText");
         DESCTEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_descText");
@@ -116,5 +136,6 @@ pub fn init(umamusume: *const Il2CppImage) {
         // SkillInfo
         get_IsDrawDesc_addr = get_method_addr(Info, c"get_IsDrawDesc", 0);
         get_IsDrawNeedSkillPoint_addr = get_method_addr(Info, c"get_IsDrawNeedSkillPoint", 0);
+        get_Id_addr = get_method_addr(Info, c"get_Id", 0);
     }
 }

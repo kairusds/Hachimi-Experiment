@@ -1583,10 +1583,6 @@ impl ConfigEditor {
                     }
                 }
                 ui.end_row();
-
-                ui.label(t!("config_editor.hide_usernames"));
-                ui.checkbox(&mut config.hide_usernames, "");
-                ui.end_row();
             }
         }
 
@@ -2044,6 +2040,38 @@ impl Window for LicenseWindow {
         .show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.label(include_str!("../../LICENSE"));
+            });
+        });
+
+        open
+    }
+}
+
+struct SimpleMessageWindow {
+    id: egui::Id,
+    title: String,
+    content: String
+}
+
+impl SimpleMessageWindow {
+    pub fn new(title: &str, content: &str) -> SimpleMessageWindow {
+        SimpleMessageWindow {
+            id: random_id(),
+            title: title.to_owned(),
+            content: content.to_owned()
+        }
+    }
+}
+
+impl Window for SimpleMessageWindow {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let mut open = true;
+
+        new_window(ctx, self.id, &self.title)
+        .open(&mut open)
+        .show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.label(&self.content);
             });
         });
 

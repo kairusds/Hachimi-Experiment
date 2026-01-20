@@ -53,8 +53,6 @@ mod LiveTheaterCharaSelect;
 mod LiveTheaterViewController;
 pub mod CySpringController;
 mod LiveUtil;
-mod JukeboxRequestInfo;
-mod FriendListItem;
 
 #[cfg(target_os = "windows")]
 pub mod SceneManager;
@@ -120,8 +118,6 @@ pub fn init() {
     LiveTheaterViewController::init(image);
     CySpringController::init(image);
     LiveUtil::init(image);
-    JukeboxRequestInfo::init(image);
-    FriendListItem::init(image);
 
     #[cfg(target_os = "windows")]
     {

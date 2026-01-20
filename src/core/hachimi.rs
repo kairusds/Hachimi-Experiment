@@ -349,8 +349,6 @@ pub struct Config {
     #[serde(default)]
     pub hide_ingame_ui_hotkey: bool,
     #[serde(default)]
-    pub hide_usernames: bool,
-    #[serde(default)]
     pub language: Language,
     #[serde(default = "Config::default_meta_index_url")]
     pub meta_index_url: String,

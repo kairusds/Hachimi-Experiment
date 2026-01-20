@@ -173,7 +173,6 @@ config_editor:
   aniso_level: "Anisotropic Filtering"
   live_vocals_swap: "Live Vocals Swap"
   live_vocals_swap_character_n: "Character %{index}"
-  hide_usernames: "Hide player usernames"
 
 tl_update_dialog:
   title: "New update available"

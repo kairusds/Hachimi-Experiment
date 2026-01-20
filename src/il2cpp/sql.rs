@@ -196,7 +196,7 @@ impl TextDataQuery {
         Ok(unsafe{&mut *cfg_ptr})
     }
 
-    fn get_skill_name(index: i32) -> Option<*mut Il2CppString> {
+    pub fn get_skill_name(index: i32) -> Option<*mut Il2CppString> {
         // Return None if skill name translation is disabled
         if Hachimi::instance().config.load().disable_skill_name_translation {
             return None;
@@ -231,7 +231,7 @@ impl TextDataQuery {
         }
     }
 
-    fn get_skill_desc(index: i32) -> Option<*mut Il2CppString> {
+    pub fn get_skill_desc(index: i32) -> Option<*mut Il2CppString> {
         let localized_data = Hachimi::instance().localized_data.load();
         let text_opt = localized_data
             .text_data_dict
