@@ -107,7 +107,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
         opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
     };
 
-    if let (Some(name), Some(desc)) = (to_s(TextDataQuery::get_skill_name(id)), to_s(TextDataQuery::get_skill_desc(id))) {
+    if let (Some(name), Some(desc)) = (to_s(TextDataQuery::get_skill_name(skill_id)), to_s(TextDataQuery::get_skill_desc(skill_id))) {
         if let Some(gui) = Gui::instance() {
             gui.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(&name, &desc)));
         }
