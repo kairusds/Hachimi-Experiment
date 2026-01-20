@@ -1457,9 +1457,20 @@ impl Window for SkillInfoDialog {
         let mut open = true;
         let mut open2 = true;
 
+        egui::Area::new(egui::Id::new("modal_dimmer"))
+        .interactable(true)
+        .fixed_pos(egui::Pos2::ZERO)
+        .show(ctx, |ui| {
+            ui.painter().rect_filled(
+                ui.ctx().screen_rect(),
+                0.0,
+                egui::Color32::from_black_alpha(150)
+            );
+        });
+
         new_window(ctx, self.id, &self.title)
-        .max_width(300.0 * scale)
-        .max_height(125.0 * scale)
+        .max_width(310.0 * scale)
+        .max_height(150.0 * scale)
         .open(&mut open)
         .show(ctx, |ui| {
             egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
@@ -1474,7 +1485,9 @@ impl Window for SkillInfoDialog {
             egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
             .show_inside(ui, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
+                egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
                     centered_and_wrapped_rich_text(ui, &self.content);
                 });
             });
