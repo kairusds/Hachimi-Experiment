@@ -1,6 +1,6 @@
 use crate::{
     core::{gui::SimpleMessageWindow, Gui, Hachimi, game::Region, utils::mul_int},
-    il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::UnityAction, UnityEngine_UI::Text}, sql::{self, TextDataQuery}, symbols::{get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
+    il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::UnityAction, UnityEngine_UI::Text}, sql::{self, TextDataQuery}, symbols::{get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::{UnityAction as UnityActionType, *}}
 };
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
@@ -131,7 +131,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
 }
 
-extern "C" fn OnClickFn(action_obj: *mut UnityAction) {
+extern "C" fn OnClickFn(action_obj: *mut UnityActionType) {
     let map = ACTION_DATA_MAP.lock().unwrap();
 
     if let Some((name, desc)) = map.get(&(action_obj as usize)) {

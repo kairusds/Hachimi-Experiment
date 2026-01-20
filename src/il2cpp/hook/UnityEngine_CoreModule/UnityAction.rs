@@ -1,4 +1,4 @@
-use crate::il2cpp::{symbols::{create_delegate, get_method_addr}, api::il2cpp_object_new, types::*};
+use crate::il2cpp::{symbols::{create_delegate, get_method_addr}, api::il2cpp_object_new, types::{UnityAction as UnityActionType, *}};
 
 // static mut CTOR_ADDR: usize = 0;
 // .ctor(Object object, IntPtr method)
@@ -17,15 +17,6 @@ pub fn new(rust_fn: usize) -> *mut UnityAction {
     }
 } */
 
-pub fn new_via_symbols<T>(rust_fn: T) -> *mut UnityAction {
-    unsafe {
-        let transmuted_fn: fn() = std::mem::transmute_copy(&rust_fn);
-        create_delegate(UnityAction, 0, transmuted_fn)
-            .map(|d| d as *mut UnityAction)
-            .expect("Failed to create UnityAction delegate")
-    }
-}
-
 pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
     get_class_or_return!(UnityEngine_CoreModule, "UnityEngine.Events", UnityAction);
     /*
@@ -33,4 +24,13 @@ pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
         CTOR_ADDR = get_method_addr(UnityAction, c".ctor", 2);
         INVOKE_ADDR = get_method_addr(UnityAction, c"Invoke", 0);
     } */
+}
+
+pub fn new_via_symbols<T>(rust_fn: T) -> *mut UnityActionType {
+    unsafe {
+        let transmuted_fn: fn() = std::mem::transmute_copy(&rust_fn);
+        create_delegate(UnityAction, 0, transmuted_fn)
+            .map(|d| d as *mut UnityAction)
+            .expect("Failed to create UnityAction delegate")
+    }
 }
