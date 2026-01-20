@@ -8,7 +8,7 @@ use super::ButtonCommon;
 use fnv::FnvHashMap;
 
 static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
-static ACTION_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (String, String)>>> = Lazy::new(|| Mutex::default());
+// static mut CURRENT_SKILL: Lazy<Mutex<Option<(String, String)>>> = Lazy::new(|| Mutex::new(None));
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
@@ -121,24 +121,25 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     let desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| "No description available.".to_string());
     let callback_ptr = UnityAction::new_via_symbols(OnClickFn);
 
-    ACTION_DATA_MAP.lock().unwrap().insert(callback_ptr as usize, (name, desc));
+    // ACTION_DATA_MAP.lock().unwrap().insert(callback_ptr as usize, (name, desc));
 
     let handle = GCHandle::new(callback_ptr as *mut Il2CppObject, false);
-    CALLBACK_HANDLES.lock().unwrap().push(handle);
+    CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(callback_ptr as _, false));
 
     let button = get__bgButton(this);
     ButtonCommon::SetOnClick(button, callback_ptr as _);
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
 }
 
-extern "C" fn OnClickFn(action_obj: *mut UnityActionType) {
-    let map = ACTION_DATA_MAP.lock().unwrap();
+extern "C" fn OnClickFn() {
+    /* let map = ACTION_DATA_MAP.lock().unwrap();
 
     if let Some((name, desc)) = map.get(&(action_obj as usize)) {
         if let Some(gui) = Gui::instance() {
             gui.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(name, desc)));
         }
-    }
+    }*/
+    info!("click");
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
