@@ -49,7 +49,7 @@ use egui::Color32;
 
 lazy_static::lazy_static! {
     static ref UNITY_COLORS: FnvHashMap<&'static str, Color32> = {
-        let mut m = FnvHashMap::new();
+        let mut m = FnvHashMap::default();
         m.insert("aqua", Color32::from_rgb(0, 255, 255));
         m.insert("cyan", Color32::from_rgb(0, 255, 255));
         m.insert("black", Color32::from_rgb(0, 0, 0));
