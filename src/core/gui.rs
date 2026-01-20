@@ -1442,7 +1442,7 @@ pub struct SkillInfoDialog {
 
 impl SkillInfoDialog {
     pub fn new(title: &str, content: &str) -> SkillInfoDialog {
-        SimpleOkDialog {
+        SkillInfoDialog {
             title: title.to_owned(),
             content: content.to_owned(),
             id: random_id()
