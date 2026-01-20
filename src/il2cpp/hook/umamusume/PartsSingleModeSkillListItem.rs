@@ -110,7 +110,7 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
         let current_ev = EventSystem::get_current();
         let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
-        info!("pressed {}", &clicked_obj as usize);
+        info!("pressed {}", &(clicked_obj as usize));
         
         if let Some(mutex) = Gui::instance() {
             let current_ev = EventSystem::get_current();
