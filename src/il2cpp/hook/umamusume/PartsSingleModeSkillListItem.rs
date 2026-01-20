@@ -7,7 +7,7 @@ use std::sync::Mutex;
 use super::ButtonCommon;
 use fnv::FnvHashMap;
 
-static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
+// static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
 // static mut CURRENT_SKILL: Lazy<Mutex<Option<(String, String)>>> = Lazy::new(|| Mutex::new(None));
 static PENDING_SKILL_DATA: Lazy<Mutex<Option<(String, String)>>> = Lazy::new(|| Mutex::new(None));
 
@@ -127,25 +127,18 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     *PENDING_SKILL_DATA.lock().unwrap() = Some((skill_name, skill_desc));
 
     let button = get__bgButton(this);
-    if let Some(delegate_ptr) = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, OnSkillClicked) {
-        CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(delegate_ptr as _, false));
-        ButtonCommon::SetOnClick(button, delegate_ptr);
-    }
-    // let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, OnSkillClicked);
-    // SKILL_DATA_MAP.lock().unwrap().insert(delegate as usize, skill_id);
-    // CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(delegate, false));
-    //ButtonCommon::SetOnClick(button, delegate);
-    // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
-}
-
-fn OnSkillClicked() {
-    if let Some(mutex) = Gui::instance() {
-        if let Some((skill_name, skill_desc)) = PENDING_SKILL_DATA.lock().unwrap().clone() {
-            mutex.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(
-                &skill_name,
-                &skill_desc
-            )));
+    if let Some(delegate_ptr) = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
+        if let Some(mutex) = Gui::instance() {
+            if let Some((skill_name, skill_desc)) = PENDING_SKILL_DATA.lock().unwrap().clone() {
+                mutex.lock().unwrap().show_window(Box::new(SimpleMessageWindow::new(
+                    &skill_name,
+                    &skill_desc
+                )));
+            }
         }
+    }) {
+        // CALLBACK_HANDLES.lock().unwrap().push(GCHandle::new(delegate_ptr as _, false));
+        ButtonCommon::SetOnClick(button, delegate_ptr);
     }
 }
 
