@@ -1,4 +1,4 @@
-use crate::il2cpp::{symbols::{create_delegate, get_method_addr}, api::il2cpp_object_new, types::{UnityAction as UnityActionType, Il2CppImage}};
+use crate::il2cpp::{symbols::{create_delegate, get_method_addr}, api::il2cpp_object_new, types::{UnityAction as UnityActionType, Il2CppClass, Il2CppImage}};
 
 // static mut CTOR_ADDR: usize = 0;
 // .ctor(Object object, IntPtr method)
