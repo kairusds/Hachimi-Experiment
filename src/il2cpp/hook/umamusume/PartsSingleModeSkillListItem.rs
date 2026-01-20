@@ -1,5 +1,5 @@
 use crate::{
-    core::{gui::SimpleOkDialog, Gui, Hachimi, game::Region, utils::mul_int},
+    core::{gui::SkillInfoDialog, Gui, Hachimi, game::Region, utils::mul_int},
     il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::{Component, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
 };
 use once_cell::sync::Lazy;
@@ -117,8 +117,7 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
             if let Some(mutex) = Gui::instance() {
                 mutex.lock().unwrap().show_window(Box::new(SimpleOkDialog::new(
                     &skill_name,
-                    &skill_desc,
-                    || {}
+                    &skill_desc
                 )));
             }
         }
@@ -140,7 +139,6 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
     });
 }
 
-// private Void SetupOnClickSkillButton(Info skillInfo) { }
 // type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);

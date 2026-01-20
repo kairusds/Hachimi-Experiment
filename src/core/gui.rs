@@ -1,7 +1,7 @@
 use std::{borrow::Cow, ops::RangeInclusive, sync::{atomic::{self, AtomicBool}, Arc, Mutex}, thread, time::Instant};
 
 use egui_scale::EguiScale;
-use fnv::FnvHashSet;
+use fnv::{FnvHashSet, FnvHashMap};
 use once_cell::sync::OnceCell;
 use rust_i18n::t;
 use chrono::{Utc, Datelike};
@@ -42,6 +42,37 @@ macro_rules! add_font {
             egui::FontData::from_static(include_bytes!(concat!("../../assets/fonts/", $filename))).into()
         );
         $family_fonts.push($filename.to_owned());
+    };
+}
+
+use egui::Color32;
+
+lazy_static::lazy_static! {
+    static ref UNITY_COLORS: FnvHashMap<&'static str, Color32> = {
+        let mut m = FnvHashMap::new();
+        m.insert("aqua", Color32::from_rgb(0, 255, 255));
+        m.insert("cyan", Color32::from_rgb(0, 255, 255));
+        m.insert("black", Color32::from_rgb(0, 0, 0));
+        m.insert("blue", Color32::from_rgb(0, 0, 255));
+        m.insert("brown", Color32::from_rgb(165, 42, 42));
+        m.insert("darkblue", Color32::from_rgb(0, 0, 160));
+        m.insert("fuchsia", Color32::from_rgb(255, 0, 255));
+        m.insert("magenta", Color32::from_rgb(255, 0, 255));
+        m.insert("green", Color32::from_rgb(0, 128, 0));
+        m.insert("grey", Color32::from_rgb(128, 128, 128));
+        m.insert("lightblue", Color32::from_rgb(173, 216, 230));
+        m.insert("lime", Color32::from_rgb(0, 255, 0));
+        m.insert("maroon", Color32::from_rgb(128, 0, 0));
+        m.insert("navy", Color32::from_rgb(0, 0, 128));
+        m.insert("olive", Color32::from_rgb(128, 128, 0));
+        m.insert("orange", Color32::from_rgb(255, 165, 0));
+        m.insert("purple", Color32::from_rgb(128, 0, 128));
+        m.insert("red", Color32::from_rgb(255, 0, 0));
+        m.insert("silver", Color32::from_rgb(192, 192, 192));
+        m.insert("teal", Color32::from_rgb(0, 128, 128));
+        m.insert("white", Color32::from_rgb(255, 255, 255));
+        m.insert("yellow", Color32::from_rgb(255, 255, 0));
+        m
     };
 }
 
@@ -203,11 +234,24 @@ impl Gui {
 
     fn get_font_definitions() -> egui::FontDefinitions {
         let mut fonts = egui::FontDefinitions::default();
-        let proportional_fonts = fonts.families.get_mut(&egui::FontFamily::Proportional).unwrap();
 
-        add_font!(fonts, proportional_fonts, "AlibabaPuHuiTi-3-45-Light.otf");
-        add_font!(fonts, proportional_fonts, "NotoSans-Light.ttf");
-        add_font!(fonts, proportional_fonts, "FontAwesome.otf");
+        let mut regular_stack = Vec::new();
+        let mut bold_stack = Vec::new();
+        let mut italic_stack = Vec::new();
+        let mut bold_italic_stack = Vec::new();
+
+        add_font!(fonts, regular_stack, "AlibabaPuHuiTi-3-45-Light.otf");
+        add_font!(fonts, regular_stack, "NotoSans-Light.ttf");
+        add_font!(fonts, regular_stack, "FontAwesome.otf");
+
+        add_font!(fonts, bold_stack, "NotoSans-Bold.ttf");
+        add_font!(fonts, italic_stack, "NotoSans-LightItalic.ttf");
+        add_font!(fonts, bold_italic_stack, "NotoSans-BoldItalic.ttf");
+
+        fonts.families.insert(egui::FontFamily::Proportional, regular_stack);
+        fonts.families.insert(egui::FontFamily::Name("BoldStack".into()), bold_stack);
+        fonts.families.insert(egui::FontFamily::Name("ItalicStack".into()), italic_stack);
+        fonts.families.insert(egui::FontFamily::Name("BoldItalicStack".into()), italic_stack);
 
         fonts
     }
@@ -1031,6 +1075,138 @@ fn simple_window_layout(ui: &mut egui::Ui, id: egui::Id, add_contents: impl FnOn
     });
 }
 
+#[derive(Clone)]
+struct StyleState {
+    color: Color32,
+    size: f32,
+    bold: bool,
+    italic: bool,
+}
+
+fn parse_unity_text(ui: &egui::Ui, text: &str, wrap_width: f32) -> egui::text::LayoutJob {
+    let mut job = egui::text::LayoutJob::default();
+    job.wrap.max_width = wrap_width;
+    job.halign = Align::Center;
+
+    // default
+    let mut state_stack = vec![StyleState {
+        color: ui.style().visuals.text_color(),
+        size: 14.0,
+        bold: false,
+        italic: false
+    }];
+
+    let mut current_pos = 0;
+    while current_pos < text.len() {
+        if let Some(tag_start) = text[current_pos..].find("<") {
+            let tag_start = current_pos + tag_start;
+
+            if tag_start > current_pos {
+                append_text(&mut job, &text[current_pos..tag_start], state_stack.last().unwrap());
+            }
+
+            if let Some(tag_end) = text[tag_start..].find(">") {
+                let tag_end = tag_start + tag_end;
+                let full_tag = &text[tag_start + 1..tag_end];
+                
+                if full_tag.starts_with("/") {
+                    if state_stack.len() > 1 { state_stack.pop(); }
+                } else {
+                    let mut new_state = state_stack.last().unwrap().clone();
+                    let parts: Vec<&str> = full_tag.split("=").collect();
+                    let tag_name = parts[0].trim();
+
+                    match tag_name {
+                        "b" => new_state.bold = true,
+                        "i" => new_state.italic = true,
+                        "size" => if parts.len() > 1 {
+                            if let Ok(s) = parts[1].trim_matches('"').parse::<f32>() {
+                                new_state.size = s;
+                            }
+                        },
+                        "color" => if parts.len() > 1 {
+                            let color_val = parts[1].trim_matches('"');
+                            new_state.color = parse_color(color_val).unwrap_or(new_state.color);
+                        },
+                        _ => {} // ignore <material> and <quad> 
+                    }
+                    state_stack.push(new_state);
+                }
+                current_pos = tag_end + 1;
+            } else {
+                append_text(&mut job, &text[tag_start..tag_start + 1], state_stack.last().unwrap());
+                current_pos = tag_start + 1;
+            }
+        } else {
+            append_text(&mut job, &text[current_pos..], state_stack.last().unwrap());
+            break;
+        }
+    }
+    job
+}
+
+fn append_text(job: &mut egui::text::LayoutJob, text: &str, state: &StyleState) {
+    let family = if state.bold && state.italic {
+        egui::FontFamily::Name("BoldItalicStack".into())
+    } else if state.bold {
+        egui::FontFamily::Name("BoldStack".into())
+    } else if state.italic {
+        egui::FontFamily::Name("ItalicStack".into())
+    } else {
+        egui::FontFamily::Proportional
+    };
+
+    job.append(
+        text,
+        0.0,
+        egui::text::TextFormat {
+            font_id: egui::FontId::new(state.size, family),
+            color: state.color,
+            ..Default::default()
+        }
+    );
+}
+
+fn parse_color(val: &str) -> Option<Color32> {
+    if val.starts_with('#') {
+        let hex = val.trim_start_matches('#');
+        match hex.len() {
+            6 => { // RRGGBB
+                let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+                let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+                let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+                Some(Color32::from_rgb(r, g, b))
+            }
+            8 => { // RRGGBBAA
+                let r = u8::from_str_radix(&hex[0..2], 16).ok()?;
+                let g = u8::from_str_radix(&hex[2..4], 16).ok()?;
+                let b = u8::from_str_radix(&hex[4..6], 16).ok()?;
+                let a = u8::from_str_radix(&hex[6..8], 16).ok()?;
+                Some(Color32::from_rgba_premultiplied(r, g, b, a))
+            }
+            _ => None
+        }
+    } else {
+        UNITY_COLORS.get(val.to_lowercase().as_str()).cloned()
+    }
+}
+
+fn centered_and_wrapped_rich_text(ui: &mut egui::Ui, text: &str) {
+    let rect = ui.available_rect_before_wrap();
+
+    let job = parse_unity_text(ui, text, rect.width());
+
+    let galley = ui.painter().layout_job(job);
+
+    let text_rect = galley.rect;
+    let text_size = text_rect.size();
+    let center_pos = rect.min + (rect.size() - text_size) / 2.0;
+
+    let paint_pos = center_pos - text_rect.min.to_vec2();
+
+    ui.painter().galley(paint_pos, galley, Color32::WHITE);
+}
+
 fn centered_and_wrapped_text(ui: &mut egui::Ui, text: &str) {
     let rect = ui.available_rect_before_wrap();
 
@@ -1255,6 +1431,57 @@ impl Window for SimpleOkDialog {
             (self.callback)();
             false
         }
+    }
+}
+
+pub struct SkillInfoDialog {
+    title: String,
+    content: String,
+    id: egui::Id
+}
+
+impl SkillInfoDialog {
+    pub fn new(title: &str, content: &str) -> SkillInfoDialog {
+        SimpleOkDialog {
+            title: title.to_owned(),
+            content: content.to_owned(),
+            id: random_id()
+        }
+    }
+}
+
+impl Window for SkillInfoDialog {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let scale = get_scale(ctx);
+
+        let mut open = true;
+        let mut open2 = true;
+
+        new_window(ctx, self.id, &self.title)
+        .max_width(300.0 * scale)
+        .max_height(125.0 * scale)
+        .open(&mut open)
+        .show(ctx, |ui| {
+            egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
+            .show_inside(ui, |ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    if ui.button(t!("ok")).clicked() {
+                        open2 = false;
+                    }
+                })
+            });
+
+            egui::CentralPanel::default()
+            .frame(egui::Frame::NONE)
+            .show_inside(ui, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    centered_and_wrapped_rich_text(ui, &self.content);
+                });
+            });
+        });
+
+        open &= open2;
+        open
     }
 }
 
