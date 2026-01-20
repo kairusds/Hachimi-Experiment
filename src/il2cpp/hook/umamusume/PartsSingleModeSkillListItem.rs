@@ -126,7 +126,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, skill_info);
 }
 
-extern "C" fn OnSkillClicked(delegate_obj: *mut Il2CppObject) {
+fn OnSkillClicked(delegate_obj: *mut Il2CppObject) {
     let skill_id = {
         let map = SKILL_DATA_MAP.lock().unwrap();
         *map.get(&(delegate_obj as usize)).unwrap_or(&0)
