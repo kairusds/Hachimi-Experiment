@@ -1480,8 +1480,8 @@ impl Window for SkillInfoDialog {
                 egui::ScrollArea::vertical()
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        rich_text_label(ui, format!("<bold><size=16>{}</bold></size>", &self.name));
-                        rich_text_label(ui, format!("#<bold>{}</bold>", &self.skill_id.to_string()));
+                        rich_text_label(ui, &format!("<bold><size=16>{}</bold></size>", self.name));
+                        rich_text_label(ui, &format!("#<bold>{}</bold>", self.skill_id.to_string()));
                     });
                     ui.separator();
                     rich_text_label(ui, &self.desc);
