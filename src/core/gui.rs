@@ -1424,16 +1424,16 @@ impl Window for SimpleOkDialog {
 }
 
 pub struct SkillInfoDialog {
-    id: i32,
+    skill_id: i32,
     name: String,
     desc: String,
     id: egui::Id
 }
 
 impl SkillInfoDialog {
-    pub fn new(id: &i32, title: &str, content: &str) -> SkillInfoDialog {
+    pub fn new(skill_id: &i32, title: &str, content: &str) -> SkillInfoDialog {
         SkillInfoDialog {
-            id: id.to_owned(),
+            skill_id: skill_id.to_owned(),
             name: title.to_owned(),
             desc: content.to_owned(),
             id: random_id()
@@ -1481,7 +1481,7 @@ impl Window for SkillInfoDialog {
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
                         rich_text_label(ui, format!("<bold><size=16>{}</bold></size>", &self.name));
-                        rich_text_label(ui, format!("#<bold>{}</bold>", &self.id.to_string()));
+                        rich_text_label(ui, format!("#<bold>{}</bold>", &self.skill_id.to_string()));
                     });
                     ui.separator();
                     rich_text_label(ui, &self.desc);
