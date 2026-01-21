@@ -1191,39 +1191,20 @@ fn parse_color(val: &str) -> Option<Color32> {
     }
 }
 
-fn centered_and_wrapped_rich_text(ui: &mut egui::Ui, text: &str) {
+fn wrapped_rich_text(ui: &mut egui::Ui, text: &str) {
     let width = ui.available_width();
-
+    
     let job = parse_unity_text(ui, text, width);
     let galley = ui.painter().layout_job(job);
-    let text_size = galley.size();
+    let text_height = galley.size().y;
 
     let (rect, _response) = ui.allocate_exact_size(
-        egui::vec2(width, text_size.y),
+        egui::vec2(width, text_height),
         egui::Sense::hover()
     );
 
-    let paint_pos = rect.min;
-
-    ui.painter().galley(paint_pos, galley, egui::Color32::WHITE);
+    ui.painter().galley(rect.min, galley, egui::Color32::WHITE);
 }
-
-/*
-fn centered_and_wrapped_rich_text(ui: &mut egui::Ui, text: &str) {
-    let rect = ui.available_rect_before_wrap();
-
-    let job = parse_unity_text(ui, text, rect.width());
-
-    let galley = ui.painter().layout_job(job);
-
-    let text_rect = galley.rect;
-    let text_size = text_rect.size();
-    let center_pos = rect.min + (rect.size() - text_size) / 2.0;
-
-    let paint_pos = center_pos - text_rect.min.to_vec2();
-
-    ui.painter().galley(paint_pos, galley, Color32::WHITE);
-} */
 
 fn centered_and_wrapped_text(ui: &mut egui::Ui, text: &str) {
     let rect = ui.available_rect_before_wrap();
@@ -1504,9 +1485,8 @@ impl Window for SkillInfoDialog {
             .frame(egui::Frame::NONE)
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical()
-                .auto_shrink([false, false])
                 .show(ui, |ui| {
-                    centered_and_wrapped_rich_text(ui, &self.content);
+                    wrapped_rich_text(ui, &self.content);
                 });
             });
         });
