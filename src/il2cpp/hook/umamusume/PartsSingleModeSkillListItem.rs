@@ -114,7 +114,7 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
             let id_str = &name_str["HachimiSkill_".len()..];
             if let Ok(id) = id_str.parse::<i32>() {
                 let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
-                    opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
+                    opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().as_ref().to_string())
                 };
                 let name = to_s(TextDataQuery::get_skill_name(id)).unwrap_or_default();
                 let desc = to_s(TextDataQuery::get_skill_desc(id)).unwrap_or_default();
