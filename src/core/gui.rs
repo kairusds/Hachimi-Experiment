@@ -1091,7 +1091,7 @@ fn parse_unity_text(ui: &egui::Ui, text: &str, wrap_width: f32) -> egui::text::L
     // default
     let mut state_stack = vec![StyleState {
         color: ui.style().visuals.text_color(),
-        size: 14.0,
+        size: 12.0,
         bold: false,
         italic: false
     }];
@@ -1192,6 +1192,24 @@ fn parse_color(val: &str) -> Option<Color32> {
 }
 
 fn centered_and_wrapped_rich_text(ui: &mut egui::Ui, text: &str) {
+    let width = ui.available_width();
+
+    let job = parse_unity_text(ui, text, width);
+    let galley = ui.painter().layout_job(job);
+    let text_size = galley.size();
+
+    let (rect, _response) = ui.allocate_exact_size(
+        egui::vec2(width, text_size.y),
+        egui::Sense::hover()
+    );
+
+    let paint_pos = rect.min;
+
+    ui.painter().galley(paint_pos, galley, egui::Color32::WHITE);
+}
+
+/*
+fn centered_and_wrapped_rich_text(ui: &mut egui::Ui, text: &str) {
     let rect = ui.available_rect_before_wrap();
 
     let job = parse_unity_text(ui, text, rect.width());
@@ -1205,7 +1223,7 @@ fn centered_and_wrapped_rich_text(ui: &mut egui::Ui, text: &str) {
     let paint_pos = center_pos - text_rect.min.to_vec2();
 
     ui.painter().galley(paint_pos, galley, Color32::WHITE);
-}
+} */
 
 fn centered_and_wrapped_text(ui: &mut egui::Ui, text: &str) {
     let rect = ui.available_rect_before_wrap();
@@ -1464,13 +1482,13 @@ impl Window for SkillInfoDialog {
             ui.painter().rect_filled(
                 ui.ctx().screen_rect(),
                 0.0,
-                egui::Color32::from_black_alpha(150)
+                egui::Color32::from_black_alpha(140)
             );
         });
 
         new_window(ctx, self.id, &self.title)
         .max_width(310.0 * scale)
-        .max_height(150.0 * scale)
+        .max_height(140 * scale)
         .open(&mut open)
         .show(ctx, |ui| {
             egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
