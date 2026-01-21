@@ -1453,14 +1453,11 @@ impl Window for SkillInfoDialog {
         .fixed_pos(egui::Pos2::ZERO)
         .show(ctx, |ui| {
             ui.painter().rect_filled(ui.ctx().screen_rect(), 0.0, Color32::from_black_alpha(130));
-            if ui.interact(ui.ctx().screen_rect(), ui.id(), egui::Sense::click()).clicked() {
-                open2 = false;
-            }
         });
 
-        new_window(ctx, self.id, "")
+        let window_res = new_window(ctx, self.id, "")
         .max_width(310.0 * scale)
-        .min_height(120.0 * scale)
+        .min_height(0.0)
         .max_height(150.0 * scale)
         .title_bar(false)
         .open(&mut open)
@@ -1478,6 +1475,8 @@ impl Window for SkillInfoDialog {
             .frame(egui::Frame::NONE.inner_margin(10.0 * scale))
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical()
+                .min_scrolled_height(100.0 * scale)
+                .auto_shrink([false, true])
                 .scroll_bar_visibility(egui::containers::scroll_area::ScrollBarVisibility::AlwaysVisible)
                 .show(ui, |ui| {
                     ui.horizontal_wrapped(|ui| {
@@ -1489,6 +1488,16 @@ impl Window for SkillInfoDialog {
                 });
             });
         });
+
+        if let Some(inner) = window_res {
+            if ctx.input(|i| i.pointer.any_click()) {
+                if let Some(pos) = ctx.input(|i| i.pointer.interact_pos()) {
+                    if !inner.response.rect.contains(pos) {
+                        open2 = false; 
+                    }
+                }
+            }
+        }
 
         open &= open2;
         open
