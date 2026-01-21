@@ -96,13 +96,8 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
 
     // GUI skill info
     let skill_id = get_Id(skill_info);
-    let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
-        opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
-    };
-
     // let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
     // let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
-
     let button = get__bgButton(this);
     let button_obj = Component::get_gameObject(button);
     Object::set_name(button_obj, unsafe { format!("HachimiSkill_{}", skill_id).to_il2cpp_string() });
@@ -118,6 +113,9 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
         if name_str.starts_with("HachimiSkill_") {
             let id_str = &name_str["HachimiSkill_".len()..];
             if let Ok(id) = id_str.parse::<i32>() {
+                let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
+                    opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
+                };
                 let name = to_s(TextDataQuery::get_skill_name(id)).unwrap_or_default();
                 let desc = to_s(TextDataQuery::get_skill_desc(id)).unwrap_or_default();
 
