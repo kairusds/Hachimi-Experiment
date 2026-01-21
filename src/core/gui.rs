@@ -1191,24 +1191,12 @@ fn parse_color(val: &str) -> Option<Color32> {
     }
 }
 
-fn wrapped_rich_text(ui: &mut egui::Ui, text: &str) {
-    let available_width = ui.available_width();
+fn rich_text_label(ui: &mut egui::Ui, text: &str) {
+    let width = ui.available_width();
 
-    let job = parse_unity_text(ui, text, available_width);
-    let galley = ui.painter().layout_job(job);
+    let job = parse_unity_text(ui, text, width);
 
-    let text_size = galley.size();
-
-    // 3. Allocate the space
-    let (rect, _response) = ui.allocate_exact_size(
-        egui::vec2(available_width, text_size.y),
-        egui::Sense::hover()
-    );
-
-    let x_offset = (available_width - text_size.x) / 2.0;
-    let paint_pos = rect.min + egui::vec2(x_offset, 0.0);
-
-    ui.painter().galley(paint_pos, galley, egui::Color32::WHITE);
+    ui.add(egui::Label::new(job));
 }
 
 fn centered_and_wrapped_text(ui: &mut egui::Ui, text: &str) {
@@ -1491,7 +1479,7 @@ impl Window for SkillInfoDialog {
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical()
                 .show(ui, |ui| {
-                    wrapped_rich_text(ui, &self.content);
+                    rich_text_label(ui, &self.content);
                 });
             });
         });
