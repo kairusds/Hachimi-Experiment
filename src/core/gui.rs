@@ -1453,10 +1453,7 @@ impl Window for SkillInfoDialog {
         .fixed_pos(egui::Pos2::ZERO)
         .show(ctx, |ui| {
             ui.painter().rect_filled(ui.ctx().screen_rect(), 0.0, Color32::from_black_alpha(130));
-            let screen_rect = ui.ctx().screen_rect();
-            ui.painter().rect_filled(screen_rect, 0.0, egui::Color32::from_black_alpha(130));
-
-            if ui.interact(screen_rect, ui.id(), egui::Sense::click()).clicked() {
+            if ui.interact(ui.ctx().screen_rect(), ui.id(), egui::Sense::click()).clicked() {
                 open2 = false;
             }
         });
