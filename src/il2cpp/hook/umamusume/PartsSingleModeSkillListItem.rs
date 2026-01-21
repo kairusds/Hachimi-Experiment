@@ -8,7 +8,7 @@ use super::ButtonCommon;
 use fnv::FnvHashMap;
 
 // static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
-static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (String, String)>>> = Lazy::new(|| Mutex::default());
+static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (i32, String, String)>>> = Lazy::new(|| Mutex::default());
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
@@ -105,17 +105,16 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
 
     let button = get__bgButton(this);
     let button_obj = Component::get_gameObject(button);
-    SKILL_DATA_MAP.lock().unwrap().insert(button_obj as usize, (skill_name, skill_desc));
-    info!("button init {}", button_obj as usize);
+    SKILL_DATA_MAP.lock().unwrap().insert(button_obj as usize, (skill_id, skill_name, skill_desc));
 
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
         let current_ev = EventSystem::get_current();
         let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
-        info!("pressed {}", &(clicked_obj as usize));
 
-        if let Some(&(ref skill_name, ref skill_desc)) = SKILL_DATA_MAP.lock().unwrap().get(&(clicked_obj as usize)) {
+        if let Some(&(ref skill_id, ref skill_name, ref skill_desc)) = SKILL_DATA_MAP.lock().unwrap().get(&(clicked_obj as usize)) {
             if let Some(mutex) = Gui::instance() {
                 mutex.lock().unwrap().show_window(Box::new(SkillInfoDialog::new(
+                    &skill_id,
                     &skill_name,
                     &skill_desc
                 )));

@@ -1086,7 +1086,7 @@ struct StyleState {
 fn parse_unity_text(ui: &egui::Ui, text: &str, wrap_width: f32) -> egui::text::LayoutJob {
     let mut job = egui::text::LayoutJob::default();
     job.wrap.max_width = wrap_width;
-    job.halign = egui::Align::Center;
+    // job.halign = egui::Align::Center;
 
     // default
     let mut state_stack = vec![StyleState {
@@ -1192,10 +1192,7 @@ fn parse_color(val: &str) -> Option<Color32> {
 }
 
 fn rich_text_label(ui: &mut egui::Ui, text: &str) {
-    let width = ui.available_width();
-
-    let job = parse_unity_text(ui, text, width);
-
+    let job = parse_unity_text(ui, text, ui.available_width());
     ui.add(egui::Label::new(job));
 }
 
@@ -1427,16 +1424,18 @@ impl Window for SimpleOkDialog {
 }
 
 pub struct SkillInfoDialog {
-    title: String,
-    content: String,
+    id: i32,
+    name: String,
+    desc: String,
     id: egui::Id
 }
 
 impl SkillInfoDialog {
-    pub fn new(title: &str, content: &str) -> SkillInfoDialog {
+    pub fn new(id: &i32, title: &str, content: &str) -> SkillInfoDialog {
         SkillInfoDialog {
-            title: title.to_owned(),
-            content: content.to_owned(),
+            id: id.to_owned(),
+            name: title.to_owned(),
+            desc: content.to_owned(),
             id: random_id()
         }
     }
@@ -1456,13 +1455,14 @@ impl Window for SkillInfoDialog {
             ui.painter().rect_filled(
                 ui.ctx().screen_rect(),
                 0.0,
-                egui::Color32::from_black_alpha(140)
+                egui::Color32::from_black_alpha(130)
             );
         });
 
-        new_window(ctx, self.id, &self.title)
+        new_window(ctx, self.id, "")
         .max_width(310.0 * scale)
-        .max_height(135.0 * scale)
+        .max_height(145.0 * scale)
+        .title_bar(false)
         .open(&mut open)
         .show(ctx, |ui| {
             egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
@@ -1475,11 +1475,16 @@ impl Window for SkillInfoDialog {
             });
 
             egui::CentralPanel::default()
-            .frame(egui::Frame::NONE)
+            .frame(egui::Frame::NONE.inner_margin(10.0 * scale))
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical()
                 .show(ui, |ui| {
-                    rich_text_label(ui, &self.content);
+                    ui.horizontal(|ui| {
+                        rich_text_label(ui, format!("<bold><size=16>{}</bold></size>", &self.name));
+                        rich_text_label(ui, format!("#<bold>{}</bold>", &self.id.to_string()));
+                    });
+                    ui.separator();
+                    rich_text_label(ui, &self.desc);
                 });
             });
         });
