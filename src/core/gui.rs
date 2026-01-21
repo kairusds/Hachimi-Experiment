@@ -1448,20 +1448,23 @@ impl Window for SkillInfoDialog {
         let mut open = true;
         let mut open2 = true;
 
-        egui::Area::new(egui::Id::new("modal_dimmer"))
+        egui::Area::new(self.id.with("modal_dimmer"))
         .interactable(true)
         .fixed_pos(egui::Pos2::ZERO)
         .show(ctx, |ui| {
-            ui.painter().rect_filled(
-                ui.ctx().screen_rect(),
-                0.0,
-                egui::Color32::from_black_alpha(130)
-            );
+            ui.painter().rect_filled(ui.ctx().screen_rect(), 0.0, Color32::from_black_alpha(130));
+            let screen_rect = ui.ctx().screen_rect();
+            ui.painter().rect_filled(screen_rect, 0.0, egui::Color32::from_black_alpha(130));
+
+            if ui.interact(screen_rect, ui.id(), egui::Sense::click()).clicked() {
+                open2 = false;
+            }
         });
 
         new_window(ctx, self.id, "")
         .max_width(310.0 * scale)
-        .max_height(145.0 * scale)
+        .min_height(120.0 * scale)
+        .max_height(150.0 * scale)
         .title_bar(false)
         .open(&mut open)
         .show(ctx, |ui| {
@@ -1478,8 +1481,9 @@ impl Window for SkillInfoDialog {
             .frame(egui::Frame::NONE.inner_margin(10.0 * scale))
             .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical()
+                .scroll_bar_visibility(egui::containers::scroll_area::ScrollBarVisibility::AlwaysVisible)
                 .show(ui, |ui| {
-                    ui.horizontal(|ui| {
+                    ui.horizontal_wrapped(|ui| {
                         rich_text_label(ui, &format!("<bold><size=16>{}</bold></size>", self.name));
                         rich_text_label(ui, &format!("#<bold>{}</bold>", self.skill_id.to_string()));
                     });
