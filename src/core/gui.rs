@@ -1469,7 +1469,7 @@ impl Window for SkillInfoDialog {
 
         new_window(ctx, self.id, &self.title)
         .max_width(310.0 * scale)
-        .max_height(140.0 * scale)
+        .max_height(135.0 * scale)
         .open(&mut open)
         .show(ctx, |ui| {
             egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
