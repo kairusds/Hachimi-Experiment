@@ -1457,35 +1457,36 @@ impl Window for SkillInfoDialog {
 
         let window_res = new_window(ctx, self.id, "")
         .max_width(310.0 * scale)
-        .min_height(0.0)
-        .max_height(150.0 * scale)
+        .max_height(155.0 * scale)
         .title_bar(false)
         .open(&mut open)
         .show(ctx, |ui| {
-            egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
-            .show_inside(ui, |ui| {
+            ui.vertical(|ui| {
+                egui::Frame::NONE
+                .inner_margin(10.0 * scale)
+                .show(ui, |ui| {
+                    egui::ScrollArea::vertical()
+                    .min_scrolled_height(100.0 * scale) 
+                    .auto_shrink([false, true])
+                    .scroll_bar_visibility(egui::containers::scroll_area::ScrollBarVisibility::AlwaysVisible)
+                    .show(ui, |ui| {
+                        ui.horizontal_wrapped(|ui| {
+                            rich_text_label(ui, &format!("<bold><size=16>{}</bold></size>", self.name));
+                            rich_text_label(ui, &format!("#<bold>{}</bold>", self.skill_id.to_string()));
+                        });
+                        ui.separator();
+                        rich_text_label(ui, &self.desc);
+                    });
+                });
+
+                ui.separator();
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    ui.add_space(10.0 * scale);
                     if ui.button(t!("ok")).clicked() {
                         open2 = false;
                     }
-                })
-            });
-
-            egui::CentralPanel::default()
-            .frame(egui::Frame::NONE.inner_margin(10.0 * scale))
-            .show_inside(ui, |ui| {
-                egui::ScrollArea::vertical()
-                .min_scrolled_height(100.0 * scale)
-                .auto_shrink([false, true])
-                .scroll_bar_visibility(egui::containers::scroll_area::ScrollBarVisibility::AlwaysVisible)
-                .show(ui, |ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        rich_text_label(ui, &format!("<bold><size=16>{}</bold></size>", self.name));
-                        rich_text_label(ui, &format!("#<bold>{}</bold>", self.skill_id.to_string()));
-                    });
-                    ui.separator();
-                    rich_text_label(ui, &self.desc);
                 });
+                ui.add_space(10.0 * scale);
             });
         });
 
