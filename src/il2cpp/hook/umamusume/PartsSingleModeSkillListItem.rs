@@ -1,6 +1,6 @@
 use crate::{
     core::{gui::SkillInfoDialog, Gui, Hachimi, game::Region, utils::mul_int},
-    il2cpp::{ext::Il2CppStringExt, hook::{UnityEngine_CoreModule::{Component, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
+    il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
 };
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
@@ -8,7 +8,7 @@ use super::ButtonCommon;
 use fnv::FnvHashMap;
 
 // static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
-static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (i32, String, String)>>> = Lazy::new(|| Mutex::default());
+// static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (i32, String, String)>>> = Lazy::new(|| Mutex::default());
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
@@ -100,25 +100,34 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
         opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
     };
 
-    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
-    let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
+    // let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
+    // let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
 
     let button = get__bgButton(this);
     let button_obj = Component::get_gameObject(button);
-    SKILL_DATA_MAP.lock().unwrap().insert(button_obj as usize, (skill_id, skill_name, skill_desc));
-    info!("SKILL_DATA_MAP LEN {}", SKILL_DATA_MAP.lock().unwrap().len());
+    Object::set_name(button_obj, unsafe { format!("HachimiSkill_{}", skill_id).to_il2cpp_string() });
+    //;SKILL_DATA_MAP.lock().unwrap().insert(button_obj as usize, (skill_id, skill_name, skill_desc));
+    // info!("SKILL_DATA_MAP LEN {}", SKILL_DATA_MAP.lock().unwrap().len());
 
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
         let current_ev = EventSystem::get_current();
         let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
+        let object_name = Object::get_name(clicked_obj);
+        let name_str = unsafe { object_name.as_utf16str() }.to_string();
 
-        if let Some(&(ref skill_id, ref skill_name, ref skill_desc)) = SKILL_DATA_MAP.lock().unwrap().get(&(clicked_obj as usize)) {
-            if let Some(mutex) = Gui::instance() {
-                mutex.lock().unwrap().show_window(Box::new(SkillInfoDialog::new(
-                    &skill_id,
-                    &skill_name,
-                    &skill_desc
-                )));
+        if name_str.starts_with("HachimiSkill_") {
+            let id_str = &name_str["HachimiSkill_".len()..];
+            if let Ok(id) = id_str.parse::<i32>() {
+                let name = to_s(TextDataQuery::get_skill_name(id)).unwrap_or_default();
+                let desc = to_s(TextDataQuery::get_skill_desc(id)).unwrap_or_default();
+
+                if let Some(mutex) = Gui::instance() {
+                    mutex.lock().unwrap().show_window(Box::new(SkillInfoDialog::new(
+                        &id,
+                        &name,
+                        &desc
+                    )));
+                }
             }
         }
     });
