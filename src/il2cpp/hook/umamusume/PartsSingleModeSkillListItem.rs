@@ -142,6 +142,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     //;SKILL_DATA_MAP.lock().unwrap().insert(button_obj as usize, (skill_id, skill_name, skill_desc));
     // info!("SKILL_DATA_MAP LEN {}", SKILL_DATA_MAP.lock().unwrap().len());
     get_skill_text(skill_id, this);
+    info!("SKILL_TEXT_CACHE len: {}", SKILL_TEXT_CACHE.lock().unwrap().len());
 
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
         let current_ev = EventSystem::get_current();
