@@ -1,6 +1,6 @@
 use crate::{
     core::{gui::SkillInfoDialog, Gui, Hachimi, game::Region, utils::mul_int},
-    il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr, GCHandle}, types::*}
+    il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr/*, GCHandle*/}, types::*}
 };
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
@@ -9,6 +9,7 @@ use fnv::FnvHashMap;
 
 // static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
 // static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (i32, String, String)>>> = Lazy::new(|| Mutex::default());
+static SKILL_TEXT_CACHE: Lazy<Mutex<FnvHashMap<i32, (String, String)>>> = Lazy::new(|| Mutex::default());
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
@@ -93,43 +94,6 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
             Text::set_horizontalOverflow(desc, 1);
         }
     }
-
-    // GUI skill info
-    let skill_id = get_Id(skill_info);
-    // let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
-    // let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
-    let button = get__bgButton(this);
-    let button_obj = Component::get_gameObject(button);
-    Object::set_name(button_obj, unsafe { format!("HachimiSkill_{}", skill_id).to_il2cpp_string() });
-    //;SKILL_DATA_MAP.lock().unwrap().insert(button_obj as usize, (skill_id, skill_name, skill_desc));
-    // info!("SKILL_DATA_MAP LEN {}", SKILL_DATA_MAP.lock().unwrap().len());
-
-    let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
-        let current_ev = EventSystem::get_current();
-        let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
-        let object_name = Object::get_name(clicked_obj);
-        let name_str = unsafe { (*object_name).as_utf16str() }.to_string();
-
-        if name_str.starts_with("HachimiSkill_") {
-            let id_str = &name_str["HachimiSkill_".len()..];
-            if let Ok(id) = id_str.parse::<i32>() {
-                let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
-                    opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
-                };
-                let name = to_s(TextDataQuery::get_skill_name(id)).unwrap_or_default();
-                let desc = to_s(TextDataQuery::get_skill_desc(id)).unwrap_or_default();
-
-                if let Some(mutex) = Gui::instance() {
-                    mutex.lock().unwrap().show_window(Box::new(SkillInfoDialog::new(
-                        &id,
-                        &name,
-                        &desc
-                    )));
-                }
-            }
-        }
-    });
-    ButtonCommon::SetOnClick(button, delegate.unwrap());
 }
 
 type UpdateItemJpFn = extern "C" fn(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, is_plate_effect_enable: bool, resource_hash: i32);
@@ -146,8 +110,62 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
     });
 }
 
+fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
+    if let Some(cached) = SKILL_TEXT_CACHE.lock().unwrap().get(&skill_id) {
+        return cached.clone();
+    }
+
+    let name = get__nameText(this);
+    let desc = get__descText(this);
+
+    let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
+        opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
+    };
+
+    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
+    let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
+
+    SKILL_TEXT_CACHE.lock().unwrap().insert(skill_id, (skill_name.clone(), skill_desc.clone()));
+
+    (skill_name, skill_desc)
+}
+
 // type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
+    // GUI skill info
+    let skill_id = get_Id(info);
+    // let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
+    // let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
+    let button = get__bgButton(this);
+    let button_obj = Component::get_gameObject(button);
+    Object::set_name(button_obj, unsafe { format!("HachimiSkill_{}", skill_id).to_il2cpp_string() });
+    //;SKILL_DATA_MAP.lock().unwrap().insert(button_obj as usize, (skill_id, skill_name, skill_desc));
+    // info!("SKILL_DATA_MAP LEN {}", SKILL_DATA_MAP.lock().unwrap().len());
+    get_skill_text(skill_id, this);
+
+    let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
+        let current_ev = EventSystem::get_current();
+        let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
+        let object_name = Object::get_name(clicked_obj);
+        let name_str = unsafe { (*object_name).as_utf16str() }.to_string();
+
+        if name_str.starts_with("HachimiSkill_") {
+            let id_str = &name_str["HachimiSkill_".len()..];
+            if let Ok(id) = id_str.parse::<i32>() {
+                if let Some(data) = SKILL_TEXT_CACHE.lock().unwrap().get(&id) {
+                    let (name, desc) = data;
+                    if let Some(mutex) = Gui::instance() {
+                        mutex.lock().unwrap().show_window(Box::new(SkillInfoDialog::new(
+                            &id,
+                            &name,
+                            &desc
+                        )));
+                    }
+                }
+            }
+        }
+    });
+    ButtonCommon::SetOnClick(button, delegate.unwrap());
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);
 }
 
