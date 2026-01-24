@@ -1978,7 +1978,8 @@ struct FirstTimeSetupWindow {
     config: hachimi::Config,
     index_request: Arc<AsyncRequest<Vec<RepoInfo>>>,
     current_page: usize,
-    current_tl_repo: Option<String>
+    current_tl_repo: Option<String>,
+    has_auto_selected: bool
 }
 
 impl FirstTimeSetupWindow {
@@ -1990,7 +1991,8 @@ impl FirstTimeSetupWindow {
             config,
             index_request: Arc::new(tl_repo::new_meta_index_request()),
             current_page: 0,
-            current_tl_repo: None
+            current_tl_repo: None,
+            has_auto_selected: false
         }
     }
 }
@@ -2055,10 +2057,11 @@ impl Window for FirstTimeSetupWindow {
                                 .filter(|repo| repo.region == hachimi.game.region)
                                 .collect();
 
-                            if self.current_tl_repo.is_none() {
+                            if !self.has_auto_selected && self.current_tl_repo.is_none() {
                                 if let Some(matched) = filtered_repos.iter().find(|r| r.is_recommended(current_lang_str)) {
                                     self.current_tl_repo = Some(matched.index.clone());
                                 }
+                                self.has_auto_selected = true;
                             }
   
                             filtered_repos.sort_by_key(|repo| !repo.is_recommended(current_lang_str));
