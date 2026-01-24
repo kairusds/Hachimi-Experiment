@@ -2100,9 +2100,10 @@ impl Window for FirstTimeSetupWindow {
                                         ui.label(t!("first_time_setup.no_compatible_repo"));
                                         return;
                                     }
-                                    
+                                    ui.radio_value(&mut self.current_tl_repo, None, t!("first_time_setup.skip_translation"));
+
                                     let mut last_section: Option<bool> = None;
-                                    
+
                                     for repo in filtered_repos.iter() {
                                         let is_matched = repo.is_recommended(current_lang_str);
                                         let is_selected = self.current_tl_repo.as_ref() == Some(&repo.index);
@@ -2113,7 +2114,7 @@ impl Window for FirstTimeSetupWindow {
                                                 ui.separator();
                                             }
                                         }
-                                        
+
                                         // Visual indicator for auto-selected matched language repo
                                         if is_matched && is_selected {
                                             let repo_label = format!("★ {}", repo.name);
@@ -2130,8 +2131,6 @@ impl Window for FirstTimeSetupWindow {
                                         
                                         last_section = Some(is_matched);
                                     }
-                                    
-                                    ui.radio_value(&mut self.current_tl_repo, None, t!("first_time_setup.skip_translation"));
                                 });
                             });
                         });
