@@ -1610,7 +1610,20 @@ impl ConfigEditor {
                 ui.end_row();
 
                 ui.label(t!("config_editor.meta_index_url"));
-                let res = ui.add(egui::TextEdit::singleline(&mut config.meta_index_url));
+                let res = ui.add(egui::TextEdit::singleline(&mut config.meta_index_url).lock_focus(true));
+                #[cfg(target_os = "windows")]
+                if res.has_focus() {
+                    ui.memory_mut(|mem| mem.set_focus_lock_filter(
+                        res.id,
+                        egui::EventFilter {
+                            tab: true,
+                            horizontal_arrows: true,
+                            vertical_arrows: true,
+                            escape: false,
+                            ..Default::default()
+                        }
+                    ));
+                }
                 #[cfg(target_os = "android")]
                 Gui::handle_android_keyboard(&res, &mut config.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
                 ui.end_row();
@@ -2029,7 +2042,20 @@ impl Window for FirstTimeSetupWindow {
                         });
                         ui.horizontal(|ui| {
                             ui.label(t!("config_editor.meta_index_url"));
-                            let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url));
+                            let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url).lock_focus(true));
+                            #[cfg(target_os = "windows")]
+                            if res.has_focus() {
+                                ui.memory_mut(|mem| mem.set_focus_lock_filter(
+                                    res.id,
+                                    egui::EventFilter {
+                                        tab: true,
+                                        horizontal_arrows: true,
+                                        vertical_arrows: true,
+                                        escape: false,
+                                        ..Default::default()
+                                    }
+                                ));
+                            }
                             #[cfg(target_os = "android")]
                             Gui::handle_android_keyboard(&res, &mut self.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
                             if res.lost_focus() {
