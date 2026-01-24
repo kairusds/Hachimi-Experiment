@@ -1,6 +1,6 @@
 use crate::{
     core::{gui::SkillInfoDialog, Gui, Hachimi, game::Region, utils::mul_int},
-    il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr/*, GCHandle*/}, types::*}
+    il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_value, get_field_object_value, get_method_addr/*, GCHandle*/}, types::*}
 };
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
@@ -32,6 +32,11 @@ static mut get_IsDrawNeedSkillPoint_addr: usize = 0;
 impl_addr_wrapper_fn!(get_IsDrawNeedSkillPoint, get_IsDrawNeedSkillPoint_addr, bool, this: *mut Il2CppObject);
 static mut get_Id_addr: usize = 0;
 impl_addr_wrapper_fn!(get_Id, get_Id_addr, i32, this: *mut Il2CppObject);
+
+static mut SKILLUPGRADECARDID_FIELD: *mut FieldInfo = 0 as _;
+fn get_SkillUpgradeCardId(this: *mut Il2CppObject) -> i32 {
+    get_field_value(this, unsafe { SKILLUPGRADECARDID_FIELD })
+}
 
 fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig_fn_cb: impl FnOnce()) {
     let skill_cfg = &Hachimi::instance().localized_data.load().config.skill_formatting;
@@ -167,6 +172,8 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
         }
     });
     ButtonCommon::SetOnClick(button, delegate.unwrap());
+    let upgrade_id = get_SkillUpgradeCardId(info);
+    info!("SkillUpgradeCardId: {}", upgrade_id);
     // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);
 }
 
@@ -192,6 +199,7 @@ pub fn init(umamusume: *const Il2CppImage) {
         _BGBUTTON_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgButton");
 
         // SkillInfo
+        SKILLUPGRADECARDID_FIELD = get_field_from_name(Info, c"SkillUpgradeCardId");
         get_IsDrawDesc_addr = get_method_addr(Info, c"get_IsDrawDesc", 0);
         get_IsDrawNeedSkillPoint_addr = get_method_addr(Info, c"get_IsDrawNeedSkillPoint", 0);
         get_Id_addr = get_method_addr(Info, c"get_Id", 0);
