@@ -140,7 +140,7 @@ fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
 
 type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
-    get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);
+    // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);
     // GUI skill info
     let skill_id = get_Id(info);
     // let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
@@ -177,10 +177,10 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     });
     ButtonCommon::SetOnClick(button, delegate.unwrap());
     let upgrade_id = get_SkillUpgradeCardId(info);
-    // let upgrade_desc = get_MasterSkillUpgradeDescription(info);
-    // let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_SkillId(upgrade_desc);
+    let upgrade_desc = get_MasterSkillUpgradeDescription(info);
+    let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_SkillId(upgrade_desc);
     info!("SkillUpgradeCardId: {}", upgrade_id);
-    // info!("SkillUpgradeDescription SkillId: {}", desc_id);
+    info!("SkillUpgradeDescription SkillId: {}", desc_id);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
