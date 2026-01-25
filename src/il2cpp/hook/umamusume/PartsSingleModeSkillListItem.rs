@@ -177,15 +177,23 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     });
     ButtonCommon::SetOnClick(button, delegate.unwrap());
     let upgrade_id = get_SkillUpgradeCardId(info);
-    let upgrade_desc = get_MasterSkillUpgradeDescription(info);
-    let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_Id(upgrade_desc);
     info!("SkillUpgradeCardId: {}", upgrade_id);
+    let upgrade_desc = get_MasterSkillUpgradeDescription(info);
+    if upgrade_desc.is_null() {
+        info!("upgrade_desc is NULL for {}", upgrade_id);
+        return;
+    }
+    let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_Id(upgrade_desc);
     info!("SkillUpgradeDescription SkillId: {}", desc_id);
 }
 
 // public Void set_MasterSkillUpgradeDescription(SkillUpgradeDescription value) { }
 type set_MasterSkillUpgradeDescriptionFn = extern "C" fn(this: *mut Il2CppObject, value: *mut Il2CppObject);
 extern "C" fn set_MasterSkillUpgradeDescription(this: *mut Il2CppObject, value: *mut Il2CppObject) {
+    if value.is_null() {
+        return get_orig_fn!(set_MasterSkillUpgradeDescription, set_MasterSkillUpgradeDescriptionFn)(this, value);
+        info!("set_MasterSkillUpgradeDescription is null");
+    }
     get_orig_fn!(set_MasterSkillUpgradeDescription, set_MasterSkillUpgradeDescriptionFn)(this, value);
     let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_Id(value);
     info!("SkillUpgradeDescription SkillId: {}", desc_id);
