@@ -34,7 +34,7 @@ impl_addr_wrapper_fn!(get_IsDrawNeedSkillPoint, get_IsDrawNeedSkillPoint_addr, b
 static mut get_Id_addr: usize = 0;
 impl_addr_wrapper_fn!(get_Id, get_Id_addr, i32, this: *mut Il2CppObject);
 static mut get_MasterSkillUpgradeDescription_addr: usize = 0;
-impl_addr_wrapper_fn!(get_MasterSkillUpgradeDescription, get_MasterSkillUpgradeDescription_addr, *mut Il2CppObject, this: *mut Il2CppObject);
+impl_addr_wrapper_fn!(get_MasterSkillUpgradeDescription, get_MasterSkillUpgradeDescription_addr, Il2CppObject, this: *mut Il2CppObject);
 
 static mut SKILLUPGRADECARDID_FIELD: *mut FieldInfo = 0 as _;
 fn get_SkillUpgradeCardId(this: *mut Il2CppObject) -> i32 {
