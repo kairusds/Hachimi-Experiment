@@ -34,7 +34,7 @@ impl_addr_wrapper_fn!(get_IsDrawNeedSkillPoint, get_IsDrawNeedSkillPoint_addr, b
 static mut get_Id_addr: usize = 0;
 impl_addr_wrapper_fn!(get_Id, get_Id_addr, i32, this: *mut Il2CppObject);
 static mut get_MasterSkillUpgradeDescription_addr: usize = 0;
-impl_addr_wrapper_fn!(get_MasterSkillUpgradeDescription, get_MasterSkillUpgradeDescription_addr, Il2CppObject, this: *mut Il2CppObject);
+impl_addr_wrapper_fn!(get_MasterSkillUpgradeDescription, get_MasterSkillUpgradeDescription_addr, *mut Il2CppObject, this: *mut Il2CppObject);
 
 static mut SKILLUPGRADECARDID_FIELD: *mut FieldInfo = 0 as _;
 fn get_SkillUpgradeCardId(this: *mut Il2CppObject) -> i32 {
@@ -138,9 +138,9 @@ fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
     (skill_name, skill_desc)
 }
 
-type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
+// type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
-    get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);
+    // get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);
     // GUI skill info
     let skill_id = get_Id(info);
     // let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
