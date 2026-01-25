@@ -26,7 +26,7 @@ fn get__bgButton(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { _BGBUTTON_FIELD })
 }
 
-// SkillInfo
+// PartsSingleModeSkillListItem.Info
 static mut get_IsDrawDesc_addr: usize = 0;
 impl_addr_wrapper_fn!(get_IsDrawDesc, get_IsDrawDesc_addr, bool, this: *mut Il2CppObject);
 static mut get_IsDrawNeedSkillPoint_addr: usize = 0;
@@ -183,6 +183,14 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     info!("SkillUpgradeDescription SkillId: {}", desc_id);
 }
 
+// public Void set_MasterSkillUpgradeDescription(SkillUpgradeDescription value) { }
+type set_MasterSkillUpgradeDescriptionFn = extern "C" fn(this: *mut Il2CppObject, value: *mut Il2CppObject);
+extern "C" fn set_MasterSkillUpgradeDescription(this: *mut Il2CppObject, value: *mut Il2CppObject) {
+    get_orig_fn!(set_MasterSkillUpgradeDescription, set_MasterSkillUpgradeDescriptionFn)(this, value);
+    let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_Id(value);
+    info!("SkillUpgradeDescription SkillId: {}", desc_id);
+}
+
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, PartsSingleModeSkillListItem);
     find_nested_class_or_return!(PartsSingleModeSkillListItem, Info);
@@ -198,6 +206,10 @@ pub fn init(umamusume: *const Il2CppImage) {
 
     let SetupOnClickSkillButton_addr = get_method_addr(PartsSingleModeSkillListItem, c"SetupOnClickSkillButton", 1);
     new_hook!(SetupOnClickSkillButton_addr, SetupOnClickSkillButton);
+
+    // PartsSingleModeSkillListItem.Info
+    let set_MasterSkillUpgradeDescription_addr = get_method_addr(Info, c"set_MasterSkillUpgradeDescription", 1);
+    new_hook!(set_MasterSkillUpgradeDescription_addr, set_MasterSkillUpgradeDescription);
 
     unsafe {
         NAMETEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_nameText");

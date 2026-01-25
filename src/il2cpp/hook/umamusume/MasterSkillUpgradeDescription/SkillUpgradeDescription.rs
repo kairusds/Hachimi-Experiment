@@ -15,8 +15,5 @@ pub fn init(MasterSkillUpgradeDescription: *mut Il2CppClass) {
     unsafe {
         // CLASS = SkillUpgradeDescription;
         ID_FIELD = get_field_from_name(SkillUpgradeDescription, c"Id");
-        if ID_FIELD.is_null() {
-            info!("Failed to find field Id in SkillUpgradeDescription");
-        }
     }
 }
