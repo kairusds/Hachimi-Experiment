@@ -2,11 +2,13 @@ use jni::{
     objects::{JValue, JMap, JObject, JString},
     JNIEnv
 };
-
 use crate::{
     android::main::java_vm,
     il2cpp::{ext::StringExt, hook::UnityEngine_CoreModule::Application}
 };
+
+use std::path::PathBuf;
+use super::game_impl;
 
 pub fn open_app_or_fallback(package_name: &str, activity_class: &str, fallback_url: &str) {
     let vm = match java_vm() {
@@ -108,5 +110,10 @@ pub fn get_device_api_level(env: *mut jni::sys::JNIEnv) -> i32 {
         .unwrap()
         .i()
         .unwrap()
+}
+
+pub fn get_game_dir() -> PathBuf {
+    let package_name = game_impl::get_package_name();
+    game_impl::get_data_dir(&package_name)
 }
 

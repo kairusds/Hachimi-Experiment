@@ -131,6 +131,7 @@ config_editor:
     If this was not intentional, close this dialog and DISABLE the option.
   meta_index_url: "Translations Meta URL"
   debug_mode: "Debug mode"
+  enable_file_logging: "Enable file logging"
   translator_mode: "Translator mode"
   skip_first_time_setup: "Skip first time setup"
   disable_auto_update_check: "Disable auto update\ncheck"
