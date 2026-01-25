@@ -53,6 +53,7 @@ mod LiveTheaterCharaSelect;
 mod LiveTheaterViewController;
 pub mod CySpringController;
 mod LiveUtil;
+pub mod MasterSkillUpgradeDescription;
 
 #[cfg(target_os = "windows")]
 pub mod SceneManager;
@@ -118,6 +119,7 @@ pub fn init() {
     LiveTheaterViewController::init(image);
     CySpringController::init(image);
     LiveUtil::init(image);
+    MasterSkillUpgradeDescription::init(image);
 
     #[cfg(target_os = "windows")]
     {
