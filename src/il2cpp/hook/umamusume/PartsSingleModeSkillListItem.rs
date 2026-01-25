@@ -6,7 +6,7 @@ use once_cell::sync::Lazy;
 use std::sync::Mutex;
 use super::ButtonCommon;
 use fnv::FnvHashMap;
-use super::MasterSkillUpgradeDescription;
+use super::{MasterSkillUpgradeDescription, MasterSkillData};
 
 // static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
 // static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (i32, String, String)>>> = Lazy::new(|| Mutex::default());
@@ -35,6 +35,8 @@ static mut get_Id_addr: usize = 0;
 impl_addr_wrapper_fn!(get_Id, get_Id_addr, i32, this: *mut Il2CppObject);
 static mut get_MasterSkillUpgradeDescription_addr: usize = 0;
 impl_addr_wrapper_fn!(get_MasterSkillUpgradeDescription, get_MasterSkillUpgradeDescription_addr, *mut Il2CppObject, this: *mut Il2CppObject);
+static mut get_MasterData_addr: usize = 0;
+impl_addr_wrapper_fn!(get_MasterData, get_MasterData_addr, *mut Il2CppObject, this: *mut Il2CppObject);
 
 static mut SKILLUPGRADECARDID_FIELD: *mut FieldInfo = 0 as _;
 fn get_SkillUpgradeCardId(this: *mut Il2CppObject) -> i32 {
@@ -178,13 +180,23 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     ButtonCommon::SetOnClick(button, delegate.unwrap());
     let upgrade_id = get_SkillUpgradeCardId(info);
     info!("SkillUpgradeCardId: {}", upgrade_id);
+    info!("SkillUpgradeDescription {:p}: ", unsafe { MasterSkillUpgradeDescription::SkillUpgradeDescription::CLASS });
     let upgrade_desc = get_MasterSkillUpgradeDescription(info);
-    if upgrade_desc.is_null() {
-        info!("upgrade_desc is NULL for {}", upgrade_id);
+    if !upgrade_desc.is_null() {
+        let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_Id(upgrade_desc);
+        info!("SkillUpgradeDescription SkillId: {}", desc_id);
+    }
+    let skill_data = get_MasterData(info);
+    if skill_data.is_null() {
+        info!("Info get_MasterData is null");
         return;
     }
-    let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_Id(upgrade_desc);
-    info!("SkillUpgradeDescription SkillId: {}", desc_id);
+    let tag_id = MasterSkillData::getTagId(skill_data);
+    if tag_id.is_null() {
+        info!("SkillData tag_id is null");
+        return;
+    }
+    info!("SkillData TagId: {}", unsafe { (*tag_id).as_utf16str() }.to_string());
 }
 
 // public Void set_MasterSkillUpgradeDescription(SkillUpgradeDescription value) { }
@@ -224,11 +236,12 @@ pub fn init(umamusume: *const Il2CppImage) {
         DESCTEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_descText");
         _BGBUTTON_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgButton");
 
-        // SkillInfo
+        // PartsSingleModeSkillListItem.Info
         SKILLUPGRADECARDID_FIELD = get_field_from_name(Info, c"SkillUpgradeCardId");
         get_IsDrawDesc_addr = get_method_addr(Info, c"get_IsDrawDesc", 0);
         get_IsDrawNeedSkillPoint_addr = get_method_addr(Info, c"get_IsDrawNeedSkillPoint", 0);
         get_Id_addr = get_method_addr(Info, c"get_Id", 0);
         get_MasterSkillUpgradeDescription_addr = get_method_addr(Info, c"get_MasterSkillUpgradeDescription", 0);
+        get_MasterData_addr = get_method_addr(Info, c"get_MasterData", 0);
     }
 }

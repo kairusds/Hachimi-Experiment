@@ -54,6 +54,7 @@ mod LiveTheaterViewController;
 pub mod CySpringController;
 mod LiveUtil;
 pub mod MasterSkillUpgradeDescription;
+pub mod MasterSkillData;
 
 #[cfg(target_os = "windows")]
 pub mod SceneManager;
@@ -120,6 +121,7 @@ pub fn init() {
     CySpringController::init(image);
     LiveUtil::init(image);
     MasterSkillUpgradeDescription::init(image);
+    MasterSkillData::init(image);
 
     #[cfg(target_os = "windows")]
     {
