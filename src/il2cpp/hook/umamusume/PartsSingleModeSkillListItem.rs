@@ -191,12 +191,12 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
 type set_MasterSkillUpgradeDescriptionFn = extern "C" fn(this: *mut Il2CppObject, value: *mut Il2CppObject);
 extern "C" fn set_MasterSkillUpgradeDescription(this: *mut Il2CppObject, value: *mut Il2CppObject) {
     if value.is_null() {
-        return get_orig_fn!(set_MasterSkillUpgradeDescription, set_MasterSkillUpgradeDescriptionFn)(this, value);
         info!("set_MasterSkillUpgradeDescription is null");
+        return get_orig_fn!(set_MasterSkillUpgradeDescription, set_MasterSkillUpgradeDescriptionFn)(this, value);
     }
     get_orig_fn!(set_MasterSkillUpgradeDescription, set_MasterSkillUpgradeDescriptionFn)(this, value);
     let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_Id(value);
-    info!("SkillUpgradeDescription SkillId: {}", desc_id);
+    info!("set_MasterSkillUpgradeDescription Id: {}", desc_id);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
