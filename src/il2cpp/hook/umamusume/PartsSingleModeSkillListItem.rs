@@ -177,9 +177,10 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     });
     ButtonCommon::SetOnClick(button, delegate.unwrap());
     let upgrade_id = get_SkillUpgradeCardId(info);
-    let upgrade_desc = get_MasterSkillUpgradeDescription(into);
+    let upgrade_desc = get_MasterSkillUpgradeDescription(info);
     let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_SkillId(upgrade_desc);
     info!("SkillUpgradeCardId: {}", upgrade_id);
+    info!("SkillUpgradeDescription SkillId: {}", desc_id);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
