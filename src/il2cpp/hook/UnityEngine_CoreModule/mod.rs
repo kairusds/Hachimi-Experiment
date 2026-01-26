@@ -16,6 +16,7 @@ pub mod UnityAction;
 pub mod TouchScreenKeyboard;
 #[cfg(target_os = "android")]
 pub mod TouchScreenKeyboardType;
+pub mod RectTransform;
 
 #[cfg(target_os = "windows")]
 pub mod QualitySettings;
@@ -46,6 +47,7 @@ pub fn init() {
     Behaviour::init(image);
     Component::init(image);
     UnityAction::init(image);
+    RectTransform::init(image);
     #[cfg(target_os = "android")]
     {
         TouchScreenKeyboard::init(image);

@@ -2,41 +2,49 @@ use crate::{
     core::{gui::SkillInfoDialog, Gui, Hachimi, game::Region, utils::mul_int},
     il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_value, get_field_object_value, get_method_addr}, types::*}
 };
-use once_cell::sync::Lazy;
-use std::sync::Mutex;
-use super::ButtonCommon;
-use fnv::FnvHashMap;
-use super::{MasterSkillUpgradeDescription, MasterSkillData};
+// use once_cell::sync::Lazy;
+// use std::sync::Mutex;
+// use super::ButtonCommon;
+// use fnv::FnvHashMap;
+// use super::{MasterSkillUpgradeDescription, MasterSkillData};
 
 // static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
 // static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (i32, String, String)>>> = Lazy::new(|| Mutex::default());
-static SKILL_TEXT_CACHE: Lazy<Mutex<FnvHashMap<i32, (String, String)>>> = Lazy::new(|| Mutex::default());
+// static SKILL_TEXT_CACHE: Lazy<Mutex<FnvHashMap<i32, (String, String)>>> = Lazy::new(|| Mutex::default());
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
-fn get__nameText(this: *mut Il2CppObject) -> *mut Il2CppObject {
+pub fn get__nameText(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { NAMETEXT_FIELD })
 }
 static mut DESCTEXT_FIELD: *mut FieldInfo = 0 as _;
-fn get__descText(this: *mut Il2CppObject) -> *mut Il2CppObject {
+pub fn get__descText(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { DESCTEXT_FIELD })
 }
+
 static mut _BGBUTTON_FIELD: *mut FieldInfo = 0 as _;
-fn get__bgButton(this: *mut Il2CppObject) -> *mut Il2CppObject {
+pub fn get__bgButton(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { _BGBUTTON_FIELD })
 }
+/*
+static mut _BGIMAGE_FIELD: *mut FieldInfo = 0 as _;
+fn get__bgImage(this: *mut Il2CppObject) -> *mut Il2CppObject {
+    get_field_object_value(this, unsafe { _BGIMAGE_FIELD })
+}*/
 
 // PartsSingleModeSkillListItem.Info
 static mut get_IsDrawDesc_addr: usize = 0;
 impl_addr_wrapper_fn!(get_IsDrawDesc, get_IsDrawDesc_addr, bool, this: *mut Il2CppObject);
 static mut get_IsDrawNeedSkillPoint_addr: usize = 0;
 impl_addr_wrapper_fn!(get_IsDrawNeedSkillPoint, get_IsDrawNeedSkillPoint_addr, bool, this: *mut Il2CppObject);
+/*
 static mut get_Id_addr: usize = 0;
 impl_addr_wrapper_fn!(get_Id, get_Id_addr, i32, this: *mut Il2CppObject);
 static mut get_MasterSkillUpgradeDescription_addr: usize = 0;
 impl_addr_wrapper_fn!(get_MasterSkillUpgradeDescription, get_MasterSkillUpgradeDescription_addr, *mut Il2CppObject, this: *mut Il2CppObject);
 static mut get_MasterData_addr: usize = 0;
 impl_addr_wrapper_fn!(get_MasterData, get_MasterData_addr, *mut Il2CppObject, this: *mut Il2CppObject);
+*/
 
 static mut SKILLUPGRADECARDID_FIELD: *mut FieldInfo = 0 as _;
 fn get_SkillUpgradeCardId(this: *mut Il2CppObject) -> i32 {
@@ -120,6 +128,7 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
     });
 }
 
+/*
 fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
     if let Some(cached) = SKILL_TEXT_CACHE.lock().unwrap().get(&skill_id) {
         return cached.clone();
@@ -139,6 +148,7 @@ fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
 
     (skill_name, skill_desc)
 }
+
 
 type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
@@ -199,7 +209,6 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     info!("SkillData TagId: {}", unsafe { (*tag_id).as_utf16str() }.to_string());
 }
 
-// public Void set_MasterSkillUpgradeDescription(SkillUpgradeDescription value) { }
 type set_MasterSkillUpgradeDescriptionFn = extern "C" fn(this: *mut Il2CppObject, value: *mut Il2CppObject);
 extern "C" fn set_MasterSkillUpgradeDescription(this: *mut Il2CppObject, value: *mut Il2CppObject) {
     if value.is_null() {
@@ -209,7 +218,7 @@ extern "C" fn set_MasterSkillUpgradeDescription(this: *mut Il2CppObject, value: 
     get_orig_fn!(set_MasterSkillUpgradeDescription, set_MasterSkillUpgradeDescriptionFn)(this, value);
     let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_Id(value);
     info!("set_MasterSkillUpgradeDescription Id: {}", desc_id);
-}
+} */
 
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, PartsSingleModeSkillListItem);
@@ -224,24 +233,22 @@ pub fn init(umamusume: *const Il2CppImage) {
         new_hook!(UpdateItem_addr, UpdateItemOther);
     }
 
-    let SetupOnClickSkillButton_addr = get_method_addr(PartsSingleModeSkillListItem, c"SetupOnClickSkillButton", 1);
-    new_hook!(SetupOnClickSkillButton_addr, SetupOnClickSkillButton);
+    // let SetupOnClickSkillButton_addr = get_method_addr(PartsSingleModeSkillListItem, c"SetupOnClickSkillButton", 1);
+    // new_hook!(SetupOnClickSkillButton_addr, SetupOnClickSkillButton);
 
     // PartsSingleModeSkillListItem.Info
-    let set_MasterSkillUpgradeDescription_addr = get_method_addr(Info, c"set_MasterSkillUpgradeDescription", 1);
-    new_hook!(set_MasterSkillUpgradeDescription_addr, set_MasterSkillUpgradeDescription);
-
     unsafe {
         NAMETEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_nameText");
         DESCTEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_descText");
         _BGBUTTON_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgButton");
+        // _BGIMAGE_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgImage");
 
         // PartsSingleModeSkillListItem.Info
-        SKILLUPGRADECARDID_FIELD = get_field_from_name(Info, c"SkillUpgradeCardId");
+        // SKILLUPGRADECARDID_FIELD = get_field_from_name(Info, c"SkillUpgradeCardId");
         get_IsDrawDesc_addr = get_method_addr(Info, c"get_IsDrawDesc", 0);
         get_IsDrawNeedSkillPoint_addr = get_method_addr(Info, c"get_IsDrawNeedSkillPoint", 0);
-        get_Id_addr = get_method_addr(Info, c"get_Id", 0);
-        get_MasterSkillUpgradeDescription_addr = get_method_addr(Info, c"get_MasterSkillUpgradeDescription", 0);
-        get_MasterData_addr = get_method_addr(Info, c"get_MasterData", 0);
+        // get_Id_addr = get_method_addr(Info, c"get_Id", 0);
+        // get_MasterSkillUpgradeDescription_addr = get_method_addr(Info, c"get_MasterSkillUpgradeDescription", 0);
+        // get_MasterData_addr = get_method_addr(Info, c"get_MasterData", 0);
     }
 }

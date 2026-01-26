@@ -18,7 +18,7 @@ mod MasterMissionData;
 mod TrainingParamChangeA2U;
 pub mod WebViewDefine;
 pub mod TextFrame;
-mod PartsSingleModeSkillListItem;
+pub mod PartsSingleModeSkillListItem;
 pub mod FlashActionPlayer;
 pub mod TextRubyData;
 pub mod TextDotData;
@@ -53,8 +53,7 @@ mod LiveTheaterCharaSelect;
 mod LiveTheaterViewController;
 pub mod CySpringController;
 mod LiveUtil;
-pub mod MasterSkillUpgradeDescription;
-pub mod MasterSkillData;
+mod DialogCharacterSimpleSkillDetail;
 
 #[cfg(target_os = "windows")]
 pub mod SceneManager;
@@ -120,8 +119,7 @@ pub fn init() {
     LiveTheaterViewController::init(image);
     CySpringController::init(image);
     LiveUtil::init(image);
-    MasterSkillUpgradeDescription::init(image);
-    MasterSkillData::init(image);
+    DialogCharacterSimpleSkillDetail::init(image);
 
     #[cfg(target_os = "windows")]
     {
