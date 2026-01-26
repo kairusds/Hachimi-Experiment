@@ -44,12 +44,15 @@ extern "C" fn Setup(
     }
 
     let desc_text = PartsSingleModeSkillListItem::get__descText(skill_item);
+    info!("desc_text: {:p}", desc_text);
     let bg_obj = PartsSingleModeSkillListItem::get__bgButton(skill_item);
+    info!("bg_obj: {:p}", desc_text);
 
     if !desc_text.is_null() && !bg_obj.is_null() {
         Text::set_horizontalOverflow(desc_text, 0); // wrap
         Text::set_verticalOverflow(desc_text, 1); // overflow
         let needed_height = Text::get_preferredHeight(desc_text);
+        info!("needed_height {}", needed_height);
 
         let mut layout_element = GameObject::GetComponent(bg_obj, LayoutElement::type_object());
         if layout_element.is_null() {
@@ -61,10 +64,15 @@ extern "C" fn Setup(
         // Image::set_type(image, 1);
 
         let final_height = needed_height + 50.0;
+        info!("final_height; {}", final_height);
         LayoutElement::set_minHeight(layout_element, final_height);
         LayoutElement::set_flexibleHeight(layout_element, 0.0);
 
         let rect_transform = GameObject::GetComponent(bg_obj, RectTransform::type_object());
+        if rect_transform.is_null() {
+            info!("RectTransform is null for _bgButton?????");
+            return;
+        };
         LayoutRebuilder::ForceRebuildLayoutImmediate(rect_transform);
     }
 }
