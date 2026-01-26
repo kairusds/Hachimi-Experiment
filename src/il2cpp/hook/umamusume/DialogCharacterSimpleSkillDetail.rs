@@ -1,7 +1,7 @@
 use crate::{
     il2cpp::{
         hook::{
-            UnityEngine_CoreModule::{GameObject, RectTransform},
+            UnityEngine_CoreModule::{Component, GameObject, RectTransform},
             UnityEngine_UI::{LayoutElement, LayoutRebuilder, Text}
         },
         symbols::{get_field_from_name, get_field_object_value, get_method_addr},
@@ -45,8 +45,9 @@ extern "C" fn Setup(
 
     let desc_text = PartsSingleModeSkillListItem::get__descText(skill_item);
     info!("desc_text: {:p}", desc_text);
-    let bg_obj = PartsSingleModeSkillListItem::get__bgButton(skill_item);
-    info!("bg_obj: {:p}", desc_text);
+    let bg_btn = PartsSingleModeSkillListItem::get__bgButton(skill_item);
+    info!("bg_btn: {:p}", bg_btn);
+    let bg_obj = Component::get_gameObject(bg_btn);
 
     if !desc_text.is_null() && !bg_obj.is_null() {
         Text::set_horizontalOverflow(desc_text, 0); // wrap
@@ -72,7 +73,7 @@ extern "C" fn Setup(
         if rect_transform.is_null() {
             info!("RectTransform is null for _bgButton?????");
             return;
-        };
+        }
         LayoutRebuilder::ForceRebuildLayoutImmediate(rect_transform);
     }
 }
