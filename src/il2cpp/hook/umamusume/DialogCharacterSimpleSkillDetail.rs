@@ -72,7 +72,7 @@ extern "C" fn Setup(
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, DialogCharacterSimpleSkillDetail);
 
-    let Setup_addr = get_method_addr(DialogCharacterSimpleSkillDetail, c"Setup", 7);
+    let Setup_addr = get_method_addr(DialogCharacterSimpleSkillDetail, c"Setup", 6);
     new_hook!(Setup_addr, Setup);
 
     unsafe {
