@@ -44,9 +44,12 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
 
                 if !base_rect.is_null() {
                     let base_game_obj = Component::get_gameObject(base_rect);
+                    info!("base_game_obj {:p}", base_game_obj);
+                    if base_game_obj.is_null() { return; }
 
                     let text_objects: Array<*mut Il2CppObject> = GameObject::GetComponentsInChildren(dialog_obj, TextCommon::type_object(), true);
                     info!("text_objects {}", text_objects.this.is_null());
+                    if text_objects.this.is_null() { return; }
 
                     if !text_objects.this.is_null() {
                         unsafe {
@@ -108,7 +111,7 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                                 }
                                 ContentSizeFitter::set_verticalFit(csf, 2); // PreferredSize
                                 // }
-                                LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
+                                // LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
                             }
                         }
                     }
@@ -117,7 +120,7 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                 let root_rect = DialogObject::get__rootRectTransform(dialog_obj);
                 info!("root_rect {:p}", root_rect);
                 if !root_rect.is_null() {
-                    LayoutRebuilder::ForceRebuildLayoutImmediate(root_rect);
+                    // LayoutRebuilder::ForceRebuildLayoutImmediate(root_rect);
                 }
             }
         }
