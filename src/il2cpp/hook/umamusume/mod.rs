@@ -54,6 +54,8 @@ mod LiveTheaterViewController;
 pub mod CySpringController;
 mod LiveUtil;
 mod DialogCharacterSimpleSkillDetail;
+pub mod DialogCommonBase;
+pub mod DialogInnerBase;
 
 #[cfg(target_os = "windows")]
 pub mod SceneManager;
@@ -120,6 +122,8 @@ pub fn init() {
     CySpringController::init(image);
     LiveUtil::init(image);
     DialogCharacterSimpleSkillDetail::init(image);
+    DialogCommonBase::init(image);
+    DialogInnerBase::init(image);
 
     #[cfg(target_os = "windows")]
     {

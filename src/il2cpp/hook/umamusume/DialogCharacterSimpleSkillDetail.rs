@@ -8,7 +8,7 @@ use crate::{
         types::*
     }
 };
-use super::PartsSingleModeSkillListItem;
+use super::{DialogCommonBase, DialogInnerBase, PartsSingleModeSkillListItem};
 
 // private PartsSingleModeSkillListItem _partsSingleModeSkillListItem;
 static mut _PARTSSINGLEMODESKILLLISTITEM_FIELD: *mut FieldInfo = 0 as _;
@@ -64,17 +64,22 @@ extern "C" fn Setup(
         // let image = GameObject::GetComponent(bg_obj, ImageCommon_Class);
         // Image::set_type(image, 1);
 
-        let final_height = needed_height + 50.0;
+        let final_height = needed_height + 150.0;
         info!("final_height; {}", final_height);
         LayoutElement::set_minHeight(layout_element, final_height);
         LayoutElement::set_flexibleHeight(layout_element, 0.0);
 
-        let rect_transform = GameObject::GetComponent(bg_obj, RectTransform::type_object());
-        if rect_transform.is_null() {
-            info!("RectTransform is null for _bgButton?????");
+        let dialog_common = DialogInnerBase::GetDialog(this);
+        if dialog_common.is_null() {
+            info!("dialog_common is null?????");
             return;
         }
-        LayoutRebuilder::ForceRebuildLayoutImmediate(rect_transform);
+        let contents_root = DialogCommonBase::get_ContentsRoot(dialog_common);
+        if contents_root.is_null() {
+            info!("contents_root is null?????");
+            return;
+        }
+        LayoutRebuilder::ForceRebuildLayoutImmediate(contents_root);
     }
 }
 
