@@ -47,7 +47,7 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                     info!("base_game_obj {:p}", base_game_obj);
                     if base_game_obj.is_null() { return; }
 
-                    let text_objects: Array<*mut Il2CppObject> = GameObject::GetComponentsInChildren(dialog_obj, TextCommon::type_object(), true);
+                    let text_objects: Array<*mut Il2CppObject> = GameObject::GetComponentsInChildren(base_game_obj, TextCommon::type_object(), true);
                     info!("text_objects {}", text_objects.this.is_null());
                     if text_objects.this.is_null() { return; }
 
@@ -70,7 +70,7 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                         }
                     }
 
-                    let img_objects: Array<*mut Il2CppObject> = GameObject::GetComponentsInChildren(dialog_obj, ImageCommon::type_object(), true);
+                    let img_objects: Array<*mut Il2CppObject> = GameObject::GetComponentsInChildren(base_game_obj, ImageCommon::type_object(), true);
                     info!("img_objects {}", img_objects.this.is_null());
 
                     if !img_objects.this.is_null() {
