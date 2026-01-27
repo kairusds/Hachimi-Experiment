@@ -56,6 +56,8 @@ mod LiveUtil;
 mod DialogCharacterSimpleSkillDetail;
 pub mod MasterDataUtil;
 pub mod DialogCommonBase;
+pub mod DialogObject;
+pub mod ImageCommon;
 
 #[cfg(target_os = "windows")]
 pub mod SceneManager;
@@ -124,6 +126,8 @@ pub fn init() {
     DialogCharacterSimpleSkillDetail::init(image);
     MasterDataUtil::init(image);
     DialogCommonBase::init(image);
+    DialogObject::init(image);
+    ImageCommon::init(image);
 
     #[cfg(target_os = "windows")]
     {

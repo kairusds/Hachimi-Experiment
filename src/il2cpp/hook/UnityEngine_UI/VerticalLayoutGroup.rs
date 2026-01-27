@@ -5,10 +5,10 @@ pub fn type_object() -> *mut Il2CppObject {
     unsafe { TYPE_OBJECT }
 }
 
-pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
-    get_class_or_return!(UnityEngine_CoreModule, UnityEngine, RectTransform);
-
+pub fn init(UnityEngine_UI: *const Il2CppImage) {
+    get_class_or_return!(UnityEngine_UI, "UnityEngine.UI", VerticalLayoutGroup);
+    
     unsafe {
-        TYPE_OBJECT = il2cpp_type_get_object(il2cpp_class_get_type(RectTransform));
+        TYPE_OBJECT = il2cpp_type_get_object(il2cpp_class_get_type(VerticalLayoutGroup));
     }
 }
