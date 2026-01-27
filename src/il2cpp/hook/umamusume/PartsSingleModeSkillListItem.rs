@@ -26,11 +26,11 @@ static mut _BGBUTTON_FIELD: *mut FieldInfo = 0 as _;
 pub fn get__bgButton(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { _BGBUTTON_FIELD })
 }
-/*
+
 static mut _BGIMAGE_FIELD: *mut FieldInfo = 0 as _;
-fn get__bgImage(this: *mut Il2CppObject) -> *mut Il2CppObject {
+pub fn get__bgImage(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { _BGIMAGE_FIELD })
-}*/
+}
 
 // PartsSingleModeSkillListItem.Info
 static mut get_IsDrawDesc_addr: usize = 0;
@@ -241,7 +241,7 @@ pub fn init(umamusume: *const Il2CppImage) {
         NAMETEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_nameText");
         DESCTEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_descText");
         _BGBUTTON_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgButton");
-        // _BGIMAGE_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgImage");
+        _BGIMAGE_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgImage");
 
         // PartsSingleModeSkillListItem.Info
         // SKILLUPGRADECARDID_FIELD = get_field_from_name(Info, c"SkillUpgradeCardId");

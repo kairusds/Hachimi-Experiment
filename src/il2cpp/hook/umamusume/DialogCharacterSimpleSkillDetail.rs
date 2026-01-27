@@ -45,9 +45,9 @@ extern "C" fn Setup(
 
     let desc_text = PartsSingleModeSkillListItem::get__descText(skill_item);
     info!("desc_text: {:p}", desc_text);
-    let bg_btn = PartsSingleModeSkillListItem::get__bgButton(skill_item);
-    info!("bg_btn: {:p}", bg_btn);
-    let bg_obj = Component::get_gameObject(bg_btn);
+    let bg_img = PartsSingleModeSkillListItem::get__bgImage(skill_item);
+    info!("bg_img: {:p}", bg_img);
+    let bg_obj = Component::get_gameObject(bg_img);
 
     if !desc_text.is_null() && !bg_obj.is_null() {
         Text::set_horizontalOverflow(desc_text, 0); // wrap
@@ -88,32 +88,6 @@ extern "C" fn Setup(
             return;
         }
         LayoutRebuilder::ForceRebuildLayoutImmediate(inner_rect);
-
-        let parent_transform = Transform::get_parent(inner_rect);
-        if parent_transform.is_null() {
-            info!("parent_transform is null");
-            return;
-        }
-        let parent_game_obj = Component::get_gameObject(parent_transform);
-        let parent_rect = GameObject::GetComponent(parent_game_obj, RectTransform::type_object());
-        if parent_rect.is_null() {
-            info!("parent_rect is null");
-            return;
-        }
-        LayoutRebuilder::ForceRebuildLayoutImmediate(parent_rect);
-
-        let grand_parent_transform = Transform::get_parent(parent_rect);
-        if grand_parent_transform.is_null() {
-            info!("grand_parent_transform is null");
-            return;
-        }
-        let gp_game_obj = Component::get_gameObject(grand_parent_transform);
-        let gp_rect = GameObject::GetComponent(gp_game_obj, RectTransform::type_object());
-        if gp_rect.is_null() {
-            info!("gp_rect is null");
-            return;
-        }
-        LayoutRebuilder::ForceRebuildLayoutImmediate(gp_rect);
     }
 }
 
