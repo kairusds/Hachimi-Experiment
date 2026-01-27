@@ -2,15 +2,14 @@ use crate::{
     core::{gui::SkillInfoDialog, Gui, Hachimi, game::Region, utils::mul_int},
     il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_value, get_field_object_value, get_method_addr}, types::*}
 };
-// use once_cell::sync::Lazy;
-// use std::sync::Mutex;
-// use super::ButtonCommon;
-// use fnv::FnvHashMap;
-// use super::{MasterSkillUpgradeDescription, MasterSkillData};
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
+use fnv::FnvHashMap;
+use super::{ButtonCommon, MasterDataUtil};
 
 // static CALLBACK_HANDLES: Lazy<Mutex<Vec<GCHandle>>> = Lazy::new(|| Mutex::default());
 // static SKILL_DATA_MAP: Lazy<Mutex<FnvHashMap<usize, (i32, String, String)>>> = Lazy::new(|| Mutex::default());
-// static SKILL_TEXT_CACHE: Lazy<Mutex<FnvHashMap<i32, (String, String)>>> = Lazy::new(|| Mutex::default());
+static SKILL_TEXT_CACHE: Lazy<Mutex<FnvHashMap<i32, (String, String)>>> = Lazy::new(|| Mutex::default());
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;
@@ -27,29 +26,30 @@ pub fn get__bgButton(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { _BGBUTTON_FIELD })
 }
 
+/*
 static mut _BGIMAGE_FIELD: *mut FieldInfo = 0 as _;
 pub fn get__bgImage(this: *mut Il2CppObject) -> *mut Il2CppObject {
     get_field_object_value(this, unsafe { _BGIMAGE_FIELD })
-}
+}*/
 
 // PartsSingleModeSkillListItem.Info
 static mut get_IsDrawDesc_addr: usize = 0;
 impl_addr_wrapper_fn!(get_IsDrawDesc, get_IsDrawDesc_addr, bool, this: *mut Il2CppObject);
 static mut get_IsDrawNeedSkillPoint_addr: usize = 0;
 impl_addr_wrapper_fn!(get_IsDrawNeedSkillPoint, get_IsDrawNeedSkillPoint_addr, bool, this: *mut Il2CppObject);
-/*
 static mut get_Id_addr: usize = 0;
 impl_addr_wrapper_fn!(get_Id, get_Id_addr, i32, this: *mut Il2CppObject);
+/*
 static mut get_MasterSkillUpgradeDescription_addr: usize = 0;
 impl_addr_wrapper_fn!(get_MasterSkillUpgradeDescription, get_MasterSkillUpgradeDescription_addr, *mut Il2CppObject, this: *mut Il2CppObject);
 static mut get_MasterData_addr: usize = 0;
 impl_addr_wrapper_fn!(get_MasterData, get_MasterData_addr, *mut Il2CppObject, this: *mut Il2CppObject);
-*/
 
 static mut SKILLUPGRADECARDID_FIELD: *mut FieldInfo = 0 as _;
 fn get_SkillUpgradeCardId(this: *mut Il2CppObject) -> i32 {
     get_field_value(this, unsafe { SKILLUPGRADECARDID_FIELD })
 }
+*/
 
 fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig_fn_cb: impl FnOnce()) {
     let skill_cfg = &Hachimi::instance().localized_data.load().config.skill_formatting;
@@ -128,7 +128,6 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
     });
 }
 
-/*
 fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
     if let Some(cached) = SKILL_TEXT_CACHE.lock().unwrap().get(&skill_id) {
         return cached.clone();
@@ -141,7 +140,7 @@ fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
         opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
     };
 
-    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
+    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(MasterDataUtil::GetSkillName(skill_id))).unwrap());
     let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
 
     SKILL_TEXT_CACHE.lock().unwrap().insert(skill_id, (skill_name.clone(), skill_desc.clone()));
@@ -149,12 +148,14 @@ fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
     (skill_name, skill_desc)
 }
 
-
 type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
     get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);
     // GUI skill info
     let skill_id = get_Id(info);
+    if skill_id > 0 {
+        return;
+    }
     // let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
     // let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
     let button = get__bgButton(this);
@@ -188,37 +189,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
         }
     });
     ButtonCommon::SetOnClick(button, delegate.unwrap());
-    let upgrade_id = get_SkillUpgradeCardId(info);
-    info!("SkillUpgradeCardId: {}", upgrade_id);
-    info!("SkillUpgradeDescription {:p}: ", unsafe { MasterSkillUpgradeDescription::SkillUpgradeDescription::CLASS });
-    let upgrade_desc = get_MasterSkillUpgradeDescription(info);
-    if !upgrade_desc.is_null() {
-        let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_Id(upgrade_desc);
-        info!("SkillUpgradeDescription SkillId: {}", desc_id);
-    }
-    let skill_data = get_MasterData(info);
-    if skill_data.is_null() {
-        info!("Info get_MasterData is null");
-        return;
-    }
-    let tag_id = MasterSkillData::getTagId(skill_data);
-    if tag_id.is_null() {
-        info!("SkillData tag_id is null");
-        return;
-    }
-    info!("SkillData TagId: {}", unsafe { (*tag_id).as_utf16str() }.to_string());
 }
-
-type set_MasterSkillUpgradeDescriptionFn = extern "C" fn(this: *mut Il2CppObject, value: *mut Il2CppObject);
-extern "C" fn set_MasterSkillUpgradeDescription(this: *mut Il2CppObject, value: *mut Il2CppObject) {
-    if value.is_null() {
-        info!("set_MasterSkillUpgradeDescription is null");
-        return get_orig_fn!(set_MasterSkillUpgradeDescription, set_MasterSkillUpgradeDescriptionFn)(this, value);
-    }
-    get_orig_fn!(set_MasterSkillUpgradeDescription, set_MasterSkillUpgradeDescriptionFn)(this, value);
-    let desc_id = MasterSkillUpgradeDescription::SkillUpgradeDescription::get_Id(value);
-    info!("set_MasterSkillUpgradeDescription Id: {}", desc_id);
-} */
 
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, PartsSingleModeSkillListItem);
@@ -241,7 +212,7 @@ pub fn init(umamusume: *const Il2CppImage) {
         NAMETEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_nameText");
         DESCTEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_descText");
         _BGBUTTON_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgButton");
-        _BGIMAGE_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgImage");
+        // _BGIMAGE_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgImage");
 
         // PartsSingleModeSkillListItem.Info
         // SKILLUPGRADECARDID_FIELD = get_field_from_name(Info, c"SkillUpgradeCardId");
