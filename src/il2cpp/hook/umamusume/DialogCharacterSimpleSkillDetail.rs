@@ -16,38 +16,52 @@ pub fn get__partsSingleModeSkillListItem(this: *mut Il2CppObject) -> *mut Il2Cpp
     get_field_object_value(this, unsafe { _PARTSSINGLEMODESKILLLISTITEM_FIELD })
 }
 
+// Dll : umamusume.dll
+// Namespace: Gallop
+//public abstract class DialogInnerBase : MonoBehaviour
+//	private Data _dialogData;
+static mut _DIALOGDATA_FIELD: *mut FieldInfo = 0 as _;
+pub fn get__dialogData(this: *mut Il2CppObject) -> *mut Il2CppObject {
+    get_field_object_value(this, unsafe { _DIALOGDATA_FIELD })
+}
+
 // private Void Setup(SkillData skillData, Boolean isDrawNeedSkillPoint, ShowHintLvUpParam showHintLvUpParam, Int32 skillUpgradeCardId, Boolean isSingleMode, Boolean isDisplayUpgradeSkill) { }
-type SetupFn = extern "C" fn(
+// public static Void Open(SkillData skillData, Boolean isDrawNeedSkillPoint, SkillLimitedType skillLimitedType, ShowHintLvUpParam hintLvUpParam, Int32 skillUpgradeCardId, Boolean isSingleMode, Boolean isDisplayUpgradeSkill) { }
+type OpenFn = extern "C" fn(
     this: *mut Il2CppObject, // DialogCharacterSimpleSkillDetail
     skillData: *mut Il2CppObject,
     isDrawNeedSkillPoint: bool,
+    skillLimitedType: *mut Il2CppObject,
     showHintLvUpParam: *mut Il2CppObject,
     skillUpgradeCardId: i32,
     isSingleMode: bool,
     isDisplayUpgradeSkill: bool
 );
-extern "C" fn Setup(
+extern "C" fn Open(
     this: *mut Il2CppObject, // DialogCharacterSimpleSkillDetail
     skillData: *mut Il2CppObject,
     isDrawNeedSkillPoint: bool,
+    skillLimitedType: *mut Il2CppObject,
     showHintLvUpParam: *mut Il2CppObject,
     skillUpgradeCardId: i32,
     isSingleMode: bool,
     isDisplayUpgradeSkill: bool
 ) {
-    get_orig_fn!(Setup, SetupFn)(this, skillData, isDrawNeedSkillPoint, showHintLvUpParam, skillUpgradeCardId, isSingleMode, isDisplayUpgradeSkill);
+    get_orig_fn!(Open, OpenFn)(this, skillData, isDrawNeedSkillPoint, skillLimitedType, showHintLvUpParam, skillUpgradeCardId, isSingleMode, isDisplayUpgradeSkill);
 
     let skill_item = get__partsSingleModeSkillListItem(this);
     if skill_item.is_null() {
-        info!("DialogCharacterSimpleSkillDetail.Setup skill_item is null");
+        info!("DialogCharacterSimpleSkillDetail.Open skill_item is null");
         return;
     }
+    let dialog_data = get__dialogData(this);
+    info!("dialog_data {:p}", dialog_data);
 
     let desc_text = PartsSingleModeSkillListItem::get__descText(skill_item);
     info!("desc_text: {:p}", desc_text);
-    let bg_img = PartsSingleModeSkillListItem::get__bgImage(skill_item);
-    info!("bg_img: {:p}", bg_img);
-    let bg_obj = Component::get_gameObject(bg_img);
+    let bg_btn = PartsSingleModeSkillListItem::get__bgButton(skill_item);
+    info!("bg_btn: {:p}", bg_btn);
+    let bg_obj = Component::get_gameObject(bg_btn);
 
     if !desc_text.is_null() && !bg_obj.is_null() {
         Text::set_horizontalOverflow(desc_text, 0); // wrap
@@ -93,11 +107,14 @@ extern "C" fn Setup(
 
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, DialogCharacterSimpleSkillDetail);
+    get_class_or_return!(umamusume, Gallop, DialogInnerBase);
 
-    let Setup_addr = get_method_addr(DialogCharacterSimpleSkillDetail, c"Setup", 6);
-    new_hook!(Setup_addr, Setup);
+    let Open_addr = get_method_addr(DialogCharacterSimpleSkillDetail, c"Open", 7);
+    new_hook!(Open_addr, Open);
 
     unsafe {
         _PARTSSINGLEMODESKILLLISTITEM_FIELD = get_field_from_name(DialogCharacterSimpleSkillDetail, c"_partsSingleModeSkillListItem");
+        _DIALOGDATA_FIELD = get_field_from_name(DialogInnerBase, c"_dialogData");
+        info!("_DIALOGDATA_FIELD: {:p}", _DIALOGDATA_FIELD);
     }
 }
