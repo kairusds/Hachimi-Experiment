@@ -89,38 +89,39 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                                 let img_go = Component::get_gameObject(img_obj);
                                 info!("img_go {:p}", img_go);
                                 if img_go.is_null(){ return; };
-                                let mut vlg = GameObject::GetComponent(img_go, VerticalLayoutGroup::type_object());
-                                if vlg.is_null() {
-                                    info!("vlg null, maybe not the correct one");
-                                    continue;
-                                    // vlg = GameObject::AddComponent(img_go, VerticalLayoutGroup::type_object());
+
+                                let transform = GameObject::GetComponent(img_go, Transform::type_object());
+                                let child_count = Transform::get_childCount(transform);
+
+                                if child_count > 0 {
+                                    let mut vlg = GameObject::GetComponent(img_go, VerticalLayoutGroup::type_object());
+                                    if vlg.is_null() {
+                                        info!("vlg null, maybe not the correct one");
+                                        continue;
+                                        // vlg = GameObject::AddComponent(img_go, VerticalLayoutGroup::type_object());
+                                    }
+                                    // sliced
+                                    Image::set_type(img_go, 1);
+            
+                                    LayoutGroup::set_padding(vlg, RectOffset::new(20, 20, 20, 20));
+                                    HorizontalOrVerticalLayoutGroup::set_childControlHeight(vlg, true);
+                                    HorizontalOrVerticalLayoutGroup::set_childForceExpandHeight(vlg, false);
+            
+                                    let mut csf = GameObject::GetComponent(img_go, ContentSizeFitter::type_object());
+                                    info!("csf before {:p}", csf);
+            
+                                    if csf.is_null() {
+                                        csf = GameObject::AddComponent(img_go, ContentSizeFitter::type_object());
+                                        info!("csf empty making new one");
+                                    }
+                                    ContentSizeFitter::set_verticalFit(csf, 2); // PreferredSize
+                                } else {
+                                    info!("child_count < 1, skipping");
                                 }
-                                // sliced
-                                Image::set_type(img_go, 1);
-        
-                                LayoutGroup::set_padding(vlg, RectOffset::new(30, 30, 30, 30));
-                                HorizontalOrVerticalLayoutGroup::set_childControlHeight(vlg, true);
-                                HorizontalOrVerticalLayoutGroup::set_childForceExpandHeight(vlg, false);
-        
-                                let mut csf = GameObject::GetComponent(img_go, ContentSizeFitter::type_object());
-                                info!("csf before {:p}", csf);
-        
-                                if csf.is_null() {
-                                    csf = GameObject::AddComponent(img_go, ContentSizeFitter::type_object());
-                                    info!("csf empty making new one");
-                                }
-                                ContentSizeFitter::set_verticalFit(csf, 2); // PreferredSize
-                                // }
-                                // LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
                             }
+                            LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
                         }
                     }
-                }
-
-                let root_rect = DialogObject::get__rootRectTransform(dialog_obj);
-                info!("root_rect {:p}", root_rect);
-                if !root_rect.is_null() {
-                    // LayoutRebuilder::ForceRebuildLayoutImmediate(root_rect);
                 }
             }
         }
