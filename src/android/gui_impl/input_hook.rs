@@ -229,7 +229,7 @@ fn get_ppp(mut env: JNIEnv, gui: &Gui) -> f32 {
     gui.context.zoom_factor() * (view_main_axis_size as f32 / gui.prev_main_axis_size as f32)
 }
 
-fn get_view(mut env: JNIEnv) -> JObject<'_> {
+fn get_view(mut env: JNIEnv<'_>) -> JObject<'_> {
     let activity_thread_class = env.find_class("android/app/ActivityThread").unwrap();
     let activity_thread = env
         .call_static_method(
