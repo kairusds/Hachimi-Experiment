@@ -29,15 +29,12 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
             let length = (*array_ptr).max_length;
             info!("array_ptr max length {}", length);
 
-            let klass_ref: &mut *mut Il2CppClass =
-                (&mut (*array_ptr).obj.__bindgen_anon_1.klass).as_mut();
-
-            let element_size = (*(*klass_ref)).element_size as usize;
-
-            let data_ptr = (array_ptr as *mut u8).add(kIl2CppSizeOfArray);
+            let element_size = std::mem::size_of::<*mut Il2CppObject>(); 
+            let data_ptr = (array_ptr as *mut u8).add(0x20);
 
             for i in 0..length {
-                let dialog_obj = data_ptr.add(i * element_size) as *mut Il2CppObject; // DialogObject
+                let slot_ptr = data_ptr.add(i as usize * element_size) as *mut *mut Il2CppObject;
+                let dialog_obj = unsafe { *slot_ptr }; // DialogObject
                 info!("dialog_obj {:p}", dialog_obj);
                 if dialog_obj.is_null(){ return; };
 
@@ -50,10 +47,10 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
 
                     let text_objects = GameObject::GetComponentsInChildren(dialog_obj, TextCommon::type_object(), true);                    
                     for text_obj in unsafe { text_objects.as_slice().iter() } {
-                        // if !*text_obj.is_null() {
-                        Text::set_horizontalOverflow(*text_obj, 0);
-                        Text::set_verticalOverflow(*text_obj, 1);
-                        // }
+                    // if !*text_obj.is_null() {
+                    Text::set_horizontalOverflow(*text_obj, 0);
+                    Text::set_verticalOverflow(*text_obj, 1);
+                    // }
                     }
 
                     let img_objects = GameObject::GetComponentsInChildren(dialog_obj, ImageCommon::type_object(), true);
