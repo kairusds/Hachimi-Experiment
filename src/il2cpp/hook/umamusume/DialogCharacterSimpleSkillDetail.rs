@@ -1,14 +1,14 @@
 use crate::{
     il2cpp::{
         hook::{
-            UnityEngine_CoreModule::{Component, GameObject, RectTransform},
+            UnityEngine_CoreModule::{Component, GameObject, RectTransform, Transform},
             UnityEngine_UI::{LayoutElement, LayoutRebuilder, Text}
         },
         symbols::{get_field_from_name, get_field_object_value, get_method_addr},
         types::*
     }
 };
-use super::{DialogCommonBase, DialogInnerBase, PartsSingleModeSkillListItem};
+use super::PartsSingleModeSkillListItem;
 
 // private PartsSingleModeSkillListItem _partsSingleModeSkillListItem;
 static mut _PARTSSINGLEMODESKILLLISTITEM_FIELD: *mut FieldInfo = 0 as _;
@@ -69,17 +69,51 @@ extern "C" fn Setup(
         LayoutElement::set_minHeight(layout_element, final_height);
         LayoutElement::set_flexibleHeight(layout_element, 0.0);
 
-        let dialog_common = DialogInnerBase::GetDialog(this);
-        if dialog_common.is_null() {
-            info!("dialog_common is null?????");
+        let this_obj = Component::get_gameObject(this);
+        if this.is_null() {
+            info!("this_obj is NULL");
             return;
         }
-        let contents_root = DialogCommonBase::get_ContentsRoot(dialog_common);
-        if contents_root.is_null() {
-            info!("contents_root is null?????");
+
+        let mut this_layout = GameObject::GetComponent(this_obj, LayoutElement::type_object());
+        if this_layout.is_null() {
+            this_layout = GameObject::AddComponent(this_obj, LayoutElement::type_object());
+        }
+        LayoutElement::set_minHeight(this_layout, final_height);
+        LayoutElement::set_flexibleHeight(this_layout, 0.0);
+
+        let inner_rect = GameObject::GetComponent(this_obj, RectTransform::type_object());
+        if inner_rect.is_null() {
+            info!("inner_rect is null");
             return;
         }
-        LayoutRebuilder::ForceRebuildLayoutImmediate(contents_root);
+        LayoutRebuilder::ForceRebuildLayoutImmediate(inner_rect);
+
+        let parent_transform = Transform::get_parent(inner_rect);
+        if parent_transform.is_null() {
+            info!("parent_transform is null");
+            return;
+        }
+        let parent_game_obj = Component::get_gameObject(parent_transform);
+        let parent_rect = GameObject::GetComponent(parent_game_obj, RectTransform::type_object());
+        if parent_rect.is_null() {
+            info!("parent_rect is null");
+            return;
+        }
+        LayoutRebuilder::ForceRebuildLayoutImmediate(parent_rect);
+
+        let grand_parent_transform = Transform::get_parent(parent_rect);
+        if grand_parent_transform.is_null() {
+            info!("grand_parent_transform is null");
+            return;
+        }
+        let gp_game_obj = Component::get_gameObject(grand_parent_transform);
+        let gp_rect = GameObject::GetComponent(gp_game_obj, RectTransform::type_object());
+        if gp_rect.is_null() {
+            info!("gp_rect is null");
+            return;
+        }
+        LayoutRebuilder::ForceRebuildLayoutImmediate(gp_rect);
     }
 }
 
