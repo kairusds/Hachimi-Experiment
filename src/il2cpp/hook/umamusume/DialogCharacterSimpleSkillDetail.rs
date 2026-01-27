@@ -27,31 +27,29 @@ pub fn get__dialogData(this: *mut Il2CppObject) -> *mut Il2CppObject {
 
 // private Void Setup(SkillData skillData, Boolean isDrawNeedSkillPoint, ShowHintLvUpParam showHintLvUpParam, Int32 skillUpgradeCardId, Boolean isSingleMode, Boolean isDisplayUpgradeSkill) { }
 // public static Void Open(SkillData skillData, Boolean isDrawNeedSkillPoint, SkillLimitedType skillLimitedType, ShowHintLvUpParam hintLvUpParam, Int32 skillUpgradeCardId, Boolean isSingleMode, Boolean isDisplayUpgradeSkill) { }
-type OpenFn = extern "C" fn(
+type SetupFn = extern "C" fn(
     this: *mut Il2CppObject, // DialogCharacterSimpleSkillDetail
     skillData: *mut Il2CppObject,
     isDrawNeedSkillPoint: bool,
-    skillLimitedType: *mut Il2CppObject,
     showHintLvUpParam: *mut Il2CppObject,
     skillUpgradeCardId: i32,
     isSingleMode: bool,
     isDisplayUpgradeSkill: bool
 );
-extern "C" fn Open(
+extern "C" fn Setup(
     this: *mut Il2CppObject, // DialogCharacterSimpleSkillDetail
     skillData: *mut Il2CppObject,
     isDrawNeedSkillPoint: bool,
-    skillLimitedType: *mut Il2CppObject,
     showHintLvUpParam: *mut Il2CppObject,
     skillUpgradeCardId: i32,
     isSingleMode: bool,
     isDisplayUpgradeSkill: bool
 ) {
-    get_orig_fn!(Open, OpenFn)(this, skillData, isDrawNeedSkillPoint, skillLimitedType, showHintLvUpParam, skillUpgradeCardId, isSingleMode, isDisplayUpgradeSkill);
+    get_orig_fn!(Setup, SetupFn)(this, skillData, isDrawNeedSkillPoint, showHintLvUpParam, skillUpgradeCardId, isSingleMode, isDisplayUpgradeSkill);
 
     let skill_item = get__partsSingleModeSkillListItem(this);
     if skill_item.is_null() {
-        info!("DialogCharacterSimpleSkillDetail.Open skill_item is null");
+        info!("DialogCharacterSimpleSkillDetail.Setup skill_item is null");
         return;
     }
     let dialog_data = get__dialogData(this);
@@ -109,8 +107,8 @@ pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, DialogCharacterSimpleSkillDetail);
     get_class_or_return!(umamusume, Gallop, DialogInnerBase);
 
-    let Open_addr = get_method_addr(DialogCharacterSimpleSkillDetail, c"Open", 7);
-    new_hook!(Open_addr, Open);
+    let Setup_addr = get_method_addr(DialogCharacterSimpleSkillDetail, c"Setup", 6);
+    new_hook!(Setup_addr, Setup);
 
     unsafe {
         _PARTSSINGLEMODESKILLLISTITEM_FIELD = get_field_from_name(DialogCharacterSimpleSkillDetail, c"_partsSingleModeSkillListItem");
