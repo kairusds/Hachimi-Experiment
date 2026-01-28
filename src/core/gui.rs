@@ -37,10 +37,17 @@ use super::{
 
 macro_rules! add_font {
     ($fonts:expr, $family_fonts:expr, $filename:literal) => {
-        $fonts.font_data.insert(
-            $filename.to_owned(),
-            egui::FontData::from_static(include_bytes!(concat!("../../assets/fonts/", $filename))).into()
-        );
+        let bytes = include_bytes!(concat!("../../assets/fonts/", $filename));
+        
+        let font_data = if $filename.ends_with(".woff2") {
+            let decompressed = woofwoof::decompress(bytes)
+                .expect(&format!("Failed to decompress font: {}", $filename));
+            egui::FontData::from_owned(decompressed)
+        } else {
+            egui::FontData::from_static(bytes)
+        };
+
+        $fonts.font_data.insert($filename.to_owned(), font_data.into());
         $family_fonts.push($filename.to_owned());
     };
 }
@@ -240,13 +247,17 @@ impl Gui {
         let mut italic_stack = Vec::new();
         let mut bold_italic_stack = Vec::new();
 
-        add_font!(fonts, regular_stack, "AlibabaPuHuiTi-3-45-Light.otf");
-        add_font!(fonts, regular_stack, "NotoSans-Light.ttf");
+        add_font!(fonts, regular_stack, "AlibabaPuHuiTi-3-45-Light.woff2");
+        add_font!(fonts, regular_stack, "NotoSans-Light.woff2");
+        add_font!(fonts, regular_stack, "NotoSansJP-Light.woff2");
         add_font!(fonts, regular_stack, "FontAwesome.otf");
 
-        add_font!(fonts, bold_stack, "NotoSans-Bold.ttf");
-        add_font!(fonts, italic_stack, "NotoSans-LightItalic.ttf");
-        add_font!(fonts, bold_italic_stack, "NotoSans-BoldItalic.ttf");
+        add_font!(fonts, bold_stack, "AlibabaPuHuiTi-3-85-Bold.woff2");
+        add_font!(fonts, bold_stack, "NotoSans-Bold.woff2");
+        add_font!(fonts, italic_stack, "NotoSans-LightItalic.woff2");
+        add_font!(fonts, bold_stack, "NotoSansJP-Bold.woff2");
+
+        add_font!(fonts, bold_italic_stack, "NotoSans-BoldItalic.woff2");
 
         fonts.families.insert(egui::FontFamily::Proportional, regular_stack);
         fonts.families.insert(egui::FontFamily::Name("BoldStack".into()), bold_stack);
@@ -2322,7 +2333,38 @@ impl Window for LicenseWindow {
         .open(&mut open)
         .show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.label(include_str!("../../LICENSE"));
+                ui.heading(t!("hachimi"));
+                ui.collapsing(t!("license.gpl_v3_only_notice"), |ui| {
+                    ui.add(egui::TextEdit::multiline(&mut include_str!("../../LICENSE"))
+                        .font(egui::TextStyle::Monospace)
+                        .desired_rows(10)
+                        .interactive(false)
+                    );
+                });
+                ui.separator();
+
+                ui.heading("Open Font Licenses (OFL)");
+                ui.label(t!("license.ofl_fonts_header"));
+                ui.group(|ui| {
+                    ui.label(t!("license.font_font_awesome"));
+                    ui.label(t!("license.font_noto_sans"));
+                    ui.label(t!("license.font_noto_sans_jp"));
+                });
+
+                ui.add_space(4.0);
+                ui.collapsing(t!("license.ofl_notice"), |ui| {
+                    ui.add(egui::TextEdit::multiline(&mut include_str!("../../assets/fonts/OFL.txt"))
+                        .font(egui::TextStyle::Monospace)
+                        .desired_rows(10)
+                        .interactive(false)
+                    );
+                });
+
+                ui.add_space(10.0);
+                ui.separator();
+
+                ui.heading(t!("license.font_alibaba_header"));
+                ui.label(t!("license.font_alibaba_body"));
             });
         });
 

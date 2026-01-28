@@ -131,10 +131,6 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
 }
 
 fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
-    if let Some(cached) = SKILL_TEXT_CACHE.lock().unwrap().get(&skill_id) {
-        return cached.clone();
-    }
-
     let name = get__nameText(this);
     let desc = get__descText(this);
 
@@ -142,12 +138,19 @@ fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
         opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
     };
 
-    let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(MasterDataUtil::GetSkillName(skill_id))).unwrap());
-    let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
+    let current_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(MasterDataUtil::GetSkillName(skill_id))).unwrap());
+    let current_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
 
-    SKILL_TEXT_CACHE.lock().unwrap().insert(skill_id, (skill_name.clone(), skill_desc.clone()));
+    let mut cache = SKILL_TEXT_CACHE.lock().unwrap();
 
-    (skill_name, skill_desc)
+    if let Some((cached_name, cached_desc)) = cache.get(&skill_id) {
+        if cached_name == &current_name && cached_desc == &current_desc {
+            return (cached_name.clone(), cached_desc.clone());
+        }
+    }
+
+    cache.insert(skill_id, (current_name.clone(), current_desc.clone()));
+    (current_name, current_desc)
 }
 
 type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
@@ -206,8 +209,8 @@ pub fn init(umamusume: *const Il2CppImage) {
         new_hook!(UpdateItem_addr, UpdateItemOther);
     }
 
-    let SetupOnClickSkillButton_addr = get_method_addr(PartsSingleModeSkillListItem, c"SetupOnClickSkillButton", 1);
-    new_hook!(SetupOnClickSkillButton_addr, SetupOnClickSkillButton);
+    // let SetupOnClickSkillButton_addr = get_method_addr(PartsSingleModeSkillListItem, c"SetupOnClickSkillButton", 1);
+    // new_hook!(SetupOnClickSkillButton_addr, SetupOnClickSkillButton);
 
     unsafe {
         // PartsSingleModeSkillListItem
