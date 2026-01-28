@@ -1439,27 +1439,6 @@ impl SkillInfoDialog {
             id: random_id()
         }
     }
-
-    fn new_window<'a>(&mut self, ctx: &egui::Context) -> egui::Window<'a> {
-        let id = &self.id;
-        let scale = get_scale(ctx);
-        let salt = get_scale_salt(ctx);
-
-        let mut frame = egui::Frame::window(&ctx.style());
-        frame.shadow = egui::Shadow::NONE;
-
-        egui::Window::new("")
-        .id(id.with(salt.to_bits()))
-        .frame(frame)
-        .pivot(egui::Align2::CENTER_CENTER)
-        .fixed_pos(ctx.viewport_rect().max / 2.0)
-        .min_width(96.0 * scale)
-        .max_width(310.0 * scale)
-        .max_height(200.0 * scale)
-        .title_bar(false)
-        .collapsible(false)
-        .resizable(false)
-    }
 }
 
 impl Window for SkillInfoDialog {
@@ -1469,39 +1448,47 @@ impl Window for SkillInfoDialog {
         let mut open = true;
         let mut open2 = true;
 
+        /*
         egui::Area::new(self.id.with("modal_dimmer"))
         .interactable(true)
         .fixed_pos(egui::Pos2::ZERO)
         .show(ctx, |ui| {
-            ui.painter().rect_filled(ui.ctx().screen_rect(), 0.0, Color32::from_black_alpha(100));
-        });
+            ui.painter().rect_filled(ui.ctx().screen_rect(), 0.0, Color32::from_black_alpha(80));
+        });*/
 
-        let window_res = SkillInfoDialog::new_window(self, ctx)
+        let window_res = new_window(ctx, self.id, "")
+        .max_width(310.0 * scale)
+        .max_height(230.0 * scale)
+        .title_bar(false)
         .open(&mut open)
-        .show(ctx, |ui: &mut egui::Ui| {
-            ui.vertical(|ui| {
-                egui::Frame::NONE
-                .inner_margin(10.0 * scale)
-                .show(ui, |ui| {
-                    egui::ScrollArea::vertical()                    
-                    .show(ui, |ui| {
-                        ui.horizontal_wrapped(|ui| {
-                            rich_text_label(ui, &format!("<bold><size=16>{}</bold></size>", self.name));
-                            rich_text_label(ui, &format!("#<bold>{}</bold>", self.skill_id.to_string()));
-                        });
-                        ui.separator();
-                        rich_text_label(ui, &self.desc);
-                    });
-                });
+        .show(ctx, |ui| {
+            ui.scope(|ui| {
+                ui.style_mut().visuals = egui::Visuals::light();
 
-                ui.separator();
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                    ui.add_space(6.0 * scale);
-                    if ui.button(t!("ok")).clicked() {
-                        open2 = false;
-                    }
+                ui.vertical(|ui| {
+                    egui::Frame::NONE
+                    .inner_margin(10.0 * scale)
+                    .show(ui, |ui| {
+                        egui::ScrollArea::vertical()                    
+                        .show(ui, |ui| {
+                            ui.horizontal_wrapped(|ui| {
+                                rich_text_label(ui, &format!("<bold><size=16>{}</bold></size>", self.name));
+                                rich_text_label(ui, &format!("#<bold>{}</bold>", self.skill_id.to_string()));
+                            });
+                            ui.separator();
+                            rich_text_label(ui, &self.desc);
+                        });
+                    });
+    
+                    ui.separator();
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                        ui.add_space(6.0 * scale);
+                        if ui.button(t!("ok")).clicked() {
+                            open2 = false;
+                        }
+                    });
+                    ui.add_space(5.0 * scale);
                 });
-                ui.add_space(5.0 * scale);
             });
         });
 
