@@ -101,9 +101,9 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
 
                                         ContentSizeFitter::set_verticalFit(csf, 2); // PreferredSize
                                         LayoutGroup::set_padding(vlg, RectOffset::new(20, 20, 20, 20));
-                                    } else {
-                                        info!("child_count < 1, skipping");
                                     }
+                                } else {
+                                    info!("child_count < 1");
                                 }
                             }
                             LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
