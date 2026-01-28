@@ -35,25 +35,57 @@ use super::{
     Hachimi
 };
 
+pub fn decompress_woff2(bytes: &[u8]) -> Result<Vec<u8>, std::io::Error> {
+    let mut decompressed = Vec::new();
+
+    let num_tables = u16::from_be_bytes([bytes[12], bytes[13]]) as usize;
+
+    let mut offset = 48; 
+    for _ in 0..num_tables {
+        let flags = bytes[offset];
+        offset += 1;
+
+        if (flags & 0x3f) == 63 { offset += 4; }
+
+        while bytes[offset] & 0x80 != 0 { offset += 1; }
+        offset += 1;
+
+        let tag_index = flags & 0x3f;
+        let transform_type = (flags & 0xc0) >> 6;
+        
+        let has_transform_length = if tag_index == 10 || tag_index == 11 {
+            transform_type == 0 
+        } else {
+            transform_type != 3 
+        };
+
+        if has_transform_length {
+            while bytes[offset] & 0x80 != 0 { offset += 1; }
+            offset += 1;
+        }
+    }
+
+    let mut input = &bytes[offset..];
+    match brotli_decompressor::BrotliDecompress(&mut input, &mut decompressed) {
+        Ok(_) => Ok(decompressed),
+        Err(e) => Err(e),
+    }
+}
+
 macro_rules! add_font {
     ($fonts:expr, $family_fonts:expr, $filename:literal) => {
         let bytes = include_bytes!(concat!("../../assets/fonts/", $filename));
-        
         let font_data = if $filename.ends_with(".woff2") {
-            let mut decompressed = Vec::new();
-            let mut input_slice = &bytes[48..]; 
-            
-            match brotli_decompressor::BrotliDecompress(&mut input_slice, &mut decompressed) {
-                Ok(_) => egui::FontData::from_owned(decompressed),
+            match decompress_woff2(bytes) {
+                Ok(data) => egui::FontData::from_owned(data),
                 Err(e) => {
-                    info!("Brotli error for {}: {:?}", $filename, e);
+                    info!("Woff2 failed for {}: {:?}", $filename, e);
                     egui::FontData::from_static(include_bytes!("../../assets/fonts/FontAwesome.otf"))
                 }
             }
         } else {
             egui::FontData::from_static(bytes)
         };
-
         $fonts.font_data.insert($filename.to_owned(), font_data.into());
         $family_fonts.push($filename.to_owned());
     };
