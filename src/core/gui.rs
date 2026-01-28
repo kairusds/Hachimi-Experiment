@@ -38,17 +38,18 @@ use super::{
 macro_rules! add_font {
     ($fonts:expr, $family_fonts:expr, $filename:literal) => {
         let bytes = include_bytes!(concat!("../../assets/fonts/", $filename));
-
+        
         let font_data = if $filename.ends_with(".woff2") {
             let mut decompressed = Vec::new();
-            let mut reader = brotli::Decompressor::new(&bytes[48..], 4096);
-
-            use std::io::Read;
-            if let Err(e) = reader.read_to_end(&mut decompressed) {
-                 panic!("Brotli decompression failed for {}: {}", $filename, e);
+            let mut input_slice = &bytes[48..]; 
+            
+            match brotli_decompressor::BrotliDecompress(&mut input_slice, &mut decompressed) {
+                Ok(_) => egui::FontData::from_owned(decompressed),
+                Err(e) => {
+                    info!("Brotli error for {}: {:?}", $filename, e);
+                    egui::FontData::from_static(include_bytes!("../../assets/fonts/FontAwesome.otf"))
+                }
             }
-
-            egui::FontData::from_owned(decompressed)
         } else {
             egui::FontData::from_static(bytes)
         };
