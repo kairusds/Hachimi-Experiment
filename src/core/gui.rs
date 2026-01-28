@@ -1449,8 +1449,9 @@ impl Window for SkillInfoDialog {
         let mut open2 = true;
 
         let light_frame = egui::Frame::window(&ctx.style())
-            .fill(egui::Color32::from_rgb(245, 245, 245))
-            .stroke(egui::Stroke::new(1.0, egui::Color32::LIGHT_GRAY))
+            .fill(egui::Color32::from_gray(241))
+            .rounding(10.0 * scale)
+            .stroke(egui::Stroke::new(1.0, egui::Color32::from_gray(210)))
             .shadow(egui::Shadow::NONE);
 
         let window_res = new_window(ctx, self.id, "")
