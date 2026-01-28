@@ -36,51 +36,84 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
             for i in 0..length {
                 let slot_ptr = data_ptr.add(i as usize * element_size) as *mut *mut Il2CppObject;
                 let dialog_obj = unsafe { *slot_ptr }; // DialogObject
-                info!("dialog_obj {:p}", dialog_obj);
 
                 let base_rect = DialogObject::get__baseRectTransform(dialog_obj);
-                info!("base_rect {:p}", base_rect);
 
                 let base_game_obj = Component::get_gameObject(base_rect);
-                let transform = GameObject::get_transform(base_game_obj);
-                let child_count = Transform::get_childCount(transform);
-                info!("transform child_count {}", child_count);
+                let img_objects: Array<*mut Il2CppObject> = GameObject::GetComponentsInChildren(base_game_obj, ImageCommon::type_object(), true);
+                info!("img_objects {}", img_objects.this.is_null());
 
-                for j in 0..child_count {
-                    let child = Transform::GetChild(transform, j);
-                    let child_go = Component::get_gameObject(child);
-                    let obj_name = Object::get_name(child_go);
-                    let name_str = unsafe { (*obj_name).as_utf16str() }.to_string();
-                    info!("name_str {}", name_str);
+                let len = (*img_objects.this).max_length;
+                let data_ptr = (img_objects.this as *mut u8).add(0x20) as *mut *mut Il2CppObject;
 
-                    // Found the skill container GEEEGEEEEEEEE
+                for i in 0..len {
+                    let img_obj = *data_ptr.add(i as usize);
+                    let img_go = Component::get_gameObject(img_obj);
+                    let object_name = Object::get_name(img_go);
+                    let name_str = unsafe { (*object_name).as_utf16str() }.to_string();
+                    info!("object_name {}", name_str);
+
                     if name_str == "Skill" {
-                        info!("im inside skill");
-                        let mut vlg = GameObject::GetComponent(child_go, VerticalLayoutGroup::type_object());
+                        info!("skill in");
+                        Image::set_type(img_obj, 1); // Sliced
+                        let mut vlg = GameObject::GetComponent(img_go, VerticalLayoutGroup::type_object());
                         if vlg.is_null() {
-                            vlg = GameObject::AddComponent(child_go, VerticalLayoutGroup::type_object());
-                            info!("add missing vlg to skill");
+                            info!("vlg is null, creating");
+                            vlg = GameObject::AddComponent(img_go, VerticalLayoutGroup::type_object());
                         }
+
                         HorizontalOrVerticalLayoutGroup::set_childControlHeight(vlg, false);
                         HorizontalOrVerticalLayoutGroup::set_childForceExpandHeight(vlg, false);
-                        LayoutGroup::set_padding(vlg, RectOffset::new(20, 20, 20, 20));
+                        LayoutGroup::set_padding(vlg, RectOffset::new(25, 25, 20, 20));
 
-                        let img_comp = GameObject::GetComponent(child_go, ImageCommon::type_object());
-                        if !img_comp.is_null() {
-                            Image::set_type(img_comp, 1); // Sliced
-                        }
-                        
-                        let mut csf = GameObject::GetComponent(child_go, ContentSizeFitter::type_object());
+                        let mut csf = GameObject::GetComponent(img_go, ContentSizeFitter::type_object());
                         if csf.is_null() {
-                            info!("why csf null");
-                            csf = GameObject::AddComponent(child_go, ContentSizeFitter::type_object());
+                            info!("csf null, new one");
+                            csf = GameObject::AddComponent(img_go, ContentSizeFitter::type_object());
                         }
-                        ContentSizeFitter::set_verticalFit(csf, 2); // PreferredSize
-
+                        ContentSizeFitter::set_verticalFit(csf, 2);
                         LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
                     }
                 }
             }
+
+            /*
+            let transform = GameObject::get_transform(base_game_obj);
+            let child_count = Transform::get_childCount(transform);
+            info!("transform child_count {}", child_count);
+
+            for j in 0..child_count {
+                let child = Transform::GetChild(transform, j);
+                let child_go = Component::get_gameObject(child);
+                let obj_name = Object::get_name(child_go);
+                let name_str = unsafe { (*obj_name).as_utf16str() }.to_string();
+                info!("name_str {}", name_str);
+
+                if name_str == "Skill" {
+                    info!("im inside skill");
+                    let mut vlg = GameObject::GetComponent(child_go, VerticalLayoutGroup::type_object());
+                    if vlg.is_null() {
+                        vlg = GameObject::AddComponent(child_go, VerticalLayoutGroup::type_object());
+                        info!("add missing vlg to skill");
+                    }
+                    HorizontalOrVerticalLayoutGroup::set_childControlHeight(vlg, false);
+                    HorizontalOrVerticalLayoutGroup::set_childForceExpandHeight(vlg, false);
+                    LayoutGroup::set_padding(vlg, RectOffset::new(20, 20, 20, 20));
+
+                    let img_comp = GameObject::GetComponent(child_go, ImageCommon::type_object());
+                    if !img_comp.is_null() {
+                        Image::set_type(img_comp, 1);
+                    }
+                    
+                    let mut csf = GameObject::GetComponent(child_go, ContentSizeFitter::type_object());
+                    if csf.is_null() {
+                        info!("why csf null");
+                        csf = GameObject::AddComponent(child_go, ContentSizeFitter::type_object());
+                    }
+                    ContentSizeFitter::set_verticalFit(csf, 2);
+
+                    LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
+                }*/
         }
     }
 }
