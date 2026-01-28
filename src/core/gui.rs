@@ -40,8 +40,9 @@ macro_rules! add_font {
         let bytes = include_bytes!(concat!("../../assets/fonts/", $filename));
         
         let font_data = if $filename.ends_with(".woff2") {
-            let decompressed = woofwoof::decompress(bytes)
-                .expect(&format!("Failed to decompress font: {}", $filename));
+            let mut decompressed = Vec::new();
+            brotli_decompressor::BrotliDecompress(&mut &bytes[..], &mut decompressed)
+                .expect(&format!("Brotli decompression failed: {}", $filename));
             egui::FontData::from_owned(decompressed)
         } else {
             egui::FontData::from_static(bytes)

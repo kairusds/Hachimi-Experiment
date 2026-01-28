@@ -44,7 +44,7 @@ rust-i18n = "3.1"
 sys-locale = "0.3.2"
 rusqlite = { version = "0.38.0", features = ["bundled"] }
 lazy_static = "1.5.0"
-woofwoof = "1.0.2"
+brotli-decompressor = "5.0.0"
 
 [target.'cfg(target_os = "android")'.dependencies]
 libc = "0.2"
