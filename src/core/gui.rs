@@ -35,21 +35,72 @@ use super::{
     Hachimi
 };
 
+// https://github.com/google/woff2
 pub fn decompress_woff2(bytes: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-    for offset in 48..1024 {
+    if bytes.len() < 48 || &bytes[0..4] != b"wOF2" {
+        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Not a WOFF2 file"));
+    }
+
+    let num_tables = u16::from_be_bytes([bytes[12], bytes[13]]) as usize;
+
+    let mut offset = 48;
+
+    for _ in 0..num_tables {
         if offset >= bytes.len() { break; }
 
-        let mut decompressed = Vec::new();
-        let mut input = &bytes[offset..];
+        let flags = bytes[offset];
+        offset += 1;
 
-        if let Ok(_) = brotli_decompressor::BrotliDecompress(&mut input, &mut decompressed) {
-            if !decompressed.is_empty() {
-                return Ok(decompressed);
-            }
+        if (flags & 0x3f) == 63 {
+            offset += 4;
+        }
+
+        while offset < bytes.len() && (bytes[offset] & 0x80) != 0 { offset += 1; }
+        offset += 1;
+
+        let tag_index = flags & 0x3f;
+        let transform_type = (flags & 0xc0) >> 6;
+
+        let has_transform_length = if tag_index == 10 || tag_index == 11 {
+            transform_type == 0
+        } else {
+            transform_type != 3
+        };
+
+        if has_transform_length {
+            while offset < bytes.len() && (bytes[offset] & 0x80) != 0 { offset += 1; }
+            offset += 1;
         }
     }
 
-    Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Could not find valid Brotli stream in WOFF2"))
+    let flavor = u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
+    if flavor == 0x74746366 { // 'ttcf'
+        while offset < bytes.len() && (bytes[offset] & 0x80) != 0 { offset += 1; }
+        offset += 1; 
+    }
+    
+    let mut input = &bytes[offset..];
+    let mut decompressed = Vec::new();
+
+    match brotli_decompressor::BrotliDecompress(&mut input, &mut decompressed) {
+        Ok(_) => {
+            if decompressed.is_empty() {
+                return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "Decompression produced no data"));
+            }
+            Ok(decompressed)
+        },
+        Err(e) => {
+            let aligned_offset = (offset + 3) & !3;
+            if aligned_offset != offset && aligned_offset < bytes.len() {
+                let mut input_alt = &bytes[aligned_offset..];
+                let mut decompressed_alt = Vec::new();
+                if let Ok(_) = brotli_decompressor::BrotliDecompress(&mut input_alt, &mut decompressed_alt) {
+                    return Ok(decompressed_alt);
+                }
+            }
+            Err(e)
+        }
+    }
 }
 
 macro_rules! add_font {
