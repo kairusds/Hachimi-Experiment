@@ -2277,9 +2277,11 @@ impl AboutWindow {
 
 impl Window for AboutWindow {
     fn run(&mut self, ctx: &egui::Context) -> bool {
+        let scale = get_scale(ctx);
         let mut open = true;
 
         new_window(ctx, self.id, t!("about.title"))
+        .max_width(310.0 * scale)
         .open(&mut open)
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
@@ -2290,7 +2292,9 @@ impl Window for AboutWindow {
                 });
             });
             ui.label(t!("about.copyright", year = Utc::now().year()));
-            ui.horizontal(|ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.spacing_mut().item_spacing.x = 8.0;
+
                 if ui.button(t!("about.view_license")).clicked() {
                     thread::spawn(|| {
                         Gui::instance().unwrap()
@@ -2303,13 +2307,13 @@ impl Window for AboutWindow {
                 if ui.button(t!("about.open_website")).clicked() {
                     Application::OpenURL(WEBSITE_URL.to_il2cpp_string());
                 }
+
                 if ui.button(t!("about.view_source_code")).clicked() {
                     Application::OpenURL(format!("https://github.com/{}", REPO_PATH).to_il2cpp_string());
                 }
-            });
-            // TODO: add central updater for both Android(only version check) and Windows
-            #[cfg(target_os = "windows")]
-            ui.vertical(|ui| {
+
+                // TODO: add central updater for both Android(only version check) and Windows
+                #[cfg(target_os = "windows")]
                 if ui.button(t!("about.check_for_updates")).clicked() {
                     Hachimi::instance().updater.clone().check_for_updates(|_| {});
                 }
