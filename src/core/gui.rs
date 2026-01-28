@@ -1448,47 +1448,43 @@ impl Window for SkillInfoDialog {
         let mut open = true;
         let mut open2 = true;
 
-        /*
-        egui::Area::new(self.id.with("modal_dimmer"))
-        .interactable(true)
-        .fixed_pos(egui::Pos2::ZERO)
-        .show(ctx, |ui| {
-            ui.painter().rect_filled(ui.ctx().screen_rect(), 0.0, Color32::from_black_alpha(80));
-        });*/
+        let light_frame = egui::Frame::window(&ctx.style())
+            .fill(egui::Color32::from_rgb(245, 245, 245))
+            .stroke(egui::Stroke::new(1.0, egui::Color32::LIGHT_GRAY))
+            .shadow(egui::Shadow::NONE);
 
         let window_res = new_window(ctx, self.id, "")
         .max_width(310.0 * scale)
         .max_height(230.0 * scale)
+        .frame(light_frame)
         .title_bar(false)
         .open(&mut open)
         .show(ctx, |ui| {
-            ui.scope(|ui| {
-                ui.style_mut().visuals = egui::Visuals::light();
+            ui.style_mut().visuals = egui::Visuals::light();
 
-                ui.vertical(|ui| {
-                    egui::Frame::NONE
-                    .inner_margin(10.0 * scale)
+            ui.vertical(|ui| {
+                egui::Frame::NONE
+                .inner_margin(10.0 * scale)
+                .show(ui, |ui| {
+                    egui::ScrollArea::vertical()                    
                     .show(ui, |ui| {
-                        egui::ScrollArea::vertical()                    
-                        .show(ui, |ui| {
-                            ui.horizontal_wrapped(|ui| {
-                                rich_text_label(ui, &format!("<bold><size=16>{}</bold></size>", self.name));
-                                rich_text_label(ui, &format!("#<bold>{}</bold>", self.skill_id.to_string()));
-                            });
-                            ui.separator();
-                            rich_text_label(ui, &self.desc);
+                        ui.horizontal_wrapped(|ui| {
+                            rich_text_label(ui, &format!("<bold><size=16>{}</bold></size>", self.name));
+                            rich_text_label(ui, &format!("#<bold>{}</bold>", self.skill_id.to_string()));
                         });
+                        ui.separator();
+                        rich_text_label(ui, &self.desc);
                     });
-    
-                    ui.separator();
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                        ui.add_space(6.0 * scale);
-                        if ui.button(t!("ok")).clicked() {
-                            open2 = false;
-                        }
-                    });
-                    ui.add_space(5.0 * scale);
                 });
+
+                ui.separator();
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    ui.add_space(6.0 * scale);
+                    if ui.button(t!("ok")).clicked() {
+                        open2 = false;
+                    }
+                });
+                ui.add_space(5.0 * scale);
             });
         });
 
