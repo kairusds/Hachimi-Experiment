@@ -113,7 +113,7 @@ impl Hachimi {
             localized_data: ArcSwap::default(),
             tl_updater: Arc::default(),
 
-            // Same with chara_data
+            // Same with these
             chara_data: ArcSwap::default(),
 
             game,
