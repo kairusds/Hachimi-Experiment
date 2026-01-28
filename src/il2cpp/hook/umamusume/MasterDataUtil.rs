@@ -1,9 +1,3 @@
-// Dll : umamusume.dll
-// Namespace: Gallop
-// public static class MasterDataUtil
-
-//public static String GetSkillName(Int32 skillId) { }
-
 use crate::il2cpp::{symbols::get_method_addr, types::*};
 
 static mut GETSKILLNAME_ADDR: usize = 0;

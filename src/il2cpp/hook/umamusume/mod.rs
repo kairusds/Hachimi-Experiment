@@ -53,11 +53,11 @@ mod LiveTheaterCharaSelect;
 mod LiveTheaterViewController;
 pub mod CySpringController;
 mod LiveUtil;
-mod DialogCharacterSimpleSkillDetail;
 pub mod MasterDataUtil;
 pub mod DialogCommonBase;
 pub mod DialogObject;
 pub mod ImageCommon;
+pub mod TimeUtil;
 
 #[cfg(target_os = "windows")]
 pub mod SceneManager;
@@ -123,11 +123,11 @@ pub fn init() {
     LiveTheaterViewController::init(image);
     CySpringController::init(image);
     LiveUtil::init(image);
-    DialogCharacterSimpleSkillDetail::init(image);
     MasterDataUtil::init(image);
     DialogCommonBase::init(image);
     DialogObject::init(image);
     ImageCommon::init(image);
+    TimeUtil::init(image);
 
     #[cfg(target_os = "windows")]
     {
