@@ -15,7 +15,7 @@ pub enum BgSeason {
     CherryBlossom = 5
 }
 
-// type GetSeasonForHomeFn = extern "C" fn(this: *mut Il2CppObject, dateTime: *mut Il2CppObject);
+// type GetSeasonForHomeFn = extern "C" fn(this: *mut Il2CppObject, dateTime: *mut Il2CppObject) -> BgSeason;
 extern "C" fn GetSeasonForHome(this: *mut Il2CppObject, dateTime: *mut Il2CppObject) -> BgSeason {
     // get_orig_fn!(GetSeasonForHome, GetSeasonForHomeFn)(this, dateTime);
     BgSeason::CherryBlossom

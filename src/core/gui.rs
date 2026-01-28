@@ -1473,8 +1473,18 @@ impl Window for SkillInfoDialog {
                             rich_text_label(ui, &format!("<bold><size=16>{}</bold></size>", self.name));
                             rich_text_label(ui, &format!("#<bold>{}</bold>", self.skill_id.to_string()));
                         });
+
                         ui.separator();
-                        rich_text_label(ui, &self.desc);
+
+                        egui::Frame::NONE
+                        .fill(egui::Color32::from_rgb(237, 228, 229))
+                        .stroke(egui::Stroke::new(1.0, egui::Color32::from_gray(200)))
+                        .rounding(4.0 * scale)
+                        .inner_margin(5.0 * scale)
+                        .show(ui, |ui| {
+                            ui.set_min_width(ui.available_width());
+                            rich_text_label(ui, &self.desc);
+                        });
                     });
                 });
 
