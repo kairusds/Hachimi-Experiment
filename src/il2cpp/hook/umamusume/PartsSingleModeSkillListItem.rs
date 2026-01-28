@@ -39,6 +39,9 @@ static mut get_IsDrawNeedSkillPoint_addr: usize = 0;
 impl_addr_wrapper_fn!(get_IsDrawNeedSkillPoint, get_IsDrawNeedSkillPoint_addr, bool, this: *mut Il2CppObject);
 static mut get_Id_addr: usize = 0;
 impl_addr_wrapper_fn!(get_Id, get_Id_addr, i32, this: *mut Il2CppObject);
+
+static mut get_IsDisplayUpgradeSkill_addr: usize = 0;
+impl_addr_wrapper_fn!(get_IsDisplayUpgradeSkill, get_IsDisplayUpgradeSkill_addr, bool, this: *mut Il2CppObject);
 /*
 static mut get_MasterSkillUpgradeDescription_addr: usize = 0;
 impl_addr_wrapper_fn!(get_MasterSkillUpgradeDescription, get_MasterSkillUpgradeDescription_addr, *mut Il2CppObject, this: *mut Il2CppObject);
@@ -150,12 +153,12 @@ fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
 
 type SetupOnClickSkillButtonFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject);
 extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2CppObject) {
-    get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);
-    // GUI skill info
-    let skill_id = get_Id(info);
-    if skill_id > 0 {
+    if get_IsDisplayUpgradeSkill(info) {
+        get_orig_fn!(SetupOnClickSkillButton, SetupOnClickSkillButtonFn)(this, info);
         return;
     }
+    // GUI skill info
+    let skill_id = get_Id(info);
     // let skill_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(name))).unwrap());
     // let skill_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
     let button = get__bgButton(this);
@@ -204,11 +207,11 @@ pub fn init(umamusume: *const Il2CppImage) {
         new_hook!(UpdateItem_addr, UpdateItemOther);
     }
 
-    // let SetupOnClickSkillButton_addr = get_method_addr(PartsSingleModeSkillListItem, c"SetupOnClickSkillButton", 1);
-    // new_hook!(SetupOnClickSkillButton_addr, SetupOnClickSkillButton);
+    let SetupOnClickSkillButton_addr = get_method_addr(PartsSingleModeSkillListItem, c"SetupOnClickSkillButton", 1);
+    new_hook!(SetupOnClickSkillButton_addr, SetupOnClickSkillButton);
 
-    // PartsSingleModeSkillListItem.Info
     unsafe {
+        // PartsSingleModeSkillListItem
         NAMETEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_nameText");
         DESCTEXT_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_descText");
         _BGBUTTON_FIELD = get_field_from_name(PartsSingleModeSkillListItem, c"_bgButton");
@@ -218,7 +221,8 @@ pub fn init(umamusume: *const Il2CppImage) {
         // SKILLUPGRADECARDID_FIELD = get_field_from_name(Info, c"SkillUpgradeCardId");
         get_IsDrawDesc_addr = get_method_addr(Info, c"get_IsDrawDesc", 0);
         get_IsDrawNeedSkillPoint_addr = get_method_addr(Info, c"get_IsDrawNeedSkillPoint", 0);
-        // get_Id_addr = get_method_addr(Info, c"get_Id", 0);
+        get_Id_addr = get_method_addr(Info, c"get_Id", 0);
+        get_IsDisplayUpgradeSkill_addr = get_method_addr(Info, c"get_IsDisplayUpgradeSkill", 0);
         // get_MasterSkillUpgradeDescription_addr = get_method_addr(Info, c"get_MasterSkillUpgradeDescription", 0);
         // get_MasterData_addr = get_method_addr(Info, c"get_MasterData", 0);
     }
