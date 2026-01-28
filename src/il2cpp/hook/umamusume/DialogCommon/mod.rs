@@ -1,8 +1,9 @@
 use crate::{
     il2cpp::{
+        ext::Il2CppStringExt,
         hook::{
             umamusume::{DialogCharacterSimpleSkillDetail, DialogCommonBase, DialogObject, ImageCommon, PartsSingleModeSkillListItem, TextCommon},
-            UnityEngine_CoreModule::{Component, GameObject, RectOffset, RectTransform, Transform},
+            UnityEngine_CoreModule::{Component, Object, GameObject, RectOffset, RectTransform, Transform},
             UnityEngine_UI::{ContentSizeFitter, HorizontalOrVerticalLayoutGroup, Image, LayoutElement, LayoutGroup, LayoutRebuilder, Text, VerticalLayoutGroup}
         },
         symbols::{Array, get_field_from_name, get_field_object_value, get_method_addr},
@@ -44,6 +45,7 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                     let base_game_obj = Component::get_gameObject(base_rect);
                     info!("base_game_obj {:p}", base_game_obj);
 
+                    /*
                     let text_objects: Array<*mut Il2CppObject> = GameObject::GetComponentsInChildren(base_game_obj, TextCommon::type_object(), true);
                     info!("text_objects {}", text_objects.this.is_null());
 
@@ -62,7 +64,7 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                                 Text::set_verticalOverflow(text_ptr, 1);
                             }
                         }
-                    }
+                    } */
 
                     let img_objects: Array<*mut Il2CppObject> = GameObject::GetComponentsInChildren(base_game_obj, ImageCommon::type_object(), true);
                     info!("img_objects {}", img_objects.this.is_null());
@@ -80,6 +82,9 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                                 info!("img_obj {:p}", img_obj);
                                 let img_go = Component::get_gameObject(img_obj);
                                 info!("img_go {:p}", img_go);
+                                let object_name = Object::get_name(img_go);
+                                let name_str = unsafe { (*object_name).as_utf16str() }.to_string();
+                                info!("object_name {}", name_str);
 
                                 let transform = GameObject::GetComponent(img_go, Transform::type_object());
                                 let child_count = Transform::get_childCount(transform);
@@ -89,7 +94,7 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                                     info!("vlg {:p}", vlg);
                                     if !vlg.is_null() {
                                         // sliced
-                                        Image::set_type(img_go, 1);
+                                        Image::set_type(img_obj, 1);
 
                                         let mut csf = GameObject::GetComponent(img_go, ContentSizeFitter::type_object());
                                         info!("csf before {:p}", csf);
@@ -106,7 +111,7 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                                     info!("child_count < 1");
                                 }
                             }
-                            LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
+                            // LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
                         }
                     }
                 }
