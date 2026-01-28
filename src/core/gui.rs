@@ -1456,7 +1456,7 @@ impl Window for SkillInfoDialog {
 
         let window_res = new_window(ctx, self.id, "")
         .max_width(310.0 * scale)
-        .max_height(230.0 * scale)
+        .max_height(240.0 * scale)
         .frame(light_frame)
         .title_bar(false)
         .open(&mut open)
@@ -1470,12 +1470,11 @@ impl Window for SkillInfoDialog {
                     egui::ScrollArea::vertical()                    
                     .show(ui, |ui| {
                         ui.horizontal_wrapped(|ui| {
-                            rich_text_label(ui, &format!("<bold><size=16>{}</bold></size>", self.name));
-                            rich_text_label(ui, &format!("#<bold>{}</bold>", self.skill_id.to_string()));
+                            rich_text_label(ui, &format!("<b><size=16>{}</bold></b>", self.name));
+                            rich_text_label(ui, &format!("#<b>{}</b>", self.skill_id.to_string()));
                         });
 
-                        ui.separator();
-
+                        // ui.separator();                        
                         egui::Frame::NONE
                         .fill(egui::Color32::from_rgb(237, 228, 229))
                         .stroke(egui::Stroke::new(1.0, egui::Color32::from_gray(200)))
@@ -1488,7 +1487,7 @@ impl Window for SkillInfoDialog {
                     });
                 });
 
-                ui.separator();
+                // ui.separator();
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                     ui.add_space(6.0 * scale);
                     if ui.button(t!("ok")).clicked() {
