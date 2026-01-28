@@ -41,78 +41,43 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
                 let base_rect = DialogObject::get__baseRectTransform(dialog_obj);
                 info!("base_rect {:p}", base_rect);
 
-                if !base_rect.is_null() {
-                    let base_game_obj = Component::get_gameObject(base_rect);
-                    info!("base_game_obj {:p}", base_game_obj);
+                let base_game_obj = Component::get_gameObject(base_rect);
+                let transform = GameObject::get_transform(base_game_obj);
+                let child_count = Transform::get_childCount(transform);
+                info!("transform child_count {}", child_count);
 
-                    /*
-                    let text_objects: Array<*mut Il2CppObject> = GameObject::GetComponentsInChildren(base_game_obj, TextCommon::type_object(), true);
-                    info!("text_objects {}", text_objects.this.is_null());
+                for j in 0..child_count {
+                    let child = Transform::GetChild(transform, j);
+                    let child_go = Component::get_gameObject(child);
+                    let obj_name = Object::get_name(child_go);
+                    let name_str = unsafe { (*obj_name).as_utf16str() }.to_string();
+                    info!("name_str {}", name_str);
 
-                    if !text_objects.this.is_null() {
-                        unsafe {
-                            let len = (*text_objects.this).max_length;
-                            info!("text_objects.this len {}", len);
-                            let data_ptr = (text_objects.this as *mut u8).add(0x20) as *mut *mut Il2CppObject;
-                            info!("text_objects data_ptr {:p}", data_ptr);
-
-                            for i in 0..len {
-                                let text_ptr = *data_ptr.add(i as usize);
-                                info!("text_ptr {:p}", text_ptr);
-                    
-                                Text::set_horizontalOverflow(text_ptr, 0); 
-                                Text::set_verticalOverflow(text_ptr, 1);
-                            }
+                    // Found the skill container GEEEGEEEEEEEE
+                    if name_str == "Skill" {
+                        info!("im inside skill");
+                        let mut vlg = GameObject::GetComponent(child_go, VerticalLayoutGroup::type_object());
+                        if vlg.is_null() {
+                            vlg = GameObject::AddComponent(child_go, VerticalLayoutGroup::type_object());
+                            info!("add missing vlg to skill");
                         }
-                    } */
+                        HorizontalOrVerticalLayoutGroup::set_childControlHeight(vlg, false);
+                        HorizontalOrVerticalLayoutGroup::set_childForceExpandHeight(vlg, false);
+                        LayoutGroup::set_padding(vlg, RectOffset::new(20, 20, 20, 20));
 
-                    let img_objects: Array<*mut Il2CppObject> = GameObject::GetComponentsInChildren(base_game_obj, ImageCommon::type_object(), true);
-                    info!("img_objects {}", img_objects.this.is_null());
-
-                    if !img_objects.this.is_null() {
-                        unsafe {
-                            let len = (*img_objects.this).max_length;
-                            info!("img_objects.this len {}", len);
-                            let data_ptr = (img_objects.this as *mut u8).add(0x20) as *mut *mut Il2CppObject;
-                            info!("img_objects data_ptr {:p}", data_ptr);
-                            if data_ptr.is_null() { continue; }
-
-                            for i in 0..len {
-                                let img_obj = *data_ptr.add(i as usize);
-                                info!("img_obj {:p}", img_obj);
-                                let img_go = Component::get_gameObject(img_obj);
-                                info!("img_go {:p}", img_go);
-                                let object_name = Object::get_name(img_go);
-                                let name_str = unsafe { (*object_name).as_utf16str() }.to_string();
-                                info!("object_name {}", name_str);
-
-                                let transform = GameObject::GetComponent(img_go, Transform::type_object());
-                                let child_count = Transform::get_childCount(transform);
-
-                                if child_count > 0 {
-                                    let mut vlg = GameObject::GetComponent(img_go, VerticalLayoutGroup::type_object());
-                                    info!("vlg {:p}", vlg);
-                                    if !vlg.is_null() {
-                                        // sliced
-                                        Image::set_type(img_obj, 1);
-
-                                        let mut csf = GameObject::GetComponent(img_go, ContentSizeFitter::type_object());
-                                        info!("csf before {:p}", csf);
-
-                                        if csf.is_null() {
-                                            csf = GameObject::AddComponent(img_go, ContentSizeFitter::type_object());
-                                            info!("csf empty making new one");
-                                        }
-
-                                        ContentSizeFitter::set_verticalFit(csf, 2); // PreferredSize
-                                        LayoutGroup::set_padding(vlg, RectOffset::new(20, 20, 20, 20));
-                                    }
-                                } else {
-                                    info!("child_count < 1");
-                                }
-                            }
-                            // LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
+                        let img_comp = GameObject::GetComponent(child_go, ImageCommon::type_object());
+                        if !img_comp.is_null() {
+                            Image::set_type(img_comp, 1); // Sliced
                         }
+                        
+                        let mut csf = GameObject::GetComponent(child_go, ContentSizeFitter::type_object());
+                        if csf.is_null() {
+                            info!("why csf null");
+                            csf = GameObject::AddComponent(child_go, ContentSizeFitter::type_object());
+                        }
+                        ContentSizeFitter::set_verticalFit(csf, 2); // PreferredSize
+
+                        LayoutRebuilder::ForceRebuildLayoutImmediate(base_rect);
                     }
                 }
             }
@@ -122,6 +87,7 @@ extern "C" fn Initialize(this: *mut Il2CppObject, inData: *mut Il2CppObject) {
 
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, DialogCommon);
+    Data::init(DialogCommon);
 
     let Initialize_addr = get_method_addr(DialogCommon, c"Initialize", 1);
     new_hook!(Initialize_addr, Initialize);
@@ -129,6 +95,4 @@ pub fn init(umamusume: *const Il2CppImage) {
     unsafe {
         _DIALOGOBJARRAY_FIELD = get_field_from_name(DialogCommon, c"_dialogObjArray");
     }
-
-    Data::init(DialogCommon)
 }

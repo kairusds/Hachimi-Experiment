@@ -60,6 +60,10 @@ impl_addr_wrapper_fn!(SetActive, SETACTIVE_ADDR, (), this: *mut Il2CppObject, va
 static mut GET_ACTIVESELF_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_activeSelf, GET_ACTIVESELF_ADDR, bool, this: *mut Il2CppObject);
 
+// public Transform get_transform() { }
+static mut GET_TRANSFORM_ADDR: usize = 0;
+impl_addr_wrapper_fn!(get_transform, GET_TRANSFORM_ADDR, *mut Il2CppObject, this: *mut Il2CppObject);
+
 // hook::UnityEngine_AssetBundleModule::AssetBundle
 // Generic GameObject handler for prefabs. Used for ui flash and combined ui flash
 pub fn on_LoadAsset(bundle: *mut Il2CppObject, this: *mut Il2CppObject, name: &Utf16Str) {
@@ -96,5 +100,6 @@ pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
         );
         SETACTIVE_ADDR = il2cpp_resolve_icall(c"UnityEngine.GameObject::SetActive(System.Boolean)".as_ptr());
         GET_ACTIVESELF_ADDR = il2cpp_resolve_icall(c"UnityEngine.GameObject::get_activeSelf()".as_ptr());
+        GET_TRANSFORM_ADDR = get_method_addr(GameObject, c"get_transform", 0);
     }
 }
