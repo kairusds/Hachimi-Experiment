@@ -111,6 +111,7 @@ extern "C" fn GetSpriteByName1(atlasType: TargetAtlasType, spriteName: *mut Il2C
 
 type GetSpriteFromNameSubFn = extern "C" fn(atlasName: *mut Il2CppString, spriteName: *mut Il2CppString) -> *mut Il2CppObject;
 extern "C" fn GetSpriteFromNameSub(atlasName: *mut Il2CppString, spriteName: *mut Il2CppString) -> *mut Il2CppObject {
+    /*
     if GAME_INITIALIZED.load(Ordering::Relaxed) {
         if atlasName != unsafe { LAST_ATLAS_PTR } || spriteName != unsafe { LAST_SPRITE_PTR } {
             let atlas = unsafe { atlasName.as_ref() }.map_or("empty".to_string(), |s| unsafe { s.as_utf16str() }.to_string());
@@ -121,7 +122,7 @@ extern "C" fn GetSpriteFromNameSub(atlasName: *mut Il2CppString, spriteName: *mu
                 LAST_SPRITE_PTR = spriteName;
             }
         }
-    }
+    }*/
     get_orig_fn!(GetSpriteFromNameSub, GetSpriteFromNameSubFn)(atlasName, spriteName)
 }
 
