@@ -138,10 +138,12 @@ pub fn init(umamusume: *const Il2CppImage) {
         &[Il2CppTypeEnum_IL2CPP_TYPE_STRING, Il2CppTypeEnum_IL2CPP_TYPE_STRING]);
     new_hook!(GetSpriteByName_addr, GetSpriteByName);
 
+    /*
     let GetSpriteByName1_addr = get_method_overload_addr(AtlasUtil, "GetSpriteByName",
         &[Il2CppTypeEnum_IL2CPP_TYPE_VALUETYPE, Il2CppTypeEnum_IL2CPP_TYPE_STRING]);
     new_hook!(GetSpriteByName1_addr, GetSpriteByName1);
 
     let GetSpriteFromNameSub_addr = get_method_addr(AtlasUtil, c"GetSpriteFromNameSub", 2);
     new_hook!(GetSpriteFromNameSub_addr, GetSpriteFromNameSub);
+    */
 }
