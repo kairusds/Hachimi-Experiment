@@ -35,88 +35,25 @@ use super::{
     Hachimi
 };
 
-// https://github.com/google/woff2
-pub fn decompress_woff2(bytes: &[u8]) -> Result<Vec<u8>, std::io::Error> {
-    if bytes.len() < 48 || &bytes[0..4] != b"wOF2" {
-        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "Not a WOFF2 file"));
-    }
-
-    let num_tables = u16::from_be_bytes([bytes[12], bytes[13]]) as usize;
-
-    let mut offset = 48;
-
-    for _ in 0..num_tables {
-        if offset >= bytes.len() { break; }
-
-        let flags = bytes[offset];
-        offset += 1;
-
-        if (flags & 0x3f) == 63 {
-            offset += 4;
-        }
-
-        while offset < bytes.len() && (bytes[offset] & 0x80) != 0 { offset += 1; }
-        offset += 1;
-
-        let tag_index = flags & 0x3f;
-        let transform_type = (flags & 0xc0) >> 6;
-
-        let has_transform_length = if tag_index == 10 || tag_index == 11 {
-            transform_type == 0
-        } else {
-            transform_type != 3
-        };
-
-        if has_transform_length {
-            while offset < bytes.len() && (bytes[offset] & 0x80) != 0 { offset += 1; }
-            offset += 1;
-        }
-    }
-
-    let flavor = u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]);
-    if flavor == 0x74746366 { // 'ttcf'
-        while offset < bytes.len() && (bytes[offset] & 0x80) != 0 { offset += 1; }
-        offset += 1; 
-    }
-    
-    let mut input = &bytes[offset..];
-    let mut decompressed = Vec::new();
-
-    match brotli_decompressor::BrotliDecompress(&mut input, &mut decompressed) {
-        Ok(_) => {
-            if decompressed.is_empty() {
-                return Err(std::io::Error::new(std::io::ErrorKind::UnexpectedEof, "Decompression produced no data"));
-            }
-            Ok(decompressed)
-        },
-        Err(e) => {
-            let aligned_offset = (offset + 3) & !3;
-            if aligned_offset != offset && aligned_offset < bytes.len() {
-                let mut input_alt = &bytes[aligned_offset..];
-                let mut decompressed_alt = Vec::new();
-                if let Ok(_) = brotli_decompressor::BrotliDecompress(&mut input_alt, &mut decompressed_alt) {
-                    return Ok(decompressed_alt);
-                }
-            }
-            Err(e)
-        }
-    }
-}
-
 macro_rules! add_font {
     ($fonts:expr, $family_fonts:expr, $filename:literal) => {
         let bytes = include_bytes!(concat!("../../assets/fonts/", $filename));
-        let font_data = if $filename.ends_with(".woff2") {
-            match decompress_woff2(bytes) {
-                Ok(data) => egui::FontData::from_owned(data),
+
+        let font_data = if $filename.ends_with(".xz") {
+            let mut decompressed = Vec::new();
+            let mut reader = std::io::Cursor::new(bytes);
+
+            match lzma_rs::xz_decompress(&mut reader, &mut decompressed) {
+                Ok(_) => egui::FontData::from_owned(decompressed),
                 Err(e) => {
-                    info!("Woff2 failed for {}: {:?}", $filename, e);
+                    info!("XZ decompression failed for {}: {:?}", $filename, e);
                     egui::FontData::from_static(include_bytes!("../../assets/fonts/FontAwesome.otf"))
                 }
             }
         } else {
             egui::FontData::from_static(bytes)
         };
+
         $fonts.font_data.insert($filename.to_owned(), font_data.into());
         $family_fonts.push($filename.to_owned());
     };
@@ -317,17 +254,17 @@ impl Gui {
         let mut italic_stack = Vec::new();
         let mut bold_italic_stack = Vec::new();
 
-        add_font!(fonts, regular_stack, "AlibabaPuHuiTi-3-45-Light.woff2");
-        add_font!(fonts, regular_stack, "NotoSans-Light.woff2");
-        add_font!(fonts, regular_stack, "NotoSansJP-Light.woff2");
+        add_font!(fonts, regular_stack, "AlibabaPuHuiTi-3-45-Light.otf.xz");
+        add_font!(fonts, regular_stack, "NotoSans-Light.ttf");
+        add_font!(fonts, regular_stack, "NotoSansJP-Regular.ttf.xz");
         add_font!(fonts, regular_stack, "FontAwesome.otf");
 
-        add_font!(fonts, bold_stack, "AlibabaPuHuiTi-3-85-Bold.woff2");
-        add_font!(fonts, bold_stack, "NotoSans-Bold.woff2");
-        add_font!(fonts, italic_stack, "NotoSans-LightItalic.woff2");
-        add_font!(fonts, bold_stack, "NotoSansJP-Bold.woff2");
+        add_font!(fonts, bold_stack, "AlibabaPuHuiTi-3-85-Bold.otf.xz");
+        add_font!(fonts, bold_stack, "NotoSans-Bold.ttf");
+        add_font!(fonts, italic_stack, "NotoSans-LightItalic.ttf");
+        add_font!(fonts, bold_stack, "NotoSansJP-Bold.ttf.xz");
 
-        add_font!(fonts, bold_italic_stack, "NotoSans-BoldItalic.woff2");
+        add_font!(fonts, bold_italic_stack, "NotoSans-BoldItalic.ttf");
 
         fonts.families.insert(egui::FontFamily::Proportional, regular_stack);
         fonts.families.insert(egui::FontFamily::Name("BoldStack".into()), bold_stack);
