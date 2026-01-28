@@ -9,9 +9,9 @@ static mut LAST_TYPE: i32 = -1;
 type GetSpriteByNameFn = extern "C" fn(atlasName: *mut Il2CppString, spriteName: *mut Il2CppString) -> *mut Il2CppObject;
 extern "C" fn GetSpriteByName(atlasName: *mut Il2CppString, spriteName: *mut Il2CppString) -> *mut Il2CppObject {
     if GAME_INITIALIZED.load(Ordering::Relaxed) {
-        if atlasName != unsafe { LAST_ATLAS_PTR } && spriteName != unsafe { LAST_SPRITE_PTR } {
-            let atlas = if !atlasName.is_null() { unsafe { (*atlasName).as_utf16str() }.to_string() } else { "null".into() };
-            let sprite = if !spriteName.is_null() { unsafe { (*spriteName).as_utf16str() }.to_string() } else { "null".into() };
+        if atlasName != unsafe { LAST_ATLAS_PTR } || spriteName != unsafe { LAST_SPRITE_PTR } {
+            let atlas = unsafe { atlasName.as_ref() }.map_or("empty".to_string(), |s| unsafe { s.as_utf16str() }.to_string());
+            let sprite = unsafe { spriteName.as_ref() }.map_or("empty".to_string(), |s| unsafe { s.as_utf16str() }.to_string());
 
             info!("GetSpriteByName (string, string): {}, {}", atlas, sprite);
             unsafe {
@@ -26,8 +26,8 @@ extern "C" fn GetSpriteByName(atlasName: *mut Il2CppString, spriteName: *mut Il2
 type GetSpriteByName1Fn = extern "C" fn(atlasType: i32, spriteName: *mut Il2CppString) -> *mut Il2CppObject;
 extern "C" fn GetSpriteByName1(atlasType: i32, spriteName: *mut Il2CppString) -> *mut Il2CppObject {
     if GAME_INITIALIZED.load(Ordering::Relaxed) {
-        if atlasType != unsafe { LAST_TYPE } && spriteName != unsafe { LAST_SPRITE_PTR } {
-            let sprite = if !spriteName.is_null() { unsafe { (*spriteName).as_utf16str() }.to_string() } else { "null".into() };
+        if atlasType != unsafe { LAST_TYPE } || spriteName != unsafe { LAST_SPRITE_PTR } {
+            let sprite = unsafe { spriteName.as_ref() }.map_or("empty".to_string(), |s| unsafe { s.as_utf16str() }.to_string());
             info!("GetSpriteByName (i32, string): {}, {}", atlasType, sprite);
             unsafe {
                 LAST_TYPE = atlasType;
@@ -41,9 +41,9 @@ extern "C" fn GetSpriteByName1(atlasType: i32, spriteName: *mut Il2CppString) ->
 type GetSpriteFromNameSubFn = extern "C" fn(atlasName: *mut Il2CppString, spriteName: *mut Il2CppString) -> *mut Il2CppObject;
 extern "C" fn GetSpriteFromNameSub(atlasName: *mut Il2CppString, spriteName: *mut Il2CppString) -> *mut Il2CppObject {
     if GAME_INITIALIZED.load(Ordering::Relaxed) {
-        if atlasName != unsafe { LAST_ATLAS_PTR } && spriteName != unsafe { LAST_SPRITE_PTR } {
-            let atlas = if !atlasName.is_null() { unsafe { (*atlasName).as_utf16str() }.to_string() } else { "null".into() };
-            let sprite = if !spriteName.is_null() { unsafe { (*spriteName).as_utf16str() }.to_string() } else { "null".into() };
+        if atlasName != unsafe { LAST_ATLAS_PTR } || spriteName != unsafe { LAST_SPRITE_PTR } {
+            let atlas = unsafe { atlasName.as_ref() }.map_or("empty".to_string(), |s| unsafe { s.as_utf16str() }.to_string());
+            let sprite = unsafe { spriteName.as_ref() }.map_or("empty".to_string(), |s| unsafe { s.as_utf16str() }.to_string());
             info!("GetSpriteFromNameSubFn (string, string): {}, {}", atlas, sprite);
             unsafe {
                 LAST_ATLAS_PTR = atlasName;
