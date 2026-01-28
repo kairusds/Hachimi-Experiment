@@ -23,6 +23,7 @@ extern "C" fn GetSpriteByName(atlasName: *mut Il2CppString, spriteName: *mut Il2
     get_orig_fn!(GetSpriteByName, GetSpriteByNameFn)(atlasName, spriteName)
 }
 
+/*
 type GetSpriteByName1Fn = extern "C" fn(atlasType: i32, spriteName: *mut Il2CppString) -> *mut Il2CppObject;
 extern "C" fn GetSpriteByName1(atlasType: i32, spriteName: *mut Il2CppString) -> *mut Il2CppObject {
     if GAME_INITIALIZED.load(Ordering::Relaxed) {
@@ -36,16 +37,15 @@ extern "C" fn GetSpriteByName1(atlasType: i32, spriteName: *mut Il2CppString) ->
         }
     }
     get_orig_fn!(GetSpriteByName1, GetSpriteByName1Fn)(atlasType, spriteName)
-}
+}*/
 
 type GetSpriteFromNameSubFn = extern "C" fn(atlasName: *mut Il2CppString, spriteName: *mut Il2CppString) -> *mut Il2CppObject;
 extern "C" fn GetSpriteFromNameSub(atlasName: *mut Il2CppString, spriteName: *mut Il2CppString) -> *mut Il2CppObject {
     if GAME_INITIALIZED.load(Ordering::Relaxed) {
         if atlasName != unsafe { LAST_ATLAS_PTR } || spriteName != unsafe { LAST_SPRITE_PTR } {
-            // let atlas = unsafe { atlasName.as_ref() }.map_or("empty".to_string(), |s| unsafe { s.as_utf16str() }.to_string());
-            // let sprite = unsafe { spriteName.as_ref() }.map_or("empty".to_string(), |s| unsafe { s.as_utf16str() }.to_string());
-            // info!("GetSpriteFromNameSubFn (string, string): {}, {}", atlas, sprite);
-            info!("GetSpriteFromNameSub: {:p}, {:p}", atlasName, spriteName);
+            let atlas = unsafe { atlasName.as_ref() }.map_or("empty".to_string(), |s| unsafe { s.as_utf16str() }.to_string());
+            let sprite = unsafe { spriteName.as_ref() }.map_or("empty".to_string(), |s| unsafe { s.as_utf16str() }.to_string());
+            info!("GetSpriteFromNameSubFn (string, string): {}, {}", atlas, sprite);
             unsafe {
                 LAST_ATLAS_PTR = atlasName;
                 LAST_SPRITE_PTR = spriteName;
@@ -67,9 +67,10 @@ pub fn init(umamusume: *const Il2CppImage) {
         &[Il2CppTypeEnum_IL2CPP_TYPE_STRING, Il2CppTypeEnum_IL2CPP_TYPE_STRING]);
     new_hook!(GetSpriteByName_addr, GetSpriteByName);
 
+    /*
     let GetSpriteByName1_addr = get_method_overload_addr(AtlasUtil, "GetSpriteByName",
         &[Il2CppTypeEnum_IL2CPP_TYPE_VALUETYPE, Il2CppTypeEnum_IL2CPP_TYPE_STRING]);
-    new_hook!(GetSpriteByName1_addr, GetSpriteByName1);
+    new_hook!(GetSpriteByName1_addr, GetSpriteByName1); */
 
     let GetSpriteFromNameSub_addr = get_method_addr(AtlasUtil, c"GetSpriteFromNameSub", 2);
     new_hook!(GetSpriteFromNameSub_addr, GetSpriteFromNameSub);
