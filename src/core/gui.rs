@@ -7,7 +7,7 @@ use rust_i18n::t;
 use chrono::{Utc, Datelike};
 
 use crate::il2cpp::{
-    ext::StringExt, Il2CppStringExt,
+    ext::{StringExt, Il2CppStringExt},
     hook::{
         umamusume::{CameraData::ShadowResolution, CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize, TimeUtil::BgSeason},
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
