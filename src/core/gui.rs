@@ -137,8 +137,7 @@ fn get_scale_salt(ctx: &egui::Context) -> f32 {
 }
 
 fn get_scale(ctx: &egui::Context) -> f32 {
-    let raw_scale = ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale"))).unwrap_or(1.0);
-    (raw_scale * 20.0).round() / 20.0
+    ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale"))).unwrap_or(1.0)
 }
 
 impl Gui {
@@ -1836,8 +1835,7 @@ impl ConfigEditor {
                     (BgSeason::Summer, unsafe { (*Localize::Get(1068)).as_utf16str() }.to_string().as_str()),
                     (BgSeason::Fall, unsafe { (*Localize::Get(1069)).as_utf16str() }.to_string().as_str()),
                     (BgSeason::Winter, unsafe { (*Localize::Get(1070)).as_utf16str() }.to_string().as_str()),
-                    (BgSeason::CherryBlossom, unsafe { (*Localize::Get(1071)).as_utf16str() }.to_string().as_str()),
-                    (BgSeason::Max, "Max?")
+                    (BgSeason::CherryBlossom, unsafe { (*Localize::Get(1071)).as_utf16str() }.to_string().as_str())
                 ]);
                 ui.end_row();
 

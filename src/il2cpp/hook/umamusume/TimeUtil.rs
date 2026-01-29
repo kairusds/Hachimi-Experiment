@@ -12,8 +12,7 @@ pub enum BgSeason {
     Summer = 2,
     Fall = 3,
     Winter = 4,
-    CherryBlossom = 5,
-    Max = 6
+    CherryBlossom = 5
 }
 
 type GetSeasonForHomeFn = extern "C" fn(this: *mut Il2CppObject, dateTime: *mut Il2CppObject) -> BgSeason;
