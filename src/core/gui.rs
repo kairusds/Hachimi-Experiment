@@ -37,33 +37,20 @@ use super::{
 
 macro_rules! add_font {
     ($fonts:expr, $family_fonts:expr, $filename:literal) => {
-        let bytes = include_bytes!(concat!("../../assets/fonts/", $filename));
-
-        let font_data = if $filename.ends_with(".xz") {
-            let mut decompressed = Vec::new();
-            let mut reader = std::io::Cursor::new(bytes);
-
-            match lzma_rs::xz_decompress(&mut reader, &mut decompressed) {
-                Ok(_) => egui::FontData::from_owned(decompressed),
-                Err(e) => {
-                    info!("XZ decompression failed for {}: {:?}", $filename, e);
-                    egui::FontData::from_static(include_bytes!("../../assets/fonts/FontAwesome.otf"))
-                }
-            }
-        } else {
-            egui::FontData::from_static(bytes)
-        };
-
-        $fonts.font_data.insert($filename.to_owned(), font_data.into());
+        $fonts.font_data.insert(
+            $filename.to_owned(),
+            egui::FontData::from_static(include_bytes!(concat!("../../assets/fonts/", $filename))).into()
+        );
         $family_fonts.push($filename.to_owned());
     };
 }
 
 use egui::Color32;
 
-lazy_static::lazy_static! {
-    static ref UNITY_COLORS: FnvHashMap<&'static str, Color32> = {
-        let mut m = FnvHashMap::default();
+static UNITY_COLORS: std::sync::OnceLock<FnvHashMap<&'static str, Color32>> = std::sync::OnceLock::new();
+pub fn get_unity_colors() -> &'static FnvHashMap<&'static str, Color32> {
+    UNITY_COLORS.get_or_init(|| {
+        let mut m = FnvHashMap::with_capacity_and_hasher(22, Default::default());
         m.insert("aqua", Color32::from_rgb(0, 255, 255));
         m.insert("cyan", Color32::from_rgb(0, 255, 255));
         m.insert("black", Color32::from_rgb(0, 0, 0));
@@ -87,7 +74,7 @@ lazy_static::lazy_static! {
         m.insert("white", Color32::from_rgb(255, 255, 255));
         m.insert("yellow", Color32::from_rgb(255, 255, 0));
         m
-    };
+    })
 }
 
 type BoxedWindow = Box<dyn Window + Send + Sync>;
@@ -248,28 +235,12 @@ impl Gui {
 
     fn get_font_definitions() -> egui::FontDefinitions {
         let mut fonts = egui::FontDefinitions::default();
+        let proportional_fonts = fonts.families.get_mut(&egui::FontFamily::Proportional).unwrap();
 
-        let mut regular_stack = Vec::new();
-        let mut bold_stack = Vec::new();
-        let mut italic_stack = Vec::new();
-        let mut bold_italic_stack = Vec::new();
-
-        add_font!(fonts, regular_stack, "AlibabaPuHuiTi-3-45-Light.otf.xz");
-        add_font!(fonts, regular_stack, "NotoSans-Light.ttf");
-        add_font!(fonts, regular_stack, "NotoSansJP-Regular.ttf.xz");
-        add_font!(fonts, regular_stack, "FontAwesome.otf");
-
-        add_font!(fonts, bold_stack, "AlibabaPuHuiTi-3-85-Bold.otf.xz");
-        add_font!(fonts, bold_stack, "NotoSans-Bold.ttf");
-        add_font!(fonts, italic_stack, "NotoSans-LightItalic.ttf");
-        add_font!(fonts, bold_stack, "NotoSansJP-Bold.ttf.xz");
-
-        add_font!(fonts, bold_italic_stack, "NotoSans-BoldItalic.ttf");
-
-        fonts.families.insert(egui::FontFamily::Proportional, regular_stack);
-        fonts.families.insert(egui::FontFamily::Name("BoldStack".into()), bold_stack);
-        fonts.families.insert(egui::FontFamily::Name("ItalicStack".into()), italic_stack);
-        fonts.families.insert(egui::FontFamily::Name("BoldItalicStack".into()), bold_italic_stack);
+        add_font!(fonts, proportional_fonts, "AlibabaPuHuiTi-3-45-Light.otf");
+        add_font!(fonts, proportional_fonts, "NotoSans-Light.ttf");
+        add_font!(fonts, proportional_fonts, "NotoSansJP-Regular.ttf");
+        add_font!(fonts, proportional_fonts, "FontAwesome.otf");
 
         fonts
     }
@@ -1096,9 +1067,10 @@ fn simple_window_layout(ui: &mut egui::Ui, id: egui::Id, add_contents: impl FnOn
 #[derive(Clone)]
 struct StyleState {
     color: Color32,
-    size: f32,
-    bold: bool,
-    italic: bool,
+    size: f32
+    // had to remove sadly due to unnecessary bloat of font files
+    // bold: bool,
+    // italic: bool
 }
 
 fn parse_unity_text(ui: &egui::Ui, text: &str, wrap_width: f32) -> egui::text::LayoutJob {
@@ -1109,9 +1081,9 @@ fn parse_unity_text(ui: &egui::Ui, text: &str, wrap_width: f32) -> egui::text::L
     // default
     let mut state_stack = vec![StyleState {
         color: ui.style().visuals.text_color(),
-        size: 12.0,
-        bold: false,
-        italic: false
+        size: 12.0
+        // bold: false,
+        // italic: false
     }];
 
     let mut current_pos = 0;
@@ -1135,8 +1107,8 @@ fn parse_unity_text(ui: &egui::Ui, text: &str, wrap_width: f32) -> egui::text::L
                     let tag_name = parts[0].trim();
 
                     match tag_name {
-                        "b" => new_state.bold = true,
-                        "i" => new_state.italic = true,
+                        // "b" => new_state.bold = true,
+                        // "i" => new_state.italic = true,
                         "size" => if parts.len() > 1 {
                             if let Ok(s) = parts[1].trim_matches('"').parse::<f32>() {
                                 new_state.size = s;
@@ -1164,7 +1136,7 @@ fn parse_unity_text(ui: &egui::Ui, text: &str, wrap_width: f32) -> egui::text::L
 }
 
 fn append_text(job: &mut egui::text::LayoutJob, text: &str, state: &StyleState) {
-    let family = if state.bold && state.italic {
+    /* let family = if state.bold && state.italic {
         egui::FontFamily::Name("BoldItalicStack".into())
     } else if state.bold {
         egui::FontFamily::Name("BoldStack".into())
@@ -1172,7 +1144,8 @@ fn append_text(job: &mut egui::text::LayoutJob, text: &str, state: &StyleState) 
         egui::FontFamily::Name("ItalicStack".into())
     } else {
         egui::FontFamily::Proportional
-    };
+    };*/
+    let family = egui::FontFamily::Proportional;
 
     job.append(
         text,
@@ -1205,7 +1178,7 @@ fn parse_color(val: &str) -> Option<Color32> {
             _ => None
         }
     } else {
-        UNITY_COLORS.get(val.to_lowercase().as_str()).cloned()
+        get_unity_colors().get(val).cloned()
     }
 }
 

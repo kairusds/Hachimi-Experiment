@@ -97,14 +97,13 @@ first_time_setup:
 about:
   title: "About"
   copyright: "© 2024-%{year} LeadRDRK, kairusds and contributors"
-  view_licenses: "View license"
+  view_license: "View license"
   open_website: "Open website"
   view_source_code: "View source code"
   check_for_updates: "Check for updates"
 
 license:
   title: "License"
-  view_license: "View license"
   gpl_v3_only_notice: "GPL-3.0-only License Text"
   font_alibaba_header: "Alibaba PuHuiTi 3.0"
   font_alibaba_body: "Copyright (c) 2020-2023 Alibaba (China) Co., Ltd. All rights reserved."
