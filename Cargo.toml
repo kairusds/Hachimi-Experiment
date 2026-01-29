@@ -9,7 +9,7 @@ name = "hachimi"
 crate-type = ["cdylib"]
 
 [profile.release]
-opt-level = z
+opt-level = "z"
 strip = true
 lto = "fat"
 codegen-units = 1
