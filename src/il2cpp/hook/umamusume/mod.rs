@@ -57,7 +57,7 @@ pub mod MasterDataUtil;
 pub mod DialogCommonBase;
 pub mod DialogObject;
 pub mod ImageCommon;
-mod TimeUtil;
+pub mod TimeUtil;
 
 #[cfg(target_os = "windows")]
 pub mod SceneManager;

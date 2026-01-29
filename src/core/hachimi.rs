@@ -339,6 +339,10 @@ pub struct Config {
     pub live_theater_allow_same_chara: bool,
     #[serde(default = "Config::default_live_vocals_swap")]
     pub live_vocals_swap: [i32; 6],
+    #[serde(default)]
+    pub skill_info_dialog: bool,
+    #[serde(default)]
+    pub homescreen_bgseason: crate::il2cpp::hook::umamusume::TimeUtil::BgSeason,
     pub sugoi_url: Option<String>,
     #[serde(default)]
     pub auto_translate_stories: bool,

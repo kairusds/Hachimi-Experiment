@@ -182,6 +182,7 @@ config_editor:
   live_vocals_swap: "Live Vocals Swap"
   live_vocals_swap_character_n: "Character %{index}"
   skill_info_dialog: "Show skill info in GUI"
+  homescreen_bgseason: "Homescreen Background\nSeason"
 
 tl_update_dialog:
   title: "New update available"
