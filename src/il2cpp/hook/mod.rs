@@ -73,7 +73,7 @@ pub mod UnityEngine_CoreModule;
 pub mod UnityEngine_AssetBundleModule;
 pub mod UnityEngine_TextRenderingModule;
 pub mod UnityEngine_ImageConversionModule;
-pub mod UnityEngine_Rendering;
+pub mod Unity_RenderPipelines_Universal_Runtime;
 pub mod UnityEngine_UI;
 pub mod UnityEngine_UIModule;
 pub mod Unity_TextMeshPro;
@@ -99,7 +99,7 @@ pub fn init() {
     UnityEngine_CoreModule::init();
     UnityEngine_TextRenderingModule::init();
     UnityEngine_ImageConversionModule::init();
-    UnityEngine_Rendering::init();
+    Unity_RenderPipelines_Universal_Runtime::init();
     UnityEngine_UI::init();
     UnityEngine_UIModule::init();
     Unity_TextMeshPro::init();
