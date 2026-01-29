@@ -116,8 +116,7 @@ struct FastPath {
 type TryGetComponentFastPathFn = extern "C" fn(this: *mut Il2CppObject, type_: *mut Il2CppType, oneFurtherThanResultValue: usize);
 extern "C" fn TryGetComponentFastPath(this: *mut Il2CppObject, type_: *mut Il2CppType, oneFurtherThanResultValue: usize) {
     get_orig_fn!(TryGetComponentFastPath, TryGetComponentFastPathFn)(this, type_, oneFurtherThanResultValue);
-    let fastPath = (oneFurtherThanResultValue - std::mem::size_of::<*mut Il2CppObject>())
-        as *mut FastPath;
+    let fastPath = (oneFurtherThanResultValue - std::mem::size_of::<*mut Il2CppObject>()) as *mut FastPath;
     let component = unsafe { (*fastPath).component };
     if !component.is_null() {
         customize(component);
