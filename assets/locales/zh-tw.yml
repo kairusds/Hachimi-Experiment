@@ -157,7 +157,7 @@ config_editor:
   live_vocals_swap: "Live演唱人聲切換"
   live_vocals_swap_character_n: "角色 %{index}"
   skill_info_dialog: "在GUI中顯示技能資訊"
-  homescreen_bgseason: "Main interface background season"
+  homescreen_bgseason: "主介面背景季節"
   shadow_resolution: "陰影解析度"
 
 tl_update_dialog:
