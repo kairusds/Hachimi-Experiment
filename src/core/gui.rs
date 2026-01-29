@@ -174,8 +174,6 @@ use std::sync::atomic::Ordering;
 #[cfg(target_os = "android")]
 use std::sync::atomic::{AtomicI32, AtomicPtr};
 #[cfg(target_os = "android")]
-use once_cell::sync::Lazy;
-#[cfg(target_os = "android")]
 static PENDING_KEYBOARD_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
 static PENDING_KB_TYPE: AtomicI32 = AtomicI32::new(0);
