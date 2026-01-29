@@ -118,8 +118,10 @@ static IS_CONSUMING_INPUT: AtomicBool = AtomicBool::new(false);
 static mut DISABLED_GAME_UIS: once_cell::unsync::Lazy<FnvHashSet<*mut Il2CppObject>> =
     once_cell::unsync::Lazy::new(|| FnvHashSet::default());
 
+use std::sync::atomic::Ordering;
+
 #[cfg(target_os = "android")]
-use std::sync::atomic::{AtomicI32, AtomicPtr, Ordering};
+use std::sync::atomic::{AtomicI32, AtomicPtr};
 #[cfg(target_os = "android")]
 use once_cell::sync::Lazy;
 #[cfg(target_os = "android")]
