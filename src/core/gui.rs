@@ -238,7 +238,7 @@ impl Gui {
         let proportional_fonts = fonts.families.get_mut(&egui::FontFamily::Proportional).unwrap();
 
         add_font!(fonts, proportional_fonts, "AlibabaPuHuiTi-3-45-Light.otf");
-        add_font!(fonts, proportional_fonts, "NotoSans-Light.ttf");
+        add_font!(fonts, proportional_fonts, "NotoSans-Regular.ttf");
         add_font!(fonts, proportional_fonts, "NotoSansJP-Regular.ttf");
         add_font!(fonts, proportional_fonts, "FontAwesome.otf");
 
