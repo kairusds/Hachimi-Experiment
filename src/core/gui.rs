@@ -214,7 +214,7 @@ fn ime_scroll_padding(ctx: &egui::Context) -> f32 {
     if !is_ime_visible() {
         return 0.0;
     }
-    ctx.input(|i| i.max_rect().height() * 0.35)
+    ctx.input(|i| i.viewport_rect().height() * 0.35)
 }
 
 impl Gui {
