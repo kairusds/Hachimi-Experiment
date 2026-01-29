@@ -775,6 +775,7 @@ impl Gui {
             ui.set_max_width(fixed_width);
 
             ui.horizontal(|ui| {
+                #[cfg_attr(target_os =  "windows", allow(unused))]
                 let res = ui.add_sized(
                     [ui.available_width() - 30.0 * scale, row_height],
                     egui::TextEdit::singleline(search_term).hint_text(t!("search_filter"))
