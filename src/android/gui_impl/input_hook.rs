@@ -236,7 +236,7 @@ fn get_ppp(mut env: JNIEnv, gui: &Gui) -> f32 {
     gui.context.zoom_factor() * (view_main_axis_size as f32 / gui.prev_main_axis_size as f32)
 }
 
-fn get_activity(mut env: JNIEnv) -> Option<JObject<'_>> {
+fn get_activity(mut env: JNIEnv<'_>) -> Option<JObject<'_>> {
     let activity_thread_class = env.find_class("android/app/ActivityThread").ok()?;
     let activity_thread = env
         .call_static_method(
@@ -270,7 +270,7 @@ fn get_activity(mut env: JNIEnv) -> Option<JObject<'_>> {
     Some(activity)
 }
 
-fn get_view(mut env: JNIEnv) -> Option<JObject<'_>> {
+fn get_view(mut env: JNIEnv<'_>) -> Option<JObject<'_>> {
     let activity = get_activity(unsafe { env.unsafe_clone() })?;
     let jni_window = env
         .call_method(activity, "getWindow", "()Landroid/view/Window;", &[])
