@@ -808,7 +808,7 @@ impl Gui {
                         if ui.add(egui::Button::selectable(is_selected, *label)).clicked() {
                             *value = *choice_val;
                             changed = true;
-                            ui.memory_mut(|_mem| egui::Popup::close_id(ui.ctx(), popup_id));
+                            egui::Popup::close_id(ui.ctx(), popup_id);
                             search_term.clear();
                         }
                     }
