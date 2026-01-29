@@ -7,19 +7,19 @@ use rust_i18n::t;
 use chrono::{Utc, Datelike};
 
 use crate::il2cpp::{
-    ext::StringExt,
+    ext::StringExt, Il2CppStringExt,
     hook::{
         umamusume::{CameraData::ShadowResolution, CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize, TimeUtil::BgSeason},
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
     },
-    symbols::{Thread, GCHandle},
+    symbols::Thread,
     types::Il2CppObject
 };
 
 #[cfg(target_os = "android")]
 use crate::il2cpp::{
-    ext::Il2CppStringExt,
     hook::{umamusume::WebViewManager, UnityEngine_CoreModule::{TouchScreenKeyboard, TouchScreenKeyboardType}},
+    symbols::GCHandle,
     types::Il2CppString
 };
 
@@ -143,7 +143,9 @@ fn get_scale(ctx: &egui::Context) -> f32 {
 
 impl Gui {
     // Call this from the render thread!
-    pub fn instance_or_init(open_key_id: &str) -> &Mutex<Gui> {
+    pub fn instance_or_init(
+        #[cfg_attr(target_os = "windows", allow(unused))] open_key_id: &str
+    ) -> &Mutex<Gui> {
         if let Some(instance) = INSTANCE.get() {
             return instance;
         }
