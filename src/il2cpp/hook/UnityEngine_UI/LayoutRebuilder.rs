@@ -1,4 +1,4 @@
-use crate::il2cpp::{api::{il2cpp_class_get_type, il2cpp_type_get_object}, symbols::get_method_addr, types::*};
+use crate::il2cpp::{symbols::get_method_addr, types::*};
 
 static mut FORCEREBUILDLAYOUTIMMEDIATE_ADDR: usize = 0;
 impl_addr_wrapper_fn!(ForceRebuildLayoutImmediate, FORCEREBUILDLAYOUTIMMEDIATE_ADDR, (), layoutRoot: *mut Il2CppObject);

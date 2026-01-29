@@ -1,6 +1,6 @@
 use crate::{
     core::{gui::SkillInfoDialog, Gui, Hachimi, game::Region, utils::mul_int},
-    il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_value, get_field_object_value, get_method_addr}, types::*}
+    il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr}, types::*}
 };
 use once_cell::sync::Lazy;
 use std::sync::Mutex;
@@ -67,7 +67,7 @@ fn UpdateItemCommon(this: *mut Il2CppObject, skill_info: *mut Il2CppObject, orig
     }
 
     if get_IsDrawDesc(skill_info) && !desc.is_null() {
-        let mut desc_len = skill_cfg.desc_length;
+        let desc_len = skill_cfg.desc_length;
         // todo: When conditions button!?
         // if get_IsDisplayUpgradeSkill(skill_info) {
         //     desc_len = mul_int(desc_len, skill_cfg.desc_btn_mult);
@@ -110,7 +110,7 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
 }
 
 fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
-    let name = get__nameText(this);
+    // let name = get__nameText(this);
     let desc = get__descText(this);
 
     let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
@@ -141,7 +141,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     let skill_id = get_Id(info);
     let button = get__bgButton(this);
     let button_obj = Component::get_gameObject(button);
-    Object::set_name(button_obj, unsafe { format!("HachimiSkill_{}", skill_id).to_il2cpp_string() });
+    Object::set_name(button_obj, format!("HachimiSkill_{}", skill_id).to_il2cpp_string());
     get_skill_text(skill_id, this);
     info!("SKILL_TEXT_CACHE len: {}", SKILL_TEXT_CACHE.lock().unwrap().len());
 

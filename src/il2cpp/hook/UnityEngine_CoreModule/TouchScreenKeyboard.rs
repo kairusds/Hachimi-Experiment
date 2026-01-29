@@ -1,4 +1,3 @@
-use serde::{Deserialize, Serialize};
 use crate::{il2cpp::{symbols::{get_method_addr, get_method_overload_addr}, types::*}};
 use super::TouchScreenKeyboardType;
 

@@ -1,6 +1,6 @@
 use crate::{
     il2cpp::{
-        symbols::{get_field_from_name, get_field_object_value, get_method_addr},
+        symbols::{get_field_from_name, get_field_object_value},
         types::*
     }
 };

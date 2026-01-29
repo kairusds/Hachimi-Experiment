@@ -12,7 +12,6 @@ use crate::il2cpp::{
         umamusume::{CameraData::ShadowResolution, CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize, TimeUtil::BgSeason},
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
     },
-    sql::CharacterData,
     symbols::{Thread, GCHandle},
     types::Il2CppObject
 };
@@ -297,7 +296,6 @@ impl Gui {
 
         let mut style = self.default_style.clone();
         if live_scale != 1.0 {
-            use egui_scale::EguiScale;
             style.scale(live_scale);
         }
         self.context.set_style(style);
@@ -660,13 +658,7 @@ impl Gui {
                 let typ_i32 = PENDING_KB_TYPE.load(Ordering::Relaxed);
                 let typ = unsafe { std::mem::transmute::<i32, TouchScreenKeyboardType::KeyboardType>(typ_i32) };
                 if !ptr.is_null() {
-                    let keyboard = unsafe {
-                        TouchScreenKeyboard::Open(
-                            ptr, 
-                            typ,
-                            false, false, false
-                        )
-                    };
+                    let keyboard = TouchScreenKeyboard::Open(ptr, typ, false, false, false);
                     let handle = GCHandle::new(keyboard, false);
                     *KEYBOARD_GC_HANDLE.lock().unwrap() = Some(handle);
                     ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
@@ -682,7 +674,7 @@ impl Gui {
                 let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
                 // update text in realtime as user types only if it's different
                 if let Some(kb_ref) = unsafe { kb_txt_ptr.as_ref() } {
-                    let kb_txt_str = unsafe { kb_ref.as_utf16str() }.to_string();
+                    let kb_txt_str = kb_ref.as_utf16str().to_string();
                     if *text != kb_txt_str {
                         *text = kb_txt_str;
                     }
@@ -811,7 +803,7 @@ impl Gui {
                         if ui.add(egui::Button::selectable(is_selected, *label)).clicked() {
                             *value = *choice_val;
                             changed = true;
-                            ui.memory_mut(|mem| mem.close_popup(popup_id));
+                            ui.memory_mut(|_mem| egui::Popup::close_id(ui.ctx(), popup_id));
                             search_term.clear();
                         }
                     }
@@ -1053,10 +1045,12 @@ fn new_window<'a>(ctx: &egui::Context, id: egui::Id, title: impl Into<egui::Widg
 }
 
 fn simple_window_layout(ui: &mut egui::Ui, id: egui::Id, add_contents: impl FnOnce(&mut egui::Ui), add_buttons: impl FnOnce(&mut egui::Ui)) {
-    ui.with_layout(egui::Layout::top_down(egui::Align::Center).with_cross_justify(true), |ui| {
-        ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
-            add_contents(ui);
-        });
+    let builder = egui::UiBuilder::new()
+        .id(id)
+        .layout(egui::Layout::top_down(egui::Align::Center).with_cross_justify(true));
+
+    ui.scope_builder(builder, |ui| {
+        ui.with_layout(egui::Layout::top_down(egui::Align::Min), add_contents);
 
         ui.separator(); 
 
@@ -1223,7 +1217,11 @@ fn paginated_window_layout(
 ) -> bool {
     let mut open = true;
 
-    ui.with_layout(egui::Layout::top_down(egui::Align::Center).with_cross_justify(true), |ui| {
+    let builder = egui::UiBuilder::new()
+        .id(id)
+        .layout(egui::Layout::top_down(egui::Align::Center).with_cross_justify(true));
+
+    ui.scope_builder(builder, |ui| {
         ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
             add_page_content(ui, *i);
         });
@@ -1293,7 +1291,8 @@ fn async_request_ui_content<T: Send + Sync + 'static>(ui: &mut egui::Ui, request
                 egui::vec2(rect.width(), total_height)
             );
 
-            ui.allocate_ui_at_rect(content_rect, |ui| {
+            let builder = egui::UiBuilder::new().max_rect(content_rect);
+            ui.scope_builder(builder, |ui| {
                 ui.vertical_centered(|ui| {
                     ui.label(text_job);
                     if ui.button(btn_text).clicked() {
@@ -1441,7 +1440,7 @@ impl Window for SkillInfoDialog {
 
         let light_frame = egui::Frame::window(&ctx.style())
             .fill(egui::Color32::from_gray(241))
-            .rounding(10.0 * scale)
+            .corner_radius(10.0 * scale)
             .stroke(egui::Stroke::new(1.0, egui::Color32::from_gray(210)))
             .shadow(egui::Shadow::NONE);
 
@@ -1469,7 +1468,7 @@ impl Window for SkillInfoDialog {
                         egui::Frame::NONE
                         .fill(egui::Color32::from_rgb(237, 228, 229))
                         .stroke(egui::Stroke::new(1.0, egui::Color32::from_gray(200)))
-                        .rounding(4.0 * scale)
+                        .corner_radius(4.0 * scale)
                         .inner_margin(5.0 * scale)
                         .show(ui, |ui| {
                             ui.set_min_width(ui.available_width());

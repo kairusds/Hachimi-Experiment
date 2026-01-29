@@ -4,7 +4,7 @@ use serde::Serialize;
 use textwrap::{core::Word, wrap_algorithms, WordSeparator::UnicodeBreakProperties};
 use unicode_width::UnicodeWidthChar;
 
-use crate::{core::Gui, il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::UnityEngine_CoreModule::Application, types::Il2CppString}};
+use crate::{core::Gui, il2cpp::{ext::{Il2CppStringExt, StringExt}, types::Il2CppString}};
 
 use super::{Error, Hachimi};
 
@@ -507,10 +507,10 @@ pub fn scale_to_aspect_ratio(sizes: (i32, i32), aspect_ratio: f32, prefer_larger
     let scale_by_height = if prefer_larger { height > width } else { width > height };
     if scale_by_height {
         width = (height as f32 * aspect_ratio).round() as i32;
-        height = height;
+        // height = height;
     }
     else {
-        width = width;
+        // width = width;
         height = (width as f32 / aspect_ratio).round() as i32;
     }
 
@@ -531,7 +531,7 @@ pub fn get_masterdb_path() -> String {
 
     #[cfg(target_os = "windows")]
     {
-        let base = unsafe { (*Application::get_persistentDataPath()).as_utf16str() }.to_string();
+        let base = unsafe { (*crate::il2cpp::hook::UnityEngine_CoreModule::Application::get_persistentDataPath()).as_utf16str() }.to_string();
         format!("{}/master/master.mdb", base)
     }
 }

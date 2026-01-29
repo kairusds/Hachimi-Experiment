@@ -7,7 +7,7 @@ use textwrap::wrap_algorithms::Penalties;
 
 use crate::{core::plugin_api::Plugin, gui_impl, hachimi_impl, il2cpp::{self, hook::umamusume::{CySpringController::SpringUpdateMode, GameSystem}, sql::CharacterData}};
 
-use super::{game::{Game, Region}, ipc, plurals, template, template_filters, tl_repo, utils, Error, Gui, Interceptor};
+use super::{game::{Game, Region}, ipc, plurals, template, template_filters, tl_repo, utils, Error, Interceptor};
 
 pub const REPO_PATH: &str = "kairusds/Hachimi-Experiment";
 pub const GITHUB_API: &str = "https://api.github.com/repos";
@@ -137,7 +137,8 @@ impl Hachimi {
         })
     }
 
-    fn load_config(data_dir: &Path, region: &Region) -> Result<Config, Error> {
+    // region param is unused?
+    fn load_config(data_dir: &Path, _region: &Region) -> Result<Config, Error> {
         let config_path = data_dir.join("config.json");
         if fs::metadata(&config_path).is_ok() {
             let json = fs::read_to_string(&config_path)?;
