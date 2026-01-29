@@ -5,7 +5,7 @@ use crate::{
     il2cpp::{
         api::il2cpp_resolve_icall,
         hook::{
-            umamusume::FlashActionPlayer, Plugins::AnimateToUnity::AnRoot,
+            umamusume::{CameraData::{self, ShadowResolution}, FlashActionPlayer}, Plugins::AnimateToUnity::AnRoot,
             UnityEngine_AssetBundleModule::AssetBundle
         },
         symbols::{get_method_addr, Array},
@@ -86,8 +86,6 @@ pub fn on_LoadAsset(bundle: *mut Il2CppObject, this: *mut Il2CppObject, name: &U
     }
 }
 
-<<<<<<< HEAD
-||||||| parent of cffe2c7 (feat: configurable shadow resolution in GUI)
 fn customize(component: *mut Il2CppObject) {
         match unsafe { (*component).klass() } {
             // graphics quality - shadow resolution
@@ -166,7 +164,6 @@ extern "C" fn TryGetComponentFastPath(this: *mut Il2CppObject, type_: *mut Il2Cp
     }
 }
 
->>>>>>> cffe2c7 (feat: configurable shadow resolution in GUI)
 pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
     get_class_or_return!(UnityEngine_CoreModule, UnityEngine, GameObject);
 
