@@ -209,6 +209,16 @@ fn ime_scroll_padding(ctx: &egui::Context) -> f32 {
 
 #[cfg(target_os = "android")]
 pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
+    if res.lost_focus() {
+        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+        if !kb_ptr.is_null() {
+            TouchScreenKeyboard::set_active(kb_ptr, false);
+            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+            *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
+        }
+        return;
+    }
+
     if !res.has_focus() {
         return;
     }
@@ -282,15 +292,6 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
             ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
             *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
             res.ctx.request_repaint();
-        }
-    }
-
-    if res.lost_focus() {
-        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-        if !kb_ptr.is_null() {
-            TouchScreenKeyboard::set_active(kb_ptr, false);
-            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
-            *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
         }
     }
 }
