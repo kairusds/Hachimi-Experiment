@@ -1,7 +1,7 @@
 mod main;
 mod zygisk;
 mod hook;
-mod utils;
+pub mod utils;
 mod plugin_loader;
 pub mod game_impl;
 pub mod log_impl;

@@ -27,9 +27,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 fnv = "1.0"
 widestring = "1.1"
-egui = { version = "0.33.3", default-features = false }
+egui = { version = "0.33.2", default-features = false }
 egui-scale = "0.3.0"
-egui_extras = { version = "0.33.3", default-features = false, features = ["image"] }
+egui_extras = { version = "0.33.2", default-features = false, features = ["image"] }
 image = { version = "0.25.9", default-features = false, features = ["png"] }
 png = "0.17"
 sqlparser = "0.43"
@@ -52,7 +52,7 @@ libc = "0.2"
 android_logger = "0.15.1"
 procfs = "0.16"
 jni = "0.21.1"
-egui_glow = "0.33.3"
+egui_glow = "0.33.2"
 glow = "0.16"
 dobby-rs = "0.1"
 
@@ -93,5 +93,4 @@ FileDescription = "Game enhancement and translation mod"
 
 [patch.crates-io]
 dobby-sys = { git = "https://github.com/LeadRDRK/dobby-sys.git", rev = "e005f6abb0db1353b92ff58d50f59112f04dcad4" }
-egui = { git = "https://github.com/kairusds/egui.git", rev = "bf8b32e40a32a54f14c0f31053c319590c7e6098" }
 embed-resource = { git = "https://github.com/nabijaczleweli/rust-embed-resource.git", rev = "e98e9aa28d66b0c2ff43516b41847cac372310dd" }

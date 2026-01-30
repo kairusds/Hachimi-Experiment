@@ -5,7 +5,7 @@ use once_cell::sync::OnceCell;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use textwrap::wrap_algorithms::Penalties;
 
-use crate::{core::plugin_api::Plugin, gui_impl, hachimi_impl, il2cpp::{self, hook::umamusume::{CySpringController::SpringUpdateMode, GameSystem}, sql::CharacterData}};
+use crate::{core::{plugin_api::Plugin, updater}, gui_impl, hachimi_impl, il2cpp::{self, hook::umamusume::{CySpringController::SpringUpdateMode, GameSystem}, sql::CharacterData}};
 
 use super::{game::{Game, Region}, ipc, plurals, template, template_filters, tl_repo, utils, Error, Interceptor};
 
@@ -13,6 +13,8 @@ pub const REPO_PATH: &str = "kairusds/Hachimi-Experiment";
 pub const GITHUB_API: &str = "https://api.github.com/repos";
 pub const CODEBERG_API: &str = "https://codeberg.org/api/v1/repos";
 pub const WEBSITE_URL: &str = "https://hachimi.noccu.art";
+pub const UMAPATCHER_APP_URI: &str = "com.leadrdrk.umapatcher.edge";
+pub const UMAPATCHER_INSTALL_URL: &str = "https://github.com/kairusds/UmaPatcher-Edge/releases/latest";
 
 pub static CONFIG_LOAD_ERROR: AtomicBool = AtomicBool::new(false);
 
@@ -46,8 +48,7 @@ pub struct Hachimi {
     #[cfg(target_os = "windows")]
     pub discord_rpc: AtomicBool,
 
-    #[cfg(target_os = "windows")]
-    pub updater: Arc<crate::windows::updater::Updater>
+    pub updater: Arc<updater::Updater>
 }
 
 static INSTANCE: OnceCell<Arc<Hachimi>> = OnceCell::new();
@@ -130,7 +131,6 @@ impl Hachimi {
             #[cfg(target_os = "windows")]
             discord_rpc: AtomicBool::new(config.windows.discord_rpc),
 
-            #[cfg(target_os = "windows")]
             updater: Arc::default(),
 
             config: ArcSwap::new(Arc::new(config))
@@ -267,14 +267,15 @@ impl Hachimi {
 
     pub fn run_auto_update_check(&self) {
         if !self.config.load().disable_auto_update_check {
+            /*
             #[cfg(not(target_os = "windows"))]
             if !self.config.load().translator_mode {
                 self.tl_updater.clone().check_for_updates(false);
-            }
+            }*/
 
             // Check for hachimi updates first, then translations
             // Don't auto check for tl updates if it's not up to date
-            #[cfg(target_os = "windows")]
+            // #[cfg(target_os = "windows")]
             self.updater.clone().check_for_updates(|new_update| {
                 let hachimi = Hachimi::instance();
                 if !new_update && !hachimi.config.load().translator_mode {

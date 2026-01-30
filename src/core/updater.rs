@@ -1,9 +1,12 @@
-use std::{fs::File, io::Read, sync::{atomic::{self, AtomicBool}, Arc, Mutex}};
+use std::{sync::{Arc, Mutex}};
 
-use arc_swap::ArcSwap;
 use rust_i18n::t;
 use serde::Deserialize;
+#[cfg(target_os = "windows")]
+use arc_swap::ArcSwap;
+#[cfg(target_os = "windows")]
 use widestring::Utf16Str;
+#[cfg(target_os = "windows")]
 use windows::{
     core::{HSTRING, PCWSTR},
     Win32::{
@@ -11,14 +14,22 @@ use windows::{
         UI::{Shell::ShellExecuteW, WindowsAndMessaging::{PostMessageW, SW_NORMAL, WM_CLOSE}}
     }
 };
-
-use crate::core::{gui::{PersistentMessageWindow, SimpleYesNoDialog}, hachimi::{REPO_PATH, CODEBERG_API, GITHUB_API}, http, Error, Gui, Hachimi};
-
+#[cfg(target_os = "windows")]
+use std::{fs::File, io::Read, sync::{atomic::{self, AtomicBool}}};
+#[cfg(target_os = "windows")]
+use crate::core::gui::PersistentMessageWindow;
+#[cfg(target_os = "windows")]
 use super::{main::DLL_HMODULE, utils};
+
+use crate::core::{gui::SimpleYesNoDialog, hachimi::{REPO_PATH, CODEBERG_API, GITHUB_API}, http, Error, Gui, Hachimi};
+
+#[cfg(target_os = "android")]
+use crate::{android::utils, core::hachimi::{UMAPATCHER_INSTALL_URL, UMAPATCHER_APP_URI}};
 
 #[derive(Default)]
 pub struct Updater {
     update_check_mutex: Mutex<()>,
+    #[cfg(target_os = "windows")]
     new_update: ArcSwap<Option<ReleaseAsset>>
 }
 
@@ -51,15 +62,32 @@ impl Updater {
         };
 
         if latest.is_different_version() {
-            let installer_asset = latest.assets.iter().find(|asset| asset.name == "hachimi_installer.exe");
-            let hash_asset = latest.assets.iter().find(|asset| asset.name == "blake3.json");
-
-            if let (Some(installer), Some(h_json)) = (installer_asset, hash_asset) {
-                let hash_data = http::get_json::<Blake3Hashes>(&h_json.browser_download_url)?;
-                let mut asset = installer.clone();
-                asset.expected_hash = Some(hash_data.installer_exe);
-                self.new_update.store(Arc::new(Some(asset)));
-
+            #[cfg(target_os = "windows")]
+            {
+                let installer_asset = latest.assets.iter().find(|asset| asset.name == "hachimi_installer.exe");
+                let hash_asset = latest.assets.iter().find(|asset| asset.name == "blake3.json");
+    
+                if let (Some(installer), Some(h_json)) = (installer_asset, hash_asset) {
+                    let hash_data = http::get_json::<Blake3Hashes>(&h_json.browser_download_url)?;
+                    let mut asset = installer.clone();
+                    asset.expected_hash = Some(hash_data.installer_exe);
+                    self.new_update.store(Arc::new(Some(asset)));
+    
+                    if let Some(mutex) = Gui::instance() {
+                        mutex.lock().unwrap().show_window(Box::new(SimpleYesNoDialog::new(
+                            &t!("update_prompt_dialog.title"),
+                            &t!("update_prompt_dialog.content", version = latest.tag_name),
+                            |ok| {
+                                if !ok { return; }
+                                Hachimi::instance().updater.clone().run();
+                            }
+                        )));
+                    }
+                    return Ok(true);
+                }
+            }
+            #[cfg(target_os = "android")]
+            {
                 if let Some(mutex) = Gui::instance() {
                     mutex.lock().unwrap().show_window(Box::new(SimpleYesNoDialog::new(
                         &t!("update_prompt_dialog.title"),
@@ -70,7 +98,6 @@ impl Updater {
                         }
                     )));
                 }
-                return Ok(true);
             }
         } else if let Some(mutex) = Gui::instance() {
             mutex.lock().unwrap().show_notification(&t!("notification.no_updates"));
@@ -80,27 +107,33 @@ impl Updater {
     }
 
     pub fn run(self: Arc<Self>) {
-        std::thread::spawn(move || {
-            let dialog_show = Arc::new(AtomicBool::new(true));
-            if let Some(mutex) = Gui::instance() {
-                mutex.lock().unwrap().show_window(Box::new(PersistentMessageWindow::new(
-                    &t!("updating_dialog.title"),
-                    &t!("updating_dialog.content"),
-                    dialog_show.clone()
-                )));
-            }
-
-            if let Err(e) = self.clone().run_internal() {
-                error!("{}", e);
+        #[cfg(target_os = "windows")]
+        {
+            std::thread::spawn(move || {
+                let dialog_show = Arc::new(AtomicBool::new(true));
                 if let Some(mutex) = Gui::instance() {
-                    mutex.lock().unwrap().show_notification(&t!("notification.update_failed", reason = e.to_string()));
+                    mutex.lock().unwrap().show_window(Box::new(PersistentMessageWindow::new(
+                        &t!("updating_dialog.title"),
+                        &t!("updating_dialog.content"),
+                        dialog_show.clone()
+                    )));
                 }
-            }
-
-            dialog_show.store(false, atomic::Ordering::Relaxed)
-        });
+    
+                if let Err(e) = self.clone().run_internal() {
+                    error!("{}", e);
+                    if let Some(mutex) = Gui::instance() {
+                        mutex.lock().unwrap().show_notification(&t!("notification.update_failed", reason = e.to_string()));
+                    }
+                }
+    
+                dialog_show.store(false, atomic::Ordering::Relaxed)
+            });
+        }
+        #[cfg(target_os = "android")]
+        utils::open_app_or_fallback(UMAPATCHER_APP_URI, UMAPATCHER_INSTALL_URL);
     }
 
+    #[cfg(target_os = "windows")]
     fn run_internal(self: Arc<Self>) -> Result<(), Error> {
         let Some(ref asset) = **self.new_update.load() else {
             return Ok(());
@@ -160,6 +193,7 @@ impl Updater {
 pub struct Release {
     // STUB
     tag_name: String,
+    #[cfg(target_os = "windows")]
     assets: Vec<ReleaseAsset>
 }
 
@@ -169,6 +203,7 @@ impl Release {
     }
 }
 
+#[cfg(target_os = "windows")]
 #[derive(Deserialize, Clone)]
 pub struct ReleaseAsset {
     // STUB
@@ -178,6 +213,7 @@ pub struct ReleaseAsset {
     pub expected_hash: Option<String>
 }
 
+#[cfg(target_os = "windows")]
 #[derive(Deserialize)]
 struct Blake3Hashes {
     #[serde(rename = "hachimi_installer.exe")]

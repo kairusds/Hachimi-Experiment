@@ -172,7 +172,9 @@ fn drain_plugin_notifications() -> Vec<String> {
 use std::sync::atomic::Ordering;
 
 #[cfg(target_os = "android")]
-use std::sync::atomic::AtomicPtr;
+use std::sync::atomic::{AtomicI32, AtomicPtr};
+#[cfg(target_os = "android")]
+static PENDING_KB_TYPE: AtomicI32 = AtomicI32::new(0);
 #[cfg(target_os = "android")]
 static PENDING_KEYBOARD_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
@@ -188,98 +190,102 @@ fn get_scale(ctx: &egui::Context) -> f32 {
     ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale"))).unwrap_or(1.0)
 }
 
-/*
+fn is_ime_visible() -> bool {
+    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+    if kb_ptr.is_null() {
+        return false;
+    }
+    TouchScreenKeyboard::get_status(kb_ptr) == TouchScreenKeyboard::Status::Visible
+}
+
 fn ime_scroll_padding(ctx: &egui::Context) -> f32 {
     if !is_ime_visible() {
         return 0.0;
     }
     ctx.input(|i| i.viewport_rect().height() * 0.35)
 }
-*/
 
-pub trait UnityKeyboardResponseExt {
-    fn android_keyboard<T: 'static>(self, val: &mut T) -> Self;
-}
+#[cfg(target_os = "android")]
+pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
+    let val_any = val as &dyn std::any::Any;
+    PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::Default as i32, Ordering::Relaxed);
 
-impl UnityKeyboardResponseExt for egui::Response {
-    fn android_keyboard<T: 'static>(self, val: &mut T) -> Self {
-        #[cfg(target_os = "android")]
-        {
-            let val_any = val as &dyn std::any::Any;  
-            let text = if let Some(s) = val_any.downcast_ref::<String>() {
-                s.clone()
-            } else if let Some(f) = val_any.downcast_ref::<f32>() {
-                f.to_string()
-            } else if let Some(i) = val_any.downcast_ref::<i32>() {
-                i.to_string()
-            } else {
-                String::new() 
-            };
-            if self.gained_focus() {
-                let ptr = text.to_il2cpp_string();
-                PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
+    let text = if let Some(s) = val_any.downcast_ref::<String>() {
+        s.clone()
+    } else if let Some(f) = val_any.downcast_ref::<f32>() {
+        PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::DecimalPad as i32, Ordering::Relaxed);
+        f.to_string()
+    } else if let Some(i) = val_any.downcast_ref::<i32>() {
+        PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::NumberPad as i32, Ordering::Relaxed);
+        i.to_string()
+    } else {
+        String::new() 
+    };
+    
+    if res.gained_focus() {
+        res.scroll_to_me(Some(egui::Align::Center));
 
-                Thread::main_thread().schedule(|| {
-                    let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
-                    let typ = TouchScreenKeyboardType::KeyboardType::Default;
+        let ptr = text.to_il2cpp_string();
+        PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
 
-                    if !ptr.is_null() {
-                        let keyboard = TouchScreenKeyboard::Open(ptr, typ, false, false, false);
-                        let handle = GCHandle::new(keyboard, false);
-                        *KEYBOARD_GC_HANDLE.lock().unwrap() = Some(handle);
-                        ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
-                    }
-                });
+        Thread::main_thread().schedule(|| {
+            let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
+            let typ: TouchScreenKeyboardType::KeyboardType = unsafe { *(&PENDING_KB_TYPE.load(Ordering::Relaxed) as *const i32 as *const TouchScreenKeyboardType::KeyboardType) };
+
+            if !ptr.is_null() {
+                let keyboard = TouchScreenKeyboard::Open(ptr, typ, false, false, false);
+                let handle = GCHandle::new(keyboard, false);
+                *KEYBOARD_GC_HANDLE.lock().unwrap() = Some(handle);
+                ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
             }
+        });
+    }
 
-            let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-            if !kb_ptr.is_null() {
-                let status = TouchScreenKeyboard::get_status(kb_ptr);
+    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+    if !kb_ptr.is_null() {
+        let status = TouchScreenKeyboard::get_status(kb_ptr);
 
-                if status == TouchScreenKeyboard::Status::Visible {
-                    let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
-                    if let Some(kb_ref) = unsafe { kb_txt_ptr.as_ref() } {
-                        let kb_txt_str = kb_ref.as_utf16str().to_string();
+        if status == TouchScreenKeyboard::Status::Visible {
+            let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
+            if let Some(kb_ref) = unsafe { kb_txt_ptr.as_ref() } {
+                let kb_txt_str = kb_ref.as_utf16str().to_string();
 
-                        let val_any_mut = val as &mut dyn std::any::Any;
+                let val_any_mut = val as &mut dyn std::any::Any;
 
-                        if let Some(s) = val_any_mut.downcast_mut::<String>() {
-                            if *s != kb_txt_str { *s = kb_txt_str; }
-                        } else if let Some(f) = val_any_mut.downcast_mut::<f32>() {
-                            if let Ok(parsed) = kb_txt_str.parse::<f32>() { 
-                                if *f != parsed { *f = parsed; }
-                            }
-                        } else if let Some(i) = val_any_mut.downcast_mut::<i32>() {
-                            if let Ok(parsed) = kb_txt_str.parse::<i32>() { 
-                                if *i != parsed { *i = parsed; }
-                            }
-                        }
+                if let Some(s) = val_any_mut.downcast_mut::<String>() {
+                    if *s != kb_txt_str { *s = kb_txt_str; }
+                } else if let Some(f) = val_any_mut.downcast_mut::<f32>() {
+                    if let Ok(parsed) = kb_txt_str.parse::<f32>() { 
+                        if *f != parsed { *f = parsed; }
                     }
-                }
-
-                if status != TouchScreenKeyboard::Status::Visible {
-                    self.surrender_focus();
-                    self.ctx.memory_mut(|mem| mem.stop_text_input());
-                    self.ctx.data_mut(|data| {
-                        data.remove::<egui::widgets::text_edit::TextEditState>(self.id);
-                    });
-
-                    ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
-                    *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
-                    self.ctx.request_repaint();
-                }
-            }
-
-            if self.lost_focus() {
-                let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-                if !kb_ptr.is_null() {
-                    TouchScreenKeyboard::set_active(kb_ptr, false);
-                    ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
-                    *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
+                } else if let Some(i) = val_any_mut.downcast_mut::<i32>() {
+                    if let Ok(parsed) = kb_txt_str.parse::<i32>() { 
+                        if *i != parsed { *i = parsed; }
+                    }
                 }
             }
         }
-        self
+
+        if status != TouchScreenKeyboard::Status::Visible {
+            res.surrender_focus();
+            res.ctx.memory_mut(|mem| mem.stop_text_input());
+            res.ctx.data_mut(|data| {
+                data.remove::<egui::widgets::text_edit::TextEditState>(res.id);
+            });
+
+            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+            *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
+            res.ctx.request_repaint();
+        }
+    }
+
+    if res.lost_focus() {
+        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+        if !kb_ptr.is_null() {
+            TouchScreenKeyboard::set_active(kb_ptr, false);
+            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+            *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
+        }
     }
 }
 
@@ -583,8 +589,9 @@ impl Gui {
                         ui.heading(t!("menu.graphics_heading"));
                         ui.horizontal(|ui| {
                             ui.label(t!("menu.fps_label"));
-                            let res = ui.add(egui::Slider::new(&mut self.menu_fps_value, 30..=240))
-                                .android_keyboard(&mut self.menu_fps_value);
+                            let res = ui.add(egui::Slider::new(&mut self.menu_fps_value, 30..=240));
+                            #[cfg(target_os = "android")]
+                            handle_android_keyboard(&res, &mut self.menu_fps_value);
                             if res.lost_focus() || res.drag_stopped() {
                                 hachimi.target_fps.store(self.menu_fps_value, atomic::Ordering::Relaxed);
                                 Thread::main_thread().schedule(|| {
@@ -717,6 +724,11 @@ impl Gui {
                         }
                         if ui.button(t!("menu.toggle_game_ui")).clicked() {
                             Thread::main_thread().schedule(Self::toggle_game_ui);
+                        }
+
+                        let padding = ime_scroll_padding(ui.ctx());
+                        if padding > 0.0 {
+                            ui.add_space(padding);
                         }
                     });
                 });
@@ -896,10 +908,12 @@ impl Gui {
             ui.set_max_width(fixed_width);
 
             ui.horizontal(|ui| {
-                ui.add_sized(
+                let _res = ui.add_sized(
                     [ui.available_width() - 30.0 * scale, row_height],
                     egui::TextEdit::singleline(search_term).hint_text(t!("search_filter"))
-                ).android_keyboard(search_term);
+                );
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&_res, search_term);
 
                 if ui.button("X").clicked() {
                     search_term.clear();
@@ -1681,7 +1695,9 @@ impl ConfigEditor {
 
         if let Some(num) = value.as_mut() {
             ui.label("");
-            ui.add(egui::Slider::new(num, range)).android_keyboard(num);
+            let _res = ui.add(egui::Slider::new(num, range));
+            #[cfg(target_os = "android")]
+            handle_android_keyboard(&_res, num);
             ui.end_row();
         }
     }
@@ -1715,13 +1731,15 @@ impl ConfigEditor {
                 ui.end_row();
 
                 ui.label(t!("config_editor.meta_index_url"));
-                ui.add(egui::TextEdit::singleline(&mut config.meta_index_url).lock_focus(true))
-                    .android_keyboard(&mut config.meta_index_url);
+                let _res = ui.add(egui::TextEdit::singleline(&mut config.meta_index_url).lock_focus(true));
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&_res, &mut config.meta_index_url);
                 ui.end_row();
 
                 ui.label(t!("config_editor.gui_scale"));
-                ui.add(egui::Slider::new(&mut config.gui_scale, 0.25..=2.0).step_by(0.05))
-                    .android_keyboard(&mut config.gui_scale);
+                let _res = ui.add(egui::Slider::new(&mut config.gui_scale, 0.25..=2.0).step_by(0.05));
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&_res, &mut config.gui_scale);
                 ui.end_row();
 
                 #[cfg(target_os = "windows")]
@@ -1810,23 +1828,27 @@ impl ConfigEditor {
                 Self::option_slider(ui, &t!("config_editor.target_fps"), &mut config.target_fps, 30..=240);
 
                 ui.label(t!("config_editor.virtual_resolution_multiplier"));
-                ui.add(egui::Slider::new(&mut config.virtual_res_mult, 1.0..=4.0).step_by(0.1))
-                    .android_keyboard(&mut config.virtual_res_mult);
+                let _res = ui.add(egui::Slider::new(&mut config.virtual_res_mult, 1.0..=4.0).step_by(0.1));
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&_res, &mut config.virtual_res_mult);
                 ui.end_row();
 
                 ui.label(t!("config_editor.ui_scale"));
-                ui.add(egui::Slider::new(&mut config.ui_scale, 0.1..=10.0).step_by(0.05))
-                    .android_keyboard(&mut config.ui_scale);
+                let _res = ui.add(egui::Slider::new(&mut config.ui_scale, 0.1..=10.0).step_by(0.05));
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&_res, &mut config.ui_scale);
                 ui.end_row();
 
                 ui.label(t!("config_editor.ui_animation_scale"));
-                ui.add(egui::Slider::new(&mut config.ui_animation_scale, 0.1..=10.0).step_by(0.1))
-                    .android_keyboard(&mut config.ui_animation_scale);
+                let _res = ui.add(egui::Slider::new(&mut config.ui_animation_scale, 0.1..=10.0).step_by(0.1));
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&_res, &mut config.ui_animation_scale);
                 ui.end_row();
 
                 ui.label(t!("config_editor.render_scale"));
-                ui.add(egui::Slider::new(&mut config.render_scale, 0.1..=10.0).step_by(0.1))
-                    .android_keyboard(&mut config.render_scale);
+                let _res = ui.add(egui::Slider::new(&mut config.render_scale, 0.1..=10.0).step_by(0.1));
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&_res, &mut config.render_scale);
                 ui.end_row();
 
                 ui.label(t!("config_editor.msaa"));
@@ -1919,13 +1941,15 @@ impl ConfigEditor {
                 ui.end_row();
 
                 ui.label(t!("config_editor.story_choice_auto_select_delay"));
-                ui.add(egui::Slider::new(&mut config.story_choice_auto_select_delay, 0.1..=10.0).step_by(0.05))
-                    .android_keyboard(&mut config.story_choice_auto_select_delay);
+                let _res = ui.add(egui::Slider::new(&mut config.story_choice_auto_select_delay, 0.1..=10.0).step_by(0.05));
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&_res, &mut config.story_choice_auto_select_delay);
                 ui.end_row();
 
                 ui.label(t!("config_editor.story_text_speed_multiplier"));
-                ui.add(egui::Slider::new(&mut config.story_tcps_multiplier, 0.1..=10.0).step_by(0.1))
-                    .android_keyboard(&mut config.story_tcps_multiplier);
+                let _res = ui.add(egui::Slider::new(&mut config.story_tcps_multiplier, 0.1..=10.0).step_by(0.1));
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&_res, &mut config.story_tcps_multiplier);
                 ui.end_row();
 
                 ui.label(t!("config_editor.force_allow_dynamic_camera"));
@@ -2055,6 +2079,10 @@ impl Window for ConfigEditor {
                                 Self::run_options_grid(&mut config, ui, self.current_tab);
                             });
                         });
+                        let padding = ime_scroll_padding(ui.ctx());
+                        if padding > 0.0 {
+                            ui.add_space(padding);
+                        }
                     });
                 },
                 |ui| {
@@ -2167,8 +2195,9 @@ impl Window for FirstTimeSetupWindow {
                         });
                         ui.horizontal(|ui| {
                             ui.label(t!("config_editor.meta_index_url"));
-                            let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url).lock_focus(true))
-                                .android_keyboard(&mut self.meta_index_url);
+                            let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url).lock_focus(true));
+                            #[cfg(target_os = "android")]
+                            handle_android_keyboard(&res, &mut self.meta_index_url);
                             #[cfg(target_os = "windows")]
                             if res.has_focus() {
                                 ui.memory_mut(|mem| mem.set_focus_lock_filter(
@@ -2257,6 +2286,10 @@ impl Window for FirstTimeSetupWindow {
                                         last_section = Some(is_matched);
                                     }
                                 });
+                                let padding = ime_scroll_padding(ui.ctx());
+                                if padding > 0.0 {
+                                    ui.add_space(padding);
+                                }
                             });
                         });
                     }
