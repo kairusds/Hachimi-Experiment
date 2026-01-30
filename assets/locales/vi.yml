@@ -31,6 +31,7 @@ in_game_browser_confirm_content: "Bạn có muốn mở trình duyệt trong gam
 browser_dialog_title: "Trình duyệt"
 
 menu:
+  check_for_updates: "Kiểm tra cập nhật"
   fps_text: "FPS: %{fps}"
   close_menu: "\uf00d Đóng menu"
   stats_heading: "\uf022 Thống kê"
@@ -46,8 +47,8 @@ menu:
   stay_on_top: "Giữ cửa sổ trên cùng"
   translation_heading: "\uf02d Bản dịch"
   reload_localized_data: "\uf021 Tải lại dữ liệu dịch"
-  check_for_updates: "\uf0aa Kiểm tra cập nhật"
-  check_for_updates_pedantic: "\uf0aa Kiểm tra cập nhật (sâu)"
+  tl_check_for_updates: "\uf0aa Kiểm tra cập nhật bản dịch"
+  tl_check_for_updates_pedantic: "\uf0aa Kiểm tra cập nhật bản dịch (sâu)"
   dump_localize_dict: "Xuất file localize dict"
   danger_zone_heading: "\uf071 Vùng nguy hiểm"
   danger_zone_warning: "Những lựa chọn này có thể gây ra các tác dụng không mong muốn. Hãy sử dụng cẩn thận!"
@@ -89,7 +90,6 @@ about:
   view_license: "Xem bản quyền"
   open_website: "Mở trang web"
   view_source_code: "Xem mã nguồn"
-  check_for_updates: "Kiểm tra cập nhật"
 
 license:
   title: "Bản quyền"

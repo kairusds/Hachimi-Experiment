@@ -31,6 +31,7 @@ in_game_browser_confirm_content: "¿Seguro que quieres abrir el navegador del ju
 browser_dialog_title: "Navegador"
 
 menu:
+  check_for_updates: "Buscar actualizaciones"
   fps_text: "FPS: %{fps}"
   close_menu: "\uf00d Cerrar menú"
   stats_heading: "\uf022 Estadísticas"
@@ -46,8 +47,8 @@ menu:
   stay_on_top: "Siempre visible"
   translation_heading: "\uf02d Traducción"
   reload_localized_data: "\uf021 Recargar datos localizados"
-  check_for_updates: "\uf0aa Buscar actualizaciones"
-  check_for_updates_pedantic: "\uf0aa Buscar actualizaciones (exhaustivo)"
+  tl_check_for_updates: "\uf0aa Buscar actualizaciones de traducción"
+  tl_check_for_updates_pedantic: "\uf0aa Buscar actualizaciones de traducción (exhaustivo)"
   dump_localize_dict: "Exportar localize dict"
   danger_zone_heading: "\uf071 Zona Peligrosa"
   danger_zone_warning: "Las siguientes opciones podrían tener efectos adversos en el juego. ¡Úsalas con precaución!"
@@ -102,7 +103,6 @@ about:
   view_license: "Ver licencia"
   open_website: "Abrir sitio web"
   view_source_code: "Ver código fuente"
-  check_for_updates: "Buscar actualizaciones"
 
 license:
   title: "Licencia"

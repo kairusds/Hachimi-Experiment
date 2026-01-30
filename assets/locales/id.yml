@@ -31,6 +31,7 @@ in_game_browser_confirm_content: "Apa kamu yakin ingin buka peramban web dalam g
 browser_dialog_title: "Peramban Web"
 
 menu:
+  check_for_updates: "Cek pembaruan"
   fps_text: "FPS: %{fps}"
   close_menu: "\uf00d Tutup menu"
   stats_heading: "\uf022 Status"
@@ -46,8 +47,8 @@ menu:
   stay_on_top: "Sematkan di atas"
   translation_heading: "\uf02d Translasi"
   reload_localized_data: "\uf021 Muat ulang data lokalisasi"
-  check_for_updates: "\uf0aa Cek pembaruan"
-  check_for_updates_pedantic: "\uf0aa Cek pembaruan (pedantik/ketat)"
+  tl_check_for_updates: "\uf0aa Periksa pembaruan terjemahan"
+  tl_check_for_updates_pedantic: "\uf0aa Periksa pembaruan terjemahan (pedantik/ketat)"
   dump_localize_dict: "Ekstrak localize_dump"
   danger_zone_heading: "\uf071 Zona Rawan"
   danger_zone_warning: "Hati-hati!\nMenggunakan opsi di bawah akan membuat game tidak stabil."
@@ -99,7 +100,6 @@ about:
   view_license: "Lihat lisensi"
   open_website: "Buka situs web"
   view_source_code: "Lihat kode sumber"
-  check_for_updates: "Cek pembaruan"
 
 license:
   title: "Lisensi"

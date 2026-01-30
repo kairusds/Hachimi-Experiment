@@ -31,6 +31,7 @@ in_game_browser_confirm_content: "您是否想要開啟遊戲內瀏覽器？"
 browser_dialog_title: "瀏覽器"
 
 menu:
+  check_for_updates: "檢查更新"
   fps_text: "FPS: %{fps}"
   close_menu: "\uf00d 關閉選單"
   stats_heading: "\uf022 狀態"
@@ -46,8 +47,8 @@ menu:
   stay_on_top: "保持在最上層"
   translation_heading: "\uf02d 翻譯"
   reload_localized_data: "\uf021 重新載入翻譯數據"
-  check_for_updates: "\uf0aa 檢查更新"
-  check_for_updates_pedantic: "\uf0aa 檢查更新（深度模式）"
+  tl_check_for_updates: "\uf0aa 檢查翻譯更新"
+  tl_check_for_updates_pedantic: "\uf0aa 檢查翻譯更新（深度模式）"
   dump_localize_dict: "導出 localize dict"
   danger_zone_heading: "\uf071 危險區域"
   danger_zone_warning: "更改這些選項可能會導致遊戲異常，請小心使用！"
@@ -90,7 +91,6 @@ about:
   view_license: "查看許可證"
   open_website: "開啟網站"
   view_source_code: "查看原始碼"
-  check_for_updates: "檢查更新"
 
 license:
   title: "許可證"

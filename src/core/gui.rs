@@ -576,6 +576,9 @@ impl Gui {
                             }
                         });
                     }
+                    if ui.button(t!("menu.check_for_updates")).clicked() {
+                        Hachimi::instance().updater.clone().check_for_updates(|_| {});
+                    }
                     ui.separator();
 
                     egui::ScrollArea::vertical().show(ui, |ui| {
@@ -659,10 +662,10 @@ impl Gui {
                             hachimi.load_localized_data();
                             show_notification = Some(t!("notification.localized_data_reloaded"));
                         }
-                        if ui.button(t!("menu.check_for_updates")).clicked() {
+                        if ui.button(t!("menu.tl_check_for_updates")).clicked() {
                             hachimi.tl_updater.clone().check_for_updates(false);
                         }
-                        if ui.button(t!("menu.check_for_updates_pedantic")).clicked() {
+                        if ui.button(t!("menu.tl_check_for_updates_pedantic")).clicked() {
                             hachimi.tl_updater.clone().check_for_updates(true);
                         }
                         if hachimi.config.load().translator_mode {
@@ -2478,12 +2481,6 @@ impl Window for AboutWindow {
 
                 if ui.button(t!("about.view_source_code")).clicked() {
                     Application::OpenURL(format!("https://github.com/{}", REPO_PATH).to_il2cpp_string());
-                }
-
-                // TODO: add central updater for both Android(only version check) and Windows
-                #[cfg(target_os = "windows")]
-                if ui.button(t!("about.check_for_updates")).clicked() {
-                    Hachimi::instance().updater.clone().check_for_updates(|_| {});
                 }
             });
         });
