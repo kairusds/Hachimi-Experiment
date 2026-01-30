@@ -230,7 +230,7 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
         s.clone()
     } else if let Some(f) = val_any.downcast_ref::<f32>() {
         PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::DecimalPad as i32, Ordering::Relaxed);
-        f.to_string()
+        if f.fract() == 0.0 { format!("{:.1}", f) } else { f.to_string() }
     } else if let Some(i) = val_any.downcast_ref::<i32>() {
         PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::NumberPad as i32, Ordering::Relaxed);
         i.to_string()
@@ -271,8 +271,13 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
                 if let Some(s) = val_any_mut.downcast_mut::<String>() {
                     if *s != kb_txt_str { *s = kb_txt_str; }
                 } else if let Some(f) = val_any_mut.downcast_mut::<f32>() {
-                    if let Ok(parsed) = kb_txt_str.parse::<f32>() { 
-                        if *f != parsed { *f = parsed; }
+                    if let Ok(parsed) = kb_txt_str.parse::<f32>() {
+                        let changed = !egui::emath::almost_equal(*f, parsed, 1e-6);
+                        let drafting = kb_txt_str.ends_with('.') || (kb_txt_str.contains('.') && kb_txt_str.ends_with('0'));
+
+                        if changed && !drafting {
+                            *f = parsed;
+                        }
                     }
                 } else if let Some(i) = val_any_mut.downcast_mut::<i32>() {
                     if let Ok(parsed) = kb_txt_str.parse::<i32>() { 
