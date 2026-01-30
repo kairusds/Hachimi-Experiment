@@ -89,7 +89,7 @@ impl Updater {
         #[cfg(target_os = "windows")]
         {
             std::thread::spawn(move || {
-                let dialog_show = Arc::new(std::sync::AtomicBool::new(true));
+                let dialog_show = Arc::new(std::sync::atomic::AtomicBool::new(true));
                 if let Some(mutex) = Gui::instance() {
                     mutex.lock().unwrap().show_window(Box::new(crate::core::gui::PersistentMessageWindow::new(
                         &t!("updating_dialog.title"),
@@ -105,7 +105,7 @@ impl Updater {
                     }
                 }
     
-                dialog_show.store(false, stc::sync::atomic::Ordering::Relaxed)
+                dialog_show.store(false, std::sync::atomic::Ordering::Relaxed)
             });
         }
         #[cfg(target_os = "android")]
