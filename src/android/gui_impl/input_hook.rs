@@ -1,4 +1,4 @@
-#![allow(non_snake_case)]
+use crate::android::utils::get_activity;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -6,7 +6,7 @@ use std::time::{Instant, Duration};
 
 use egui::Vec2;
 use jni::{
-    objects::{JMap, JObject},
+    objects::JObject,
     sys::{jboolean, jint, JNI_TRUE},
     JNIEnv,
 };
@@ -233,40 +233,6 @@ fn get_ppp(mut env: JNIEnv, gui: &Gui) -> f32 {
     let view_main_axis_size = if view_width < view_height { view_width } else { view_height };
 
     gui.context.zoom_factor() * (view_main_axis_size as f32 / gui.prev_main_axis_size as f32)
-}
-
-fn get_activity(mut env: JNIEnv<'_>) -> Option<JObject<'_>> {
-    let activity_thread_class = env.find_class("android/app/ActivityThread").ok()?;
-    let activity_thread = env
-        .call_static_method(
-            activity_thread_class,
-            "currentActivityThread",
-            "()Landroid/app/ActivityThread;",
-            &[],
-        )
-        .ok()?
-        .l()
-        .ok()?;
-    let activities = env
-        .get_field(activity_thread, "mActivities", "Landroid/util/ArrayMap;")
-        .ok()?
-        .l()
-        .ok()?;
-    let activities_map = JMap::from_env(&mut env, &activities).ok()?;
-
-    // Get the first activity in the map
-    let (_, activity_record) = activities_map
-        .iter(&mut env)
-        .ok()?
-        .next(&mut env)
-        .ok()??
-        ;
-    let activity = env
-        .get_field(activity_record, "activity", "Landroid/app/Activity;")
-        .ok()?
-        .l()
-        .ok()?;
-    Some(activity)
 }
 
 fn get_view(mut env: JNIEnv<'_>) -> Option<JObject<'_>> {

@@ -1,5 +1,7 @@
-use jni::objects::{JValue, JString};
-use jni::JNIEnv;
+use jni::{
+    objects::{JValue, JMap, JObject, JString},
+    JNIEnv
+};
 use crate::{
     android::main::java_vm,
     il2cpp::{ext::StringExt, hook::UnityEngine_CoreModule::Application}
@@ -17,19 +19,13 @@ pub fn open_app_or_fallback(package_name: &str, fallback_url: &str) {
     };
 
     let try_open = |env: &mut JNIEnv| -> jni::errors::Result<()> {
-        let unity_player = env.find_class("com/unity3d/player/UnityPlayer")?;
-        let activity = env.get_static_field(unity_player, "currentActivity", "Landroid/app/Activity;")?.l()?;
+        let activity = get_activity(unsafe { env.unsafe_clone() }).ok_or(jni::errors::Error::JavaException)?;
 
         let intent_class = env.find_class("android/content/Intent")?;
         let action_main = env.new_string("android.intent.action.MAIN")?;
+        let intent_obj = env.new_object(&intent_class, "(Ljava/lang/String;)V", &[JValue::from(&action_main)])?;
+
         let category_launcher = env.new_string("android.intent.category.LAUNCHER")?;
-
-        let intent_obj = env.new_object(
-            &intent_class,
-            "(Ljava/lang/String;)V",
-            &[JValue::from(&action_main)],
-        )?;
-
         env.call_method(&intent_obj, "addCategory", "(Ljava/lang/String;)Landroid/content/Intent;", &[JValue::from(&category_launcher)])?;
 
         let pkg_name_java = env.new_string(package_name)?;
@@ -41,7 +37,7 @@ pub fn open_app_or_fallback(package_name: &str, fallback_url: &str) {
         Ok(())
     };
 
-    if let Err(e) = try_open(&mut env) {
+    if let Err(_e) = try_open(&mut env) {
         if env.exception_check().unwrap_or(false) {
             if let Ok(ex) = env.exception_occurred() {
                 let _ = env.exception_clear();
@@ -54,11 +50,44 @@ pub fn open_app_or_fallback(package_name: &str, fallback_url: &str) {
             }
         }
         
-        info!("open_app_or_fallback: Intent failed ({}), falling back to OpenURL", e);
-
+        info!("open_app_or_fallback: Launch failed for {}, falling back to URL", package_name);
         let url_ptr = fallback_url.to_string().to_il2cpp_string();
         Application::OpenURL(url_ptr);
     }
+}
+
+pub fn get_activity(mut env: JNIEnv<'_>) -> Option<JObject<'_>> {
+    let activity_thread_class = env.find_class("android/app/ActivityThread").ok()?;
+    let activity_thread = env
+        .call_static_method(
+            activity_thread_class,
+            "currentActivityThread",
+            "()Landroid/app/ActivityThread;",
+            &[],
+        )
+        .ok()?
+        .l()
+        .ok()?;
+    let activities = env
+        .get_field(activity_thread, "mActivities", "Landroid/util/ArrayMap;")
+        .ok()?
+        .l()
+        .ok()?;
+    let activities_map = JMap::from_env(&mut env, &activities).ok()?;
+
+    // Get the first activity in the map
+    let (_, activity_record) = activities_map
+        .iter(&mut env)
+        .ok()?
+        .next(&mut env)
+        .ok()??
+        ;
+    let activity = env
+        .get_field(activity_record, "activity", "Landroid/app/Activity;")
+        .ok()?
+        .l()
+        .ok()?;
+    Some(activity)
 }
 
 pub fn get_device_api_level(env: *mut jni::sys::JNIEnv) -> i32 {
