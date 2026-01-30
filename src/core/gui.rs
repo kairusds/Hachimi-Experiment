@@ -209,6 +209,10 @@ fn ime_scroll_padding(ctx: &egui::Context) -> f32 {
 
 #[cfg(target_os = "android")]
 pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
+    if !res.has_focus() {
+        return;
+    }
+
     let val_any = val as &dyn std::any::Any;
     PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::Default as i32, Ordering::Relaxed);
 
