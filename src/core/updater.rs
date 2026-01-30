@@ -2,33 +2,14 @@ use std::{sync::{Arc, Mutex}};
 
 use rust_i18n::t;
 use serde::Deserialize;
-#[cfg(target_os = "windows")]
-use arc_swap::ArcSwap;
-#[cfg(target_os = "windows")]
-use widestring::Utf16Str;
-#[cfg(target_os = "windows")]
-use windows::{
-    core::{HSTRING, PCWSTR},
-    Win32::{
-        Foundation::{MAX_PATH, WPARAM, LPARAM}, System::LibraryLoader::GetModuleFileNameW,
-        UI::{Shell::ShellExecuteW, WindowsAndMessaging::{PostMessageW, SW_NORMAL, WM_CLOSE}}
-    }
-};
-#[cfg(target_os = "windows")]
-use std::{fs::File, io::Read, sync::{atomic::{self, AtomicBool}}};
-#[cfg(target_os = "windows")]
-use crate::{core::gui::PersistentMessageWindow, windows::{main::DLL_HMODULE, utils}};
 
 use crate::core::{gui::SimpleYesNoDialog, hachimi::{REPO_PATH, CODEBERG_API, GITHUB_API}, http, Error, Gui, Hachimi};
-
-#[cfg(target_os = "android")]
-use crate::{android::utils, core::hachimi::{UMAPATCHER_INSTALL_URL, UMAPATCHER_APP_URI}};
 
 #[derive(Default)]
 pub struct Updater {
     update_check_mutex: Mutex<()>,
     #[cfg(target_os = "windows")]
-    new_update: ArcSwap<Option<ReleaseAsset>>
+    new_update: arc_swap::ArcSwap<Option<ReleaseAsset>>
 }
 
 impl Updater {
@@ -108,9 +89,9 @@ impl Updater {
         #[cfg(target_os = "windows")]
         {
             std::thread::spawn(move || {
-                let dialog_show = Arc::new(AtomicBool::new(true));
+                let dialog_show = Arc::new(std::sync::AtomicBool::new(true));
                 if let Some(mutex) = Gui::instance() {
-                    mutex.lock().unwrap().show_window(Box::new(PersistentMessageWindow::new(
+                    mutex.lock().unwrap().show_window(Box::new(crate::core::gui::PersistentMessageWindow::new(
                         &t!("updating_dialog.title"),
                         &t!("updating_dialog.content"),
                         dialog_show.clone()
@@ -124,11 +105,14 @@ impl Updater {
                     }
                 }
     
-                dialog_show.store(false, atomic::Ordering::Relaxed)
+                dialog_show.store(false, stc::sync::atomic::Ordering::Relaxed)
             });
         }
         #[cfg(target_os = "android")]
-        utils::open_app_or_fallback(UMAPATCHER_APP_URI, UMAPATCHER_INSTALL_URL);
+        {
+            use crate::{android::utils, core::hachimi::{UMAPATCHER_INSTALL_URL, UMAPATCHER_APP_URI}};
+            utils::open_app_or_fallback(UMAPATCHER_APP_URI, UMAPATCHER_INSTALL_URL);
+        }
     }
 
     #[cfg(target_os = "windows")]
@@ -137,6 +121,16 @@ impl Updater {
             return Ok(());
         };
         self.new_update.store(Arc::new(None));
+
+        use crate::windows::{main::DLL_HMODULE, utils};
+        use windows::{
+            core::{HSTRING, PCWSTR},
+            Win32::{
+                Foundation::{MAX_PATH, WPARAM, LPARAM}, System::LibraryLoader::GetModuleFileNameW,
+                UI::{Shell::ShellExecuteW, WindowsAndMessaging::{PostMessageW, SW_NORMAL, WM_CLOSE}}
+            }
+        };
+        use std::{fs::File, io::Read};
 
         // Download the installer
         let installer_path = utils::get_tmp_installer_path();
@@ -164,7 +158,7 @@ impl Updater {
         // Launch the installer
         let mut slice = [0u16; MAX_PATH as usize];
         let length = unsafe { GetModuleFileNameW(Some(DLL_HMODULE), &mut slice) } as usize;
-        let hachimi_path_str = unsafe { Utf16Str::from_slice_unchecked(&slice[..length]) };
+        let hachimi_path_str = unsafe { widestring::Utf16Str::from_slice_unchecked(&slice[..length]) };
         let game_dir = utils::get_game_dir();
         unsafe {
             ShellExecuteW(
