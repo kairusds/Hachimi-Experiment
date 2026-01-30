@@ -113,7 +113,7 @@ impl Updater {
             use crate::{android::utils, core::hachimi::{UMAPATCHER_INSTALL_URL, UMAPATCHER_PACKAGE_NAME}};
             utils::open_app_or_fallback(
                 UMAPATCHER_PACKAGE_NAME,
-                &format!("{}.MainActivity", UMAPATCHER_PACKAGE_NAME),
+                &format!("{}.MainActivity", UMAPATCHER_PACKAGE_NAME.replace(".edge", "")),
                 UMAPATCHER_INSTALL_URL
             );
         }
