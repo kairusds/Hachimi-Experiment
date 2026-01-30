@@ -31,7 +31,7 @@ in_game_browser_confirm_content: "Are you sure you want to open the in-game brow
 browser_dialog_title: "Browser"
 
 menu:
-  check_for_updates: "Check for updates"
+  check_for_updates: "\uf0aa Check for updates"
   fps_text: "FPS: %{fps}"
   close_menu: "\uf00d Close menu"
   stats_heading: "\uf022 Stats"
@@ -48,7 +48,7 @@ menu:
   translation_heading: "\uf02d Translation"
   reload_localized_data: "\uf021 Reload localized data"
   tl_check_for_updates: "\uf0aa Check for translation updates"
-  tl_check_for_updates_pedantic: "\uf0aa Check for updates (pedantic)"
+  tl_check_for_updates_pedantic: "\uf0aa Check for translation updates (pedantic)"
   dump_localize_dict: "Dump localize dict"
   danger_zone_heading: "\uf071 Danger Zone"
   danger_zone_warning: "These options might have unintended effects on the game. Use with caution!"

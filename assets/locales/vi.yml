@@ -31,7 +31,7 @@ in_game_browser_confirm_content: "Bạn có muốn mở trình duyệt trong gam
 browser_dialog_title: "Trình duyệt"
 
 menu:
-  check_for_updates: "Kiểm tra cập nhật"
+  check_for_updates: "\uf0aa Kiểm tra cập nhật"
   fps_text: "FPS: %{fps}"
   close_menu: "\uf00d Đóng menu"
   stats_heading: "\uf022 Thống kê"

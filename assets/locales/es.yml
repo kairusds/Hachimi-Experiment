@@ -31,7 +31,7 @@ in_game_browser_confirm_content: "¿Seguro que quieres abrir el navegador del ju
 browser_dialog_title: "Navegador"
 
 menu:
-  check_for_updates: "Buscar actualizaciones"
+  check_for_updates: "\uf0aa Buscar actualizaciones"
   fps_text: "FPS: %{fps}"
   close_menu: "\uf00d Cerrar menú"
   stats_heading: "\uf022 Estadísticas"

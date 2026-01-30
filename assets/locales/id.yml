@@ -31,7 +31,7 @@ in_game_browser_confirm_content: "Apa kamu yakin ingin buka peramban web dalam g
 browser_dialog_title: "Peramban Web"
 
 menu:
-  check_for_updates: "Cek pembaruan"
+  check_for_updates: "\uf0aa Cek pembaruan"
   fps_text: "FPS: %{fps}"
   close_menu: "\uf00d Tutup menu"
   stats_heading: "\uf022 Status"

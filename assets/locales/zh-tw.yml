@@ -31,7 +31,7 @@ in_game_browser_confirm_content: "您是否想要開啟遊戲內瀏覽器？"
 browser_dialog_title: "瀏覽器"
 
 menu:
-  check_for_updates: "檢查更新"
+  check_for_updates: "\uf0aa 檢查更新"
   fps_text: "FPS: %{fps}"
   close_menu: "\uf00d 關閉選單"
   stats_heading: "\uf022 狀態"

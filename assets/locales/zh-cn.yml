@@ -31,7 +31,7 @@ in_game_browser_confirm_content: "确定要打开游戏内浏览器吗？"
 browser_dialog_title: "浏览器"
 
 menu:
-  check_for_updates: "检查更新"
+  check_for_updates: "\uf0aa 检查更新"
   fps_text: "帧率: %{fps}"
   close_menu: "\uf00d 关闭菜单"
   stats_heading: "\uf022 统计数据"
