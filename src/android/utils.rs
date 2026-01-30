@@ -5,50 +5,37 @@ use crate::{
     il2cpp::{ext::StringExt, hook::UnityEngine_CoreModule::Application}
 };
 
-pub fn open_app_or_fallback(app_uri: &str, fallback_url: &str) {
-    // let app_uri = app_uri.to_string();
-    // let fallback_url = fallback_url.to_string();
-
-    // Thread::main_thread().schedule(move || {
+pub fn open_app_or_fallback(package_name: &str, fallback_url: &str) {
     let vm = match java_vm() {
         Some(v) => v,
-        None => {
-            info!("open_app_or_fallback: No JVM found");
-            return;
-        }
+        None => return,
     };
 
     let mut env = match vm.attach_current_thread() {
         Ok(e) => e,
-        Err(e) => {
-            info!("open_app_or_fallback: Failed to attach thread: {}", e);
-            return;
-        }
+        Err(_) => return,
     };
 
     let try_open = |env: &mut JNIEnv| -> jni::errors::Result<()> {
         let unity_player = env.find_class("com/unity3d/player/UnityPlayer")?;
         let activity = env.get_static_field(unity_player, "currentActivity", "Landroid/app/Activity;")?.l()?;
 
-        let uri_class = env.find_class("android/net/Uri")?;
-
-        let app_uri_java: JString = env.new_string(app_uri)?;
-
-        let uri_obj = env.call_static_method(
-            uri_class,
-            "parse",
-            "(Ljava/lang/String;)Landroid/net/Uri;",
-            &[JValue::from(&app_uri_java)],
-        )?.l()?;
-
         let intent_class = env.find_class("android/content/Intent")?;
-        let action_view: JString = env.new_string("android.intent.action.VIEW")?;
+        let action_main = env.new_string("android.intent.action.MAIN")?;
+        let category_launcher = env.new_string("android.intent.category.LAUNCHER")?;
 
         let intent_obj = env.new_object(
             &intent_class,
-            "(Ljava/lang/String;Landroid/net/Uri;)V",
-            &[JValue::from(&action_view), JValue::from(&uri_obj)],
+            "(Ljava/lang/String;)V",
+            &[JValue::from(&action_main)],
         )?;
+
+        env.call_method(&intent_obj, "addCategory", "(Ljava/lang/String;)Landroid/content/Intent;", &[JValue::from(&category_launcher)])?;
+
+        let pkg_name_java = env.new_string(package_name)?;
+        env.call_method(&intent_obj, "setPackage", "(Ljava/lang/String;)Landroid/content/Intent;", &[JValue::from(&pkg_name_java)])?;
+
+        env.call_method(&intent_obj, "setFlags", "(I)Landroid/content/Intent;", &[JValue::Int(0x10000000)])?;
 
         env.call_method(&activity, "startActivity", "(Landroid/content/Intent;)V", &[JValue::from(&intent_obj)])?;
         Ok(())
@@ -56,14 +43,22 @@ pub fn open_app_or_fallback(app_uri: &str, fallback_url: &str) {
 
     if let Err(e) = try_open(&mut env) {
         if env.exception_check().unwrap_or(false) {
-            let _ = env.exception_clear();
-            info!("open_app_or_fallback: Java Exception cleared. App likely not installed.");
+            if let Ok(ex) = env.exception_occurred() {
+                let _ = env.exception_clear();
+
+                if let Ok(msg_obj) = env.call_method(ex, "toString", "()Ljava/lang/String;", &[]) {
+                    let msg_jstr: JString = msg_obj.l().unwrap().into();
+                    let msg_rust: String = env.get_string(&msg_jstr).unwrap().into();
+                    info!("open_app_or_fallback: Java Exception: {}", msg_rust);
+                }
+            }
         }
+        
         info!("open_app_or_fallback: Intent failed ({}), falling back to OpenURL", e);
+
         let url_ptr = fallback_url.to_string().to_il2cpp_string();
         Application::OpenURL(url_ptr);
     }
-    // });
 }
 
 pub fn get_device_api_level(env: *mut jni::sys::JNIEnv) -> i32 {
