@@ -89,7 +89,6 @@ pub struct Gui {
     last_fps_update: Instant,
     tmp_frame_count: u32,
     fps_text: String,
-    last_focused: Option<egui::Id>,
 
     show_menu: bool,
 
@@ -105,6 +104,13 @@ pub struct Gui {
     menu_vsync_value: i32,
 
     pub update_progress_visible: bool,
+
+    #[cfg(target_os = "android")]
+    last_keyboard_text: String,
+    #[cfg(target_os = "android")]
+    active_textedit_id: Option<egui::Id>,
+    #[cfg(target_os = "android")]
+    active_textedit_buffer: String,
 
     notifications: Vec<Notification>,
     windows: Vec<BoxedWindow>
@@ -173,11 +179,9 @@ fn drain_plugin_notifications() -> Vec<String> {
 use std::sync::atomic::Ordering;
 
 #[cfg(target_os = "android")]
-use std::sync::atomic::{AtomicI32, AtomicPtr};
+use std::sync::atomic::AtomicPtr;
 #[cfg(target_os = "android")]
 static PENDING_KEYBOARD_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
-#[cfg(target_os = "android")]
-static PENDING_KB_TYPE: AtomicI32 = AtomicI32::new(0);
 #[cfg(target_os = "android")]
 static ACTIVE_KEYBOARD: AtomicPtr<Il2CppObject> = AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
@@ -191,31 +195,14 @@ fn get_scale(ctx: &egui::Context) -> f32 {
     ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale"))).unwrap_or(1.0)
 }
 
-static IME_REQUESTED: AtomicBool = AtomicBool::new(false);
-static IME_VISIBLE: AtomicBool = AtomicBool::new(false);
-
-pub fn request_ime() {
-    IME_REQUESTED.store(true, atomic::Ordering::Relaxed);
-}
-
-pub fn take_ime_request() -> bool {
-    IME_REQUESTED.swap(false, atomic::Ordering::Relaxed)
-}
-
-pub fn set_ime_visible(visible: bool) {
-    IME_VISIBLE.store(visible, atomic::Ordering::Relaxed);
-}
-
-pub fn is_ime_visible() -> bool {
-    IME_VISIBLE.load(atomic::Ordering::Relaxed)
-}
-
+/*
 fn ime_scroll_padding(ctx: &egui::Context) -> f32 {
     if !is_ime_visible() {
         return 0.0;
     }
     ctx.input(|i| i.viewport_rect().height() * 0.35)
 }
+*/
 
 impl Gui {
     // Call this from the render thread!
@@ -269,7 +256,6 @@ impl Gui {
             last_fps_update: now,
             tmp_frame_count: 0,
             fps_text: "FPS: 0".to_string(),
-            last_focused: None,
 
             show_menu: false,
 
@@ -295,6 +281,13 @@ impl Gui {
             menu_vsync_value: hachimi.vsync_count.load(atomic::Ordering::Relaxed),
 
             update_progress_visible: false,
+
+            #[cfg(target_os = "android")]
+            last_keyboard_text: String::new(),
+            #[cfg(target_os = "android")]
+            active_textedit_id: None,
+            #[cfg(target_os = "android")]
+            active_textedit_buffer: String::new(),
 
             notifications: Vec::new(),
             windows
@@ -339,6 +332,62 @@ impl Gui {
         });
 
         self.prev_main_axis_size = main_axis_size;
+    }
+
+    #[cfg(target_os = "android")]
+    fn process_android_keyboard(&mut self) {
+        let focused_id = self.context.memory(|m| m.focused());
+
+        if self.context.wants_keyboard_input() && focused_id.is_some() {
+            if ACTIVE_KEYBOARD.load(Ordering::Relaxed).is_null() {
+                let current_text = self.active_textedit_buffer.clone(); 
+                let ptr = current_text.to_il2cpp_string();
+
+                PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
+
+                Thread::main_thread().schedule(|| {
+                    let text_ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
+                    if !text_ptr.is_null() {
+                        let keyboard = TouchScreenKeyboard::Open(
+                            text_ptr, 
+                            TouchScreenKeyboardType::KeyboardType::Default, 
+                            false, false, false
+                        );
+
+                        if !keyboard.is_null() {
+                            let handle = GCHandle::new(keyboard, false);
+                            *KEYBOARD_GC_HANDLE.lock().unwrap() = Some(handle);
+                            ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
+                        }
+                    }
+                });
+                self.last_keyboard_text = current_text; 
+            }
+        }
+
+        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+        if !kb_ptr.is_null() {
+            let status = TouchScreenKeyboard::get_status(kb_ptr);
+
+            if status == TouchScreenKeyboard::Status::Visible {
+                let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
+                if let Some(kb_ref) = unsafe { kb_txt_ptr.as_ref() } {
+                    let kb_txt_str = kb_ref.as_utf16str().to_string();
+                    
+                    if kb_txt_str != self.last_keyboard_text { 
+                        self.input.events.push(egui::Event::Text(kb_txt_str.clone()));
+                        self.last_keyboard_text = kb_txt_str;
+                    }
+                }
+            } else {
+                if let Some(id) = focused_id {
+                    self.context.memory_mut(|m| m.surrender_focus(id));
+                }
+                ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+                *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
+                self.last_keyboard_text.clear();
+            }
+        }
     }
 
     fn take_input(&mut self) -> egui::RawInput {
@@ -394,11 +443,23 @@ impl Gui {
             self.show_notification(&t!("notification.config_error"));
         }
 
-        let focused = self.context.memory(|m| m.focused());
-        if focused.is_some() && focused != self.last_focused && self.context.wants_keyboard_input() {
-            request_ime();
+        #[cfg(target_os = "android")]
+        {
+            let focused = self.context.memory(|m| m.focused());
+            if focused != self.active_textedit_id {
+                self.active_textedit_id = focused;
+                self.active_textedit_buffer.clear(); 
+            }
+
+            for event in &self.input.events {
+                if let egui::Event::Text(t) = event {
+                    if self.active_textedit_id.is_some() {
+                        self.active_textedit_buffer.push_str(t);
+                    }
+                }
+            }
+            self.process_android_keyboard();
         }
-        self.last_focused = focused;
 
         // Store this as an atomic value so the input thread can check it without locking the gui
         IS_CONSUMING_INPUT.store(self.is_consuming_input(), atomic::Ordering::Relaxed);
@@ -658,10 +719,6 @@ impl Gui {
                         if ui.button(t!("menu.toggle_game_ui")).clicked() {
                             Thread::main_thread().schedule(Self::toggle_game_ui);
                         }
-                        let padding = ime_scroll_padding(ui.ctx());
-                        if padding > 0.0 {
-                            ui.add_space(padding);
-                        }
                     });
                 });
             });
@@ -772,63 +829,6 @@ impl Gui {
         changed
     }
 
-    #[cfg(target_os = "android")]
-    pub fn handle_android_keyboard(res: &egui::Response, text: &mut String, kb_type: TouchScreenKeyboardType::KeyboardType) {
-        if res.gained_focus() {
-            let ptr = text.to_il2cpp_string();
-            PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
-            PENDING_KB_TYPE.store(kb_type as i32, Ordering::Relaxed);
-
-            Thread::main_thread().schedule(|| {
-                let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
-                let typ_i32 = PENDING_KB_TYPE.load(Ordering::Relaxed);
-                let typ = unsafe { std::mem::transmute::<i32, TouchScreenKeyboardType::KeyboardType>(typ_i32) };
-                if !ptr.is_null() {
-                    let keyboard = TouchScreenKeyboard::Open(ptr, typ, false, false, false);
-                    let handle = GCHandle::new(keyboard, false);
-                    *KEYBOARD_GC_HANDLE.lock().unwrap() = Some(handle);
-                    ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
-                }
-            });
-        }
-
-        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-        if !kb_ptr.is_null() {
-            let status = TouchScreenKeyboard::get_status(kb_ptr);
-
-            if status == TouchScreenKeyboard::Status::Visible {
-                let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
-                // update text in realtime as user types only if it's different
-                if let Some(kb_ref) = unsafe { kb_txt_ptr.as_ref() } {
-                    let kb_txt_str = kb_ref.as_utf16str().to_string();
-                    if *text != kb_txt_str {
-                        *text = kb_txt_str;
-                    }
-                }
-            }
-
-            if status != TouchScreenKeyboard::Status::Visible {
-                res.surrender_focus();
-                res.ctx.memory_mut(|mem| mem.stop_text_input());
-                res.ctx.data_mut(|data| {
-                    data.remove::<egui::widgets::text_edit::TextEditState>(res.id);
-                });
-                ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
-                *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
-                res.ctx.request_repaint();
-            }
-        }
-
-        if res.lost_focus() {
-            let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
-            if !kb_ptr.is_null() {
-                TouchScreenKeyboard::set_active(kb_ptr, false);
-                ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
-                *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
-            }
-        }
-    }
-
     fn run_combo_menu<T: PartialEq + Copy>(
         ui: &mut egui::Ui,
         id_salt: impl std::hash::Hash,
@@ -897,14 +897,10 @@ impl Gui {
             ui.set_max_width(fixed_width);
 
             ui.horizontal(|ui| {
-                #[cfg_attr(target_os =  "windows", allow(unused))]
-                let res = ui.add_sized(
+                ui.add_sized(
                     [ui.available_width() - 30.0 * scale, row_height],
                     egui::TextEdit::singleline(search_term).hint_text(t!("search_filter"))
                 );
-
-                #[cfg(target_os = "android")]
-                Self::handle_android_keyboard(&res, search_term, TouchScreenKeyboardType::KeyboardType::Search);
 
                 if ui.button("X").clicked() {
                     search_term.clear();
@@ -1720,22 +1716,7 @@ impl ConfigEditor {
                 ui.end_row();
 
                 ui.label(t!("config_editor.meta_index_url"));
-                let res = ui.add(egui::TextEdit::singleline(&mut config.meta_index_url).lock_focus(true));
-                #[cfg(target_os = "windows")]
-                if res.has_focus() {
-                    ui.memory_mut(|mem| mem.set_focus_lock_filter(
-                        res.id,
-                        egui::EventFilter {
-                            tab: true,
-                            horizontal_arrows: true,
-                            vertical_arrows: true,
-                            escape: false,
-                            ..Default::default()
-                        }
-                    ));
-                }
-                #[cfg(target_os = "android")]
-                Gui::handle_android_keyboard(&res, &mut config.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
+                ui.add(egui::TextEdit::singleline(&mut config.meta_index_url).lock_focus(true));
                 ui.end_row();
 
                 ui.label(t!("config_editor.gui_scale"));
@@ -2067,10 +2048,6 @@ impl Window for ConfigEditor {
                                 Self::run_options_grid(&mut config, ui, self.current_tab);
                             });
                         });
-                        let padding = ime_scroll_padding(ui.ctx());
-                        if padding > 0.0 {
-                            ui.add_space(padding);
-                        }
                     });
                 },
                 |ui| {
@@ -2197,8 +2174,7 @@ impl Window for FirstTimeSetupWindow {
                                     }
                                 ));
                             }
-                            #[cfg(target_os = "android")]
-                            Gui::handle_android_keyboard(&res, &mut self.meta_index_url, TouchScreenKeyboardType::KeyboardType::URL);
+
                             if res.lost_focus() {
                                 if self.meta_index_url != self.config.meta_index_url {
                                     self.config.meta_index_url = self.meta_index_url.clone();
@@ -2273,10 +2249,6 @@ impl Window for FirstTimeSetupWindow {
                                         last_section = Some(is_matched);
                                     }
                                 });
-                                let padding = ime_scroll_padding(ui.ctx());
-                                if padding > 0.0 {
-                                    ui.add_space(padding);
-                                }
                             });
                         });
                     }
