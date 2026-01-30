@@ -340,9 +340,10 @@ impl Gui {
 
         if self.context.wants_keyboard_input() && focused_id.is_some() {
             if ACTIVE_KEYBOARD.load(Ordering::Relaxed).is_null() {
-                let current_text = self.active_textedit_buffer.clone(); 
+                let current_text = self.context.data(|d| {
+                    d.get_temp::<String>(focused_id.unwrap()).unwrap_or_default()
+                });
                 let ptr = current_text.to_il2cpp_string();
-
                 PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
 
                 Thread::main_thread().schedule(|| {
