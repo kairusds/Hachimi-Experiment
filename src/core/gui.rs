@@ -190,6 +190,7 @@ fn get_scale(ctx: &egui::Context) -> f32 {
     ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale"))).unwrap_or(1.0)
 }
 
+#[cfg(target_os = "android")]
 fn is_ime_visible() -> bool {
     let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
     if kb_ptr.is_null() {
@@ -198,6 +199,7 @@ fn is_ime_visible() -> bool {
     TouchScreenKeyboard::get_status(kb_ptr) == TouchScreenKeyboard::Status::Visible
 }
 
+#[cfg(target_os = "android")]
 fn ime_scroll_padding(ctx: &egui::Context) -> f32 {
     if !is_ime_visible() {
         return 0.0;
@@ -726,9 +728,12 @@ impl Gui {
                             Thread::main_thread().schedule(Self::toggle_game_ui);
                         }
 
-                        let padding = ime_scroll_padding(ui.ctx());
-                        if padding > 0.0 {
-                            ui.add_space(padding);
+                        #[cfg(target_os = "android")]
+                        {
+                            let padding = ime_scroll_padding(ui.ctx());
+                            if padding > 0.0 {
+                                ui.add_space(padding);
+                            }
                         }
                     });
                 });
@@ -2079,9 +2084,12 @@ impl Window for ConfigEditor {
                                 Self::run_options_grid(&mut config, ui, self.current_tab);
                             });
                         });
-                        let padding = ime_scroll_padding(ui.ctx());
-                        if padding > 0.0 {
-                            ui.add_space(padding);
+                        #[cfg(target_os = "android")]
+                        {
+                            let padding = ime_scroll_padding(ui.ctx());
+                            if padding > 0.0 {
+                                ui.add_space(padding);
+                            }
                         }
                     });
                 },
@@ -2286,9 +2294,12 @@ impl Window for FirstTimeSetupWindow {
                                         last_section = Some(is_matched);
                                     }
                                 });
-                                let padding = ime_scroll_padding(ui.ctx());
-                                if padding > 0.0 {
-                                    ui.add_space(padding);
+                                #[cfg(target_os = "android")]
+                                {
+                                    let padding = ime_scroll_padding(ui.ctx());
+                                    if padding > 0.0 {
+                                        ui.add_space(padding);
+                                    }
                                 }
                             });
                         });
