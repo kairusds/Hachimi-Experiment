@@ -205,8 +205,16 @@ impl UnityKeyboardResponseExt for egui::Response {
     fn android_keyboard<T: 'static>(self, val: &mut T) -> Self {
         #[cfg(target_os = "android")]
         {
-            let val_any = val as &mut dyn std::any::Any;
-            let text = val_any.downcast_mut::<String>().unwrap();
+            let val_any = val as &dyn std::any::Any;  
+            let text = if let Some(s) = val_any.downcast_ref::<String>() {
+                s.clone()
+            } else if let Some(f) = val_any.downcast_ref::<f32>() {
+                f.to_string()
+            } else if let Some(i) = val_any.downcast_ref::<i32>() {
+                i.to_string()
+            } else {
+                String::new() 
+            };
             if self.gained_focus() {
                 let ptr = text.to_il2cpp_string();
                 PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
@@ -232,8 +240,19 @@ impl UnityKeyboardResponseExt for egui::Response {
                     let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
                     if let Some(kb_ref) = unsafe { kb_txt_ptr.as_ref() } {
                         let kb_txt_str = kb_ref.as_utf16str().to_string();
-                        if *text != kb_txt_str {
-                            *text = kb_txt_str;
+
+                        let val_any_mut = val as &mut dyn std::any::Any;
+
+                        if let Some(s) = val_any_mut.downcast_mut::<String>() {
+                            if *s != kb_txt_str { *s = kb_txt_str; }
+                        } else if let Some(f) = val_any_mut.downcast_mut::<f32>() {
+                            if let Ok(parsed) = kb_txt_str.parse::<f32>() { 
+                                if *f != parsed { *f = parsed; }
+                            }
+                        } else if let Some(i) = val_any_mut.downcast_mut::<i32>() {
+                            if let Ok(parsed) = kb_txt_str.parse::<i32>() { 
+                                if *i != parsed { *i = parsed; }
+                            }
                         }
                     }
                 }
