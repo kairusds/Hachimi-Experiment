@@ -13,7 +13,7 @@ pub const REPO_PATH: &str = "kairusds/Hachimi-Experiment";
 pub const GITHUB_API: &str = "https://api.github.com/repos";
 pub const CODEBERG_API: &str = "https://codeberg.org/api/v1/repos";
 pub const WEBSITE_URL: &str = "https://hachimi.noccu.art";
-pub const UMAPATCHER_APP_URI: &str = "com.leadrdrk.umapatcher.edge";
+pub const UMAPATCHER_PACKAGE_NAME: &str = "com.leadrdrk.umapatcher.edge";
 pub const UMAPATCHER_INSTALL_URL: &str = "https://github.com/kairusds/UmaPatcher-Edge/releases/latest";
 
 pub static CONFIG_LOAD_ERROR: AtomicBool = AtomicBool::new(false);

@@ -110,8 +110,12 @@ impl Updater {
         }
         #[cfg(target_os = "android")]
         {
-            use crate::{android::utils, core::hachimi::{UMAPATCHER_INSTALL_URL, UMAPATCHER_APP_URI}};
-            utils::open_app_or_fallback(UMAPATCHER_APP_URI, UMAPATCHER_INSTALL_URL);
+            use crate::{android::utils, core::hachimi::{UMAPATCHER_INSTALL_URL, UMAPATCHER_PACKAGE_NAME}};
+            utils::open_app_or_fallback(
+                UMAPATCHER_PACKAGE_NAME,
+                &format!("{}.MainActivity", UMAPATCHER_PACKAGE_NAME),
+                UMAPATCHER_INSTALL_URL
+            );
         }
     }
 

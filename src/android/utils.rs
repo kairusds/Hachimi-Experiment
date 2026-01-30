@@ -2,12 +2,13 @@ use jni::{
     objects::{JValue, JMap, JObject, JString},
     JNIEnv
 };
+
 use crate::{
     android::main::java_vm,
     il2cpp::{ext::StringExt, hook::UnityEngine_CoreModule::Application}
 };
 
-pub fn open_app_or_fallback(package_name: &str, fallback_url: &str) {
+pub fn open_app_or_fallback(package_name: &str, activity_class: &str, fallback_url: &str) {
     let vm = match java_vm() {
         Some(v) => v,
         None => return,
@@ -22,14 +23,25 @@ pub fn open_app_or_fallback(package_name: &str, fallback_url: &str) {
         let activity = get_activity(unsafe { env.unsafe_clone() }).ok_or(jni::errors::Error::JavaException)?;
 
         let intent_class = env.find_class("android/content/Intent")?;
-        let action_main = env.new_string("android.intent.action.MAIN")?;
-        let intent_obj = env.new_object(&intent_class, "(Ljava/lang/String;)V", &[JValue::from(&action_main)])?;
 
-        let category_launcher = env.new_string("android.intent.category.LAUNCHER")?;
-        env.call_method(&intent_obj, "addCategory", "(Ljava/lang/String;)Landroid/content/Intent;", &[JValue::from(&category_launcher)])?;
+        let intent_obj = env.new_object(&intent_class, "()V", &[])?;
 
         let pkg_name_java = env.new_string(package_name)?;
-        env.call_method(&intent_obj, "setPackage", "(Ljava/lang/String;)Landroid/content/Intent;", &[JValue::from(&pkg_name_java)])?;
+        let cls_name_java = env.new_string(activity_class)?;
+        
+        let component_class = env.find_class("android/content/ComponentName")?;
+        let component_obj = env.new_object(
+            &component_class, 
+            "(Ljava/lang/String;Ljava/lang/String;)V", 
+            &[JValue::from(&pkg_name_java), JValue::from(&cls_name_java)]
+        )?;
+    
+        env.call_method(
+            &intent_obj, 
+            "setComponent", 
+            "(Landroid/content/ComponentName;)Landroid/content/Intent;", 
+            &[JValue::from(&component_obj)]
+        )?;
 
         env.call_method(&intent_obj, "setFlags", "(I)Landroid/content/Intent;", &[JValue::Int(0x10000000)])?;
 
@@ -50,7 +62,7 @@ pub fn open_app_or_fallback(package_name: &str, fallback_url: &str) {
             }
         }
         
-        info!("open_app_or_fallback: Launch failed for {}, falling back to URL", package_name);
+        info!("open_app_or_fallback: Launch failed for UmaPatcher, falling back to URL");
         let url_ptr = fallback_url.to_string().to_il2cpp_string();
         Application::OpenURL(url_ptr);
     }
