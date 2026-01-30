@@ -18,7 +18,6 @@ use windows::{
 use std::{fs::File, io::Read, sync::{atomic::{self, AtomicBool}}};
 #[cfg(target_os = "windows")]
 use crate::{core::gui::PersistentMessageWindow, windows::{main::DLL_HMODULE, utils}};
-#[cfg(target_os = "windows")]
 
 use crate::core::{gui::SimpleYesNoDialog, hachimi::{REPO_PATH, CODEBERG_API, GITHUB_API}, http, Error, Gui, Hachimi};
 
