@@ -2,12 +2,11 @@ use crate::{
     core::{gui::SkillInfoDialog, Gui, Hachimi, game::Region, utils::mul_int},
     il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr}, types::*}
 };
-use once_cell::sync::Lazy;
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex};
 use fnv::FnvHashMap;
 use super::{ButtonCommon, MasterDataUtil};
 
-static SKILL_TEXT_CACHE: Lazy<Mutex<FnvHashMap<i32, (String, String)>>> = Lazy::new(|| Mutex::default());
+static SKILL_TEXT_CACHE: LazyLock<Mutex<FnvHashMap<i32, (String, String)>>> = LazyLock::new(|| Mutex::default());
 
 // SkillListItem
 static mut NAMETEXT_FIELD: *mut FieldInfo = 0 as _;

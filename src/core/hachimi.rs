@@ -1,7 +1,6 @@
-use std::{fs, path::{Path, PathBuf}, process, sync::{atomic::{self, AtomicBool, AtomicI32}, Arc, Mutex}};
+use std::{fs, path::{Path, PathBuf}, process, sync::{atomic::{self, AtomicBool, AtomicI32}, Arc, Mutex, OnceLock}};
 use arc_swap::ArcSwap;
 use fnv::{FnvHashMap, FnvHashSet};
-use once_cell::sync::OnceCell;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use textwrap::wrap_algorithms::Penalties;
 
@@ -51,7 +50,7 @@ pub struct Hachimi {
     pub updater: Arc<updater::Updater>
 }
 
-static INSTANCE: OnceCell<Arc<Hachimi>> = OnceCell::new();
+static INSTANCE: OnceLock<Arc<Hachimi>> = OnceLock::new();
 
 impl Hachimi {
     pub fn init() -> bool {
@@ -267,15 +266,8 @@ impl Hachimi {
 
     pub fn run_auto_update_check(&self) {
         if !self.config.load().disable_auto_update_check {
-            /*
-            #[cfg(not(target_os = "windows"))]
-            if !self.config.load().translator_mode {
-                self.tl_updater.clone().check_for_updates(false);
-            }*/
-
             // Check for hachimi updates first, then translations
             // Don't auto check for tl updates if it's not up to date
-            // #[cfg(target_os = "windows")]
             self.updater.clone().check_for_updates(|new_update| {
                 let hachimi = Hachimi::instance();
                 if !new_update && !hachimi.config.load().translator_mode {

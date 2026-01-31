@@ -1,8 +1,16 @@
-use std::{borrow::Cow, collections::HashMap, ops::RangeInclusive, os::raw::c_void, panic::{self, AssertUnwindSafe}, sync::{atomic::{self, AtomicBool}, Arc, Mutex}, thread, time::Instant};
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    ops::RangeInclusive,
+    os::raw::c_void,
+    panic::{self, AssertUnwindSafe},
+    sync::{atomic::{self, AtomicBool}, Arc, LazyLock, Mutex, OnceLock},
+    thread,
+    time::Instant
+};
 
 use egui_scale::EguiScale;
 use fnv::{FnvHashSet, FnvHashMap};
-use once_cell::sync::{Lazy, OnceCell};
 use rust_i18n::t;
 use chrono::{Utc, Datelike};
 
@@ -113,14 +121,21 @@ const PIXELS_PER_POINT_RATIO: f32 = 3.0/1080.0;
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgba_premultiplied(27, 27, 27, 220);
 const TEXT_COLOR: egui::Color32 = egui::Color32::from_gray(170);
 
-static INSTANCE: OnceCell<Mutex<Gui>> = OnceCell::new();
+#[repr(transparent)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct SendPtr(pub *mut Il2CppObject);
+
+unsafe impl Send for SendPtr {}
+unsafe impl Sync for SendPtr {}
+
+static INSTANCE: OnceLock<Mutex<Gui>> = OnceLock::new();
 static IS_CONSUMING_INPUT: AtomicBool = AtomicBool::new(false);
-static mut DISABLED_GAME_UIS: once_cell::unsync::Lazy<FnvHashSet<*mut Il2CppObject>> =
-    once_cell::unsync::Lazy::new(|| FnvHashSet::default());
-static PLUGIN_MENU_ITEMS: Lazy<Mutex<Vec<PluginMenuItem>>> = Lazy::new(|| Mutex::new(Vec::new()));
-static PLUGIN_MENU_SECTIONS: Lazy<Mutex<Vec<PluginMenuSection>>> = Lazy::new(|| Mutex::new(Vec::new()));
-static PLUGIN_MENU_ICONS: Lazy<Mutex<HashMap<String, PluginMenuIcon>>> = Lazy::new(|| Mutex::new(HashMap::new()));
-static PLUGIN_NOTIFICATIONS: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(Vec::new()));
+static DISABLED_GAME_UIS: LazyLock<Mutex<FnvHashSet<SendPtr>>> =
+    LazyLock::new(|| Mutex::new(FnvHashSet::default()));
+static PLUGIN_MENU_ITEMS: LazyLock<Mutex<Vec<PluginMenuItem>>> = LazyLock::new(|| Mutex::new(Vec::new()));
+static PLUGIN_MENU_SECTIONS: LazyLock<Mutex<Vec<PluginMenuSection>>> = LazyLock::new(|| Mutex::new(Vec::new()));
+static PLUGIN_MENU_ICONS: LazyLock<Mutex<HashMap<String, PluginMenuIcon>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+static PLUGIN_NOTIFICATIONS: LazyLock<Mutex<Vec<String>>> = LazyLock::new(|| Mutex::new(Vec::new()));
 
 pub type PluginMenuCallback = extern "C" fn(userdata: *mut c_void);
 pub type PluginMenuSectionCallback = extern "C" fn(ui: *mut c_void, userdata: *mut c_void);
@@ -225,9 +240,9 @@ static PENDING_KEYBOARD_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr:
 #[cfg(target_os = "android")]
 static ACTIVE_KEYBOARD: AtomicPtr<Il2CppObject> = AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
-pub static KEYBOARD_GC_HANDLE: Lazy<Mutex<Option<GCHandle>>> = Lazy::new(|| Mutex::default());
+pub static KEYBOARD_GC_HANDLE: LazyLock<Mutex<Option<GCHandle>>> = LazyLock::new(|| Mutex::default());
 #[cfg(target_os = "android")]
-static KEYBOARD_SELECTION: std::sync::LazyLock<Mutex<RangeInt>> = std::sync::LazyLock::new(|| {
+static KEYBOARD_SELECTION: LazyLock<Mutex<RangeInt>> = LazyLock::new(|| {
     Mutex::new(RangeInt::new(0, 1))
 });
 
@@ -904,34 +919,36 @@ impl Gui {
         let canvas_iter = unsafe { canvas_array.as_slice().iter() };
         let an_root_iter = unsafe { an_root_array.as_slice().iter() };
 
-        if unsafe { DISABLED_GAME_UIS.is_empty() } {
+        let mut disabled_uis = DISABLED_GAME_UIS.lock().unwrap();
+
+        if disabled_uis.is_empty() {
             for canvas in canvas_iter {
                 if Behaviour::get_enabled(*canvas) {
                     Behaviour::set_enabled(*canvas, false);
-                    unsafe { DISABLED_GAME_UIS.insert(*canvas); }
+                    disabled_uis.insert(SendPtr(*canvas));
                 }
             }
             for an_root in an_root_iter {
                 let top_object = AnRoot::get__topObject(*an_root);
                 if GameObject::get_activeSelf(top_object) {
                     GameObject::SetActive(top_object, false);
-                    unsafe { DISABLED_GAME_UIS.insert(top_object); }
+                    disabled_uis.insert(SendPtr(top_object));
                 }
             }
         }
         else {
             for canvas in canvas_iter {
-                if unsafe { DISABLED_GAME_UIS.contains(canvas) } {
+                if disabled_uis.contains(&SendPtr(*canvas)) {
                     Behaviour::set_enabled(*canvas, true);
                 }
             }
             for an_root in an_root_iter {
                 let top_object = AnRoot::get__topObject(*an_root);
-                if unsafe { DISABLED_GAME_UIS.contains(&top_object) } {
+                if disabled_uis.contains(&SendPtr(top_object)) {
                     GameObject::SetActive(top_object, true);
                 }
             }
-            unsafe { DISABLED_GAME_UIS.clear(); }
+            disabled_uis.clear();
         }
     }
 

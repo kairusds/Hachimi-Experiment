@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
-use std::{os::raw::{c_uint, c_void}, sync::Mutex};
+use std::{os::raw::{c_uint, c_void}, sync::{OnceLock, Mutex}};
 
-use once_cell::sync::OnceCell;
 use windows::{
     core::{w, Interface, HRESULT},
     Win32::{
@@ -153,7 +152,7 @@ extern "C" fn IDXGISwapChain_ResizeBuffers(
     ))
 }
 
-static PAINTER: OnceCell<Mutex<D3D11Painter>> = OnceCell::new();
+static PAINTER: OnceLock<Mutex<D3D11Painter>> = OnceLock::new();
 fn init_painter(p_swap_chain: *mut c_void) -> Result<&'static Mutex<D3D11Painter>, Error> {
     PAINTER.get_or_try_init(|| {
         let borrowed_swap_chain = unsafe {
