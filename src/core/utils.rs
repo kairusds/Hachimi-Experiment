@@ -4,9 +4,16 @@ use serde::Serialize;
 use textwrap::{core::Word, wrap_algorithms, WordSeparator::UnicodeBreakProperties};
 use unicode_width::UnicodeWidthChar;
 
-use crate::{core::Gui, il2cpp::{ext::{Il2CppStringExt, StringExt}, types::Il2CppString}};
+use crate::{core::Gui, il2cpp::{ext::{Il2CppStringExt, StringExt}, types::{Il2CppObject, Il2CppString}}};
 
 use super::{Error, Hachimi};
+
+#[repr(transparent)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct SendPtr(pub *mut Il2CppObject);
+
+unsafe impl Send for SendPtr {}
+unsafe impl Sync for SendPtr {}
 
 pub fn char_to_utf16_index(text: &str, char_idx: usize) -> i32 {
     text.chars()

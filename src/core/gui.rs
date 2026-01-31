@@ -38,7 +38,7 @@ use super::{
     hachimi::{self, Language, REPO_PATH, WEBSITE_URL},
     http::AsyncRequest,
     tl_repo::{self, RepoInfo},
-    utils,
+    utils::{self, SendPtr},
     Hachimi
 };
 
@@ -120,13 +120,6 @@ pub struct Gui {
 const PIXELS_PER_POINT_RATIO: f32 = 3.0/1080.0;
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgba_premultiplied(27, 27, 27, 220);
 const TEXT_COLOR: egui::Color32 = egui::Color32::from_gray(170);
-
-#[repr(transparent)]
-#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct SendPtr(pub *mut Il2CppObject);
-
-unsafe impl Send for SendPtr {}
-unsafe impl Sync for SendPtr {}
 
 static INSTANCE: OnceLock<Mutex<Gui>> = OnceLock::new();
 static IS_CONSUMING_INPUT: AtomicBool = AtomicBool::new(false);
@@ -256,7 +249,7 @@ fn get_scale(ctx: &egui::Context) -> f32 {
 
 #[cfg(target_os = "android")]
 fn is_ime_visible() -> bool {
-    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
     if kb_ptr.is_null() {
         return false;
     }
@@ -274,10 +267,10 @@ fn ime_scroll_padding(ctx: &egui::Context) -> f32 {
 #[cfg(target_os = "android")]
 pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
     if res.lost_focus() {
-        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
         if !kb_ptr.is_null() {
             TouchScreenKeyboard::set_active(kb_ptr, false);
-            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Release);
             *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
         }
         return;
@@ -291,15 +284,15 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
     use egui::{text::{CCursor, CCursorRange}, widgets::text_edit::TextEditState};
 
     let val_any = val as &dyn std::any::Any;
-    PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::Default as i32, Ordering::Relaxed);
+    PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::Default as i32, Ordering::Release);
 
     let text = if let Some(s) = val_any.downcast_ref::<String>() {
         s.clone()
     } else if let Some(f) = val_any.downcast_ref::<f32>() {
-        PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::DecimalPad as i32, Ordering::Relaxed);
+        PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::DecimalPad as i32, Ordering::Release);
         if f.fract() == 0.0 { format!("{:.1}", f) } else { f.to_string() }
     } else if let Some(i) = val_any.downcast_ref::<i32>() {
-        PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::NumberPad as i32, Ordering::Relaxed);
+        PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::NumberPad as i32, Ordering::Release);
         i.to_string()
     } else {
         String::new() 
@@ -309,7 +302,7 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
         res.scroll_to_me(Some(egui::Align::Center));
 
         let ptr = text.to_il2cpp_string();
-        PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
+        PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Release);
 
         let initial_selection = res.ctx.data(|data| {
             data.get_temp::<TextEditState>(res.id)
@@ -328,20 +321,20 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
         *KEYBOARD_SELECTION.lock().unwrap() = initial_selection;
 
         Thread::main_thread().schedule(|| {
-            let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
-            let typ: TouchScreenKeyboardType::KeyboardType = unsafe { *(&PENDING_KB_TYPE.load(Ordering::Relaxed) as *const i32 as *const TouchScreenKeyboardType::KeyboardType) };
+            let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::AcqRel);
+            let typ: TouchScreenKeyboardType::KeyboardType = unsafe { *(&PENDING_KB_TYPE.load(Ordering::Acquire) as *const i32 as *const TouchScreenKeyboardType::KeyboardType) };
 
             if !ptr.is_null() {
                 let keyboard = TouchScreenKeyboard::Open(ptr, typ, false, false, false);
                 TouchScreenKeyboard::set_selection(keyboard, *KEYBOARD_SELECTION.lock().unwrap());
                 let handle = GCHandle::new(keyboard, false);
                 *KEYBOARD_GC_HANDLE.lock().unwrap() = Some(handle);
-                ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
+                ACTIVE_KEYBOARD.store(keyboard, Ordering::Release);
             }
         });
     }
 
-    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Relaxed);
+    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
     if !kb_ptr.is_null() {
         let status = TouchScreenKeyboard::get_status(kb_ptr);
 
@@ -396,7 +389,7 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
                 data.remove::<egui::widgets::text_edit::TextEditState>(res.id);
             });
 
-            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Relaxed);
+            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Release);
             *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
             res.ctx.request_repaint();
         }
