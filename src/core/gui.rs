@@ -20,7 +20,7 @@ use crate::il2cpp::{
 use crate::il2cpp::{
     hook::{umamusume::WebViewManager, UnityEngine_CoreModule::{TouchScreenKeyboard, TouchScreenKeyboardType}},
     symbols::GCHandle,
-    types::Il2CppString
+    types::{Il2CppString, RangeInt}
 };
 
 #[cfg(target_os = "windows")]
@@ -226,6 +226,10 @@ static PENDING_KEYBOARD_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr:
 static ACTIVE_KEYBOARD: AtomicPtr<Il2CppObject> = AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
 pub static KEYBOARD_GC_HANDLE: Lazy<Mutex<Option<GCHandle>>> = Lazy::new(|| Mutex::default());
+#[cfg(target_os = "android")]
+static KEYBOARD_SELECTION: std::sync::LazyLock<Mutex<RangeInt>> = std::sync::LazyLock::new(|| {
+    Mutex::new(RangeInt::new(0, 1))
+});
 
 fn get_scale_salt(ctx: &egui::Context) -> f32 {
     ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale_salt"))).unwrap_or(1.0)
@@ -268,6 +272,9 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
         return;
     }
 
+    use utils::{char_to_utf16_index, utf16_to_char_index};
+    use egui::{text::{CCursor, CCursorRange}, widgets::text_edit::TextEditState};
+
     let val_any = val as &dyn std::any::Any;
     PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::Default as i32, Ordering::Relaxed);
 
@@ -289,12 +296,29 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
         let ptr = text.to_il2cpp_string();
         PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Relaxed);
 
+        let initial_selection = res.ctx.data(|data| {
+            data.get_temp::<TextEditState>(res.id)
+            .and_then(|state| state.cursor.char_range())
+            .map(|range| {
+                let start_char = range.primary.index.min(range.secondary.index);
+                let end_char = range.primary.index.max(range.secondary.index);
+
+                let start_u16 = char_to_utf16_index(&text, start_char);
+                let end_u16 = char_to_utf16_index(&text, end_char);
+
+                RangeInt::new(start_u16, end_u16 - start_u16)
+            })
+            .unwrap_or(RangeInt::new(char_to_utf16_index(&text, text.chars().count()), 0))
+        });
+        *KEYBOARD_SELECTION.lock().unwrap() = initial_selection;
+
         Thread::main_thread().schedule(|| {
             let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::Relaxed);
             let typ: TouchScreenKeyboardType::KeyboardType = unsafe { *(&PENDING_KB_TYPE.load(Ordering::Relaxed) as *const i32 as *const TouchScreenKeyboardType::KeyboardType) };
 
             if !ptr.is_null() {
                 let keyboard = TouchScreenKeyboard::Open(ptr, typ, false, false, false);
+                TouchScreenKeyboard::set_selection(keyboard, *KEYBOARD_SELECTION.lock().unwrap());
                 let handle = GCHandle::new(keyboard, false);
                 *KEYBOARD_GC_HANDLE.lock().unwrap() = Some(handle);
                 ACTIVE_KEYBOARD.store(keyboard, Ordering::Relaxed);
@@ -314,7 +338,7 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
                 let val_any_mut = val as &mut dyn std::any::Any;
 
                 if let Some(s) = val_any_mut.downcast_mut::<String>() {
-                    if *s != kb_txt_str { *s = kb_txt_str; }
+                    if *s != kb_txt_str { *s = kb_txt_str.clone(); }
                 } else if let Some(f) = val_any_mut.downcast_mut::<f32>() {
                     if let Ok(parsed) = kb_txt_str.parse::<f32>() {
                         let changed = !egui::emath::almost_equal(*f, parsed, 1e-6);
@@ -329,6 +353,23 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
                         if *i != parsed { *i = parsed; }
                     }
                 }
+
+                let unity_range = TouchScreenKeyboard::get_selection(kb_ptr);
+                let kb_txt_clone = kb_txt_str.clone(); 
+                res.ctx.data_mut(|data| {
+                    let mut state = data.get_temp::<TextEditState>(res.id).unwrap_or_default();
+                    
+                    let start_char = utf16_to_char_index(&kb_txt_clone, unity_range.start as usize);
+                    let end_char = utf16_to_char_index(&kb_txt_clone, (unity_range.start + unity_range.length) as usize);
+        
+                    let cursor_range = CCursorRange::two(
+                        CCursor::new(start_char),
+                        CCursor::new(end_char),
+                    );
+                    
+                    state.cursor.set_char_range(Some(cursor_range));
+                    data.insert_temp(res.id, state);
+                });
             }
         }
 

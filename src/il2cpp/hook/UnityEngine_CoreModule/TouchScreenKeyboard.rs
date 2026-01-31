@@ -1,10 +1,10 @@
 use crate::{il2cpp::{symbols::{get_method_addr, get_method_overload_addr}, types::*}};
 use super::TouchScreenKeyboardType;
 
-static mut TOUCHSCREENKEYBOARD_OPEN_ADDR: usize = 0;
+static mut OPEN_ADDR: usize = 0;
 impl_addr_wrapper_fn!(
     Open, 
-    TOUCHSCREENKEYBOARD_OPEN_ADDR, 
+    OPEN_ADDR, 
     *mut Il2CppObject, 
     text: *mut Il2CppString,
     keyboardType: TouchScreenKeyboardType::KeyboardType,
@@ -13,8 +13,8 @@ impl_addr_wrapper_fn!(
     secure: bool
 );
 
-static mut TOUCHSCREENKEYBOARD_GET_TEXT_ADDR: usize = 0;
-impl_addr_wrapper_fn!(get_text, TOUCHSCREENKEYBOARD_GET_TEXT_ADDR, *mut Il2CppString, this: *mut Il2CppObject);
+static mut GET_TEXT_ADDR: usize = 0;
+impl_addr_wrapper_fn!(get_text, GET_TEXT_ADDR, *mut Il2CppString, this: *mut Il2CppObject);
 
 #[repr(i32)]
 #[derive(Debug, PartialEq, Eq)]
@@ -25,17 +25,23 @@ pub enum Status {
     LostFocus
 }
 
-static mut TOUCHSCREENKEYBOARD_GET_STATUS_ADDR: usize = 0;
-impl_addr_wrapper_fn!(get_status, TOUCHSCREENKEYBOARD_GET_STATUS_ADDR, Status, this: *mut Il2CppObject);
+static mut GET_STATUS_ADDR: usize = 0;
+impl_addr_wrapper_fn!(get_status, GET_STATUS_ADDR, Status, this: *mut Il2CppObject);
 
-static mut TOUCHSCREENKEYBOARD_SET_ACTIVE_ADDR: usize = 0;
-impl_addr_wrapper_fn!(set_active, TOUCHSCREENKEYBOARD_SET_ACTIVE_ADDR, (), this: *mut Il2CppObject, value: bool);
+static mut SET_ACTIVE_ADDR: usize = 0;
+impl_addr_wrapper_fn!(set_active, SET_ACTIVE_ADDR, (), this: *mut Il2CppObject, value: bool);
+
+static mut GET_SELECTION_ADDR: usize = 0;
+impl_addr_wrapper_fn!(get_selection, GET_SELECTION_ADDR, RangeInt, this: *mut Il2CppObject);
+
+static mut SET_SELECTION_ADDR: usize = 0;
+impl_addr_wrapper_fn!(set_selection, SET_SELECTION_ADDR, (), this: *mut Il2CppObject, value: RangeInt);
 
 pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
     get_class_or_return!(UnityEngine_CoreModule, UnityEngine, TouchScreenKeyboard);
 
     unsafe {
-        TOUCHSCREENKEYBOARD_OPEN_ADDR = get_method_overload_addr(
+        OPEN_ADDR = get_method_overload_addr(
             TouchScreenKeyboard, 
             "Open", 
             &[
@@ -46,8 +52,10 @@ pub fn init(UnityEngine_CoreModule: *const Il2CppImage) {
                 Il2CppTypeEnum_IL2CPP_TYPE_BOOLEAN,  // Boolean secure
             ]
         );
-        TOUCHSCREENKEYBOARD_GET_TEXT_ADDR = get_method_addr(TouchScreenKeyboard, c"get_text", 0);
-        TOUCHSCREENKEYBOARD_GET_STATUS_ADDR = get_method_addr(TouchScreenKeyboard, c"get_status", 0);
-        TOUCHSCREENKEYBOARD_SET_ACTIVE_ADDR = get_method_addr(TouchScreenKeyboard, c"set_active", 1);
+        GET_TEXT_ADDR = get_method_addr(TouchScreenKeyboard, c"get_text", 0);
+        GET_STATUS_ADDR = get_method_addr(TouchScreenKeyboard, c"get_status", 0);
+        SET_ACTIVE_ADDR = get_method_addr(TouchScreenKeyboard, c"set_active", 1);
+        GET_SELECTION_ADDR = get_method_addr(TouchScreenKeyboard, c"get_selection", 0);
+        SET_SELECTION_ADDR = get_method_addr(TouchScreenKeyboard, c"set_selection", 1);
     }
 }
