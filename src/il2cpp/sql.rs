@@ -1,10 +1,9 @@
 use std::{ptr, sync::atomic::{self, AtomicPtr}};
-use rusqlite::{Connection, OpenFlags};
 use fnv::{FnvHashMap, FnvHashSet};
 use sqlparser::ast;
 use crate::{
     core::{utils::{get_masterdb_path, fit_text, wrap_fit_text}, Hachimi},
-    il2cpp::{ext::StringExt, hook::LibNative_Runtime, types::{Il2CppObject, Il2CppString}}
+    il2cpp::{ext::{StringExt, Il2CppStringExt}, hook::LibNative_Runtime::Sqlite3::{Connection, Query}, types::{Il2CppObject, Il2CppString}}
 };
 
 // public API
@@ -14,38 +13,33 @@ pub struct CharacterData {
 }
 
 impl CharacterData {
-    pub fn load_from_db() -> Result<Self, rusqlite::Error> {
+    pub fn load_from_db() -> Self {
         let mut chara_ids = FnvHashSet::default();
         let mut chara_names = FnvHashMap::default();
-        
-        // open read-only + no mutex for maximum performance and zero game interference
-        let conn = Connection::open_with_flags(
-            get_masterdb_path(), 
-            OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX
-        )?;
 
-        // query joining chara_data (for the IDs) and text_data (for the names)
-        let mut stmt = conn.prepare(
-            "SELECT C.id, T.text 
-             FROM chara_data AS C 
-             JOIN text_data AS T ON C.id = T.\"index\" 
-             WHERE T.id = 6"
-        )?;
+        let db_path = get_masterdb_path();
+        let conn = Connection::new();
 
-        let rows = stmt.query_map([], |row| {
-            Ok((
-                row.get::<_, i32>(0)?, // id
-                row.get::<_, String>(1)? // name
-            ))
-        })?;
+        if Connection::Open(conn, db_path.to_il2cpp_string(), ptr::null_mut(), ptr::null_mut(), 0) {
+            let sql = "SELECT C.id, T.text FROM chara_data AS C JOIN text_data AS T ON C.id = T.\"index\" WHERE T.id = 6";
+            let query = Connection::Query(conn, sql.to_il2cpp_string());
 
-        for row in rows.flatten() {
-            let (id, name) = row;
-            chara_ids.insert(id);
-            chara_names.insert(id, name);
+            if !query.is_null() {
+                while Query::Step(query) {
+                    let id = Query::GetInt(query, 0);
+                    let name_ptr = Query::GetText(query, 1);
+
+                    if let Some(name) = unsafe { name_ptr.as_ref() }.map(|s| s.as_utf16str().to_string()) {
+                        chara_ids.insert(id);
+                        chara_names.insert(id, name);
+                    }
+                }
+                Query::Dispose(query);
+            }
+            Connection::CloseDB(conn);
         }
 
-        Ok(CharacterData { chara_ids, chara_names })
+        CharacterData { chara_ids, chara_names }
     }
 
     pub fn exists(&self, id: i32) -> bool {
@@ -134,7 +128,7 @@ impl Column {
 
     fn try_get_int(&self, query: *mut Il2CppObject) -> Option<i32> {
         if let Some(idx) = self.select_idx {
-            Some(LibNative_Runtime::Sqlite3::Query::GetInt(query, idx))
+            Some(Query::GetInt(query, idx))
         }
         else {
             None

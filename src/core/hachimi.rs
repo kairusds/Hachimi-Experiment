@@ -200,15 +200,9 @@ impl Hachimi {
 
     pub fn init_character_data(&self) {
         if self.chara_data.load().is_none() {
-            match CharacterData::load_from_db() {
-                Ok(data) => {
-                    self.chara_data.store(Arc::new(Some(data)));
-                    info!("Character database loaded successfully.");
-                }
-                Err(e) => {
-                    error!("Failed to load character database: {}", e);
-                }
-            }
+            let data = CharacterData::load_from_db();
+            self.chara_data.store(Arc::new(Some(data)));
+            info!("Character database loaded successfully.");
         }
     }
 
