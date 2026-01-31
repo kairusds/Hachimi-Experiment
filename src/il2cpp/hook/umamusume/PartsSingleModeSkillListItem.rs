@@ -143,7 +143,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     let button_obj = Component::get_gameObject(button);
     Object::set_name(button_obj, format!("HachimiSkill_{}", skill_id).to_il2cpp_string());
     get_skill_text(skill_id, this);
-    info!("SKILL_TEXT_CACHE len: {}", SKILL_TEXT_CACHE.lock().unwrap().len());
+    // info!("SKILL_TEXT_CACHE len: {}", SKILL_TEXT_CACHE.lock().unwrap().len());
 
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
         let current_ev = EventSystem::get_current();
