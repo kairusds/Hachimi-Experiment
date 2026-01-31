@@ -1,7 +1,7 @@
 use widestring::Utf16Str;
 
 use crate::{
-    core::ext::Utf16StringExt,
+    core::{Hachimi, ext::Utf16StringExt},
     il2cpp::{
         api::il2cpp_resolve_icall,
         ext::Il2CppObjectExt,
@@ -88,13 +88,16 @@ pub fn on_LoadAsset(bundle: *mut Il2CppObject, this: *mut Il2CppObject, name: &U
 }
 
 fn customize(component: *mut Il2CppObject) {
-    match unsafe { (*component).klass() } {
-        // graphics quality - shadow resolution
-        CameraData if CameraData == CameraData::class() => {
-            CameraData::set_IsOverrideShadowResolution(component, true);
-            CameraData::set_OverrideShadowResolution(component, ShadowResolution::_4096);
+    let shadow_resolution = Hachimi::instance().config.load().shadow_resolution;
+    if shadow_resolution != ShadowResolution::Default {
+        match unsafe { (*component).klass() } {
+            // graphics quality - shadow resolution
+            CameraData if CameraData == CameraData::class() => {
+                CameraData::set_IsOverrideShadowResolution(component, true);
+                CameraData::set_OverrideShadowResolution(component, shadow_resolution);
+            }
+            _ => return
         }
-        _ => return
     }
 }
 
