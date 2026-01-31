@@ -332,7 +332,7 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
 
         if status == TouchScreenKeyboard::Status::Visible {
             let unity_range = TouchScreenKeyboard::get_selection(kb_ptr);
-            info!("unity_range {}, {}", unity_range.start, unity_range.length);
+
             let kb_txt_ptr = TouchScreenKeyboard::get_text(kb_ptr);
             if let Some(kb_ref) = unsafe { kb_txt_ptr.as_ref() } {
                 let kb_txt_str = kb_ref.as_utf16str().to_string();
