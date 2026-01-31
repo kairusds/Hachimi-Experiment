@@ -357,20 +357,20 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
                 let unity_range = TouchScreenKeyboard::get_selection(kb_ptr);
                 let kb_txt_clone = kb_txt_str.clone(); 
                 res.ctx.data_mut(|data| {
-                    let mut state = data.get_temp::<TextEditState>(res.id).unwrap_or_default();
-                    
-                    let start_char = utf16_to_char_index(&kb_txt_clone, unity_range.start as usize);
-                    let end_char = utf16_to_char_index(&kb_txt_clone, (unity_range.start + unity_range.length) as usize);
-        
-                    let cursor_range = CCursorRange::two(
-                        CCursor::new(start_char),
-                        CCursor::new(end_char),
-                    );
-                    
-                    state.cursor.set_char_range(Some(cursor_range));
-                    data.insert_temp(res.id, state);
+                    if let Some(mut state) = data.get_temp::<TextEditState>(res.id) {
+                        let start_char = utf16_to_char_index(&kb_txt_clone, unity_range.start as usize);
+                        let end_char = utf16_to_char_index(&kb_txt_clone, (unity_range.start + unity_range.length) as usize);
+
+                        let new_range = CCursorRange::two(CCursor::new(start_char), CCursor::new(end_char));
+
+                        if state.cursor.char_range() != Some(new_range) {
+                            state.cursor.set_char_range(Some(new_range));
+                            data.insert_temp(res.id, state);
+                        }
+                    }
                 });
             }
+            res.ctx.request_repaint();
         }
 
         if status != TouchScreenKeyboard::Status::Visible {
