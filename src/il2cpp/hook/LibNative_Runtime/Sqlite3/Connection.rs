@@ -113,13 +113,11 @@ extern "C" fn PreparedQuery(this: *mut Il2CppObject, sql: *const Il2CppString) -
     query
 }
 
-// public Boolean Open(String fileName, String vfsName, Byte[] key, TYPE cipherType) { }
 static mut OPEN_ADDR: usize = 0;
 impl_addr_wrapper_fn!(Open, OPEN_ADDR, bool,
     this: *mut Il2CppObject, fileName: *mut Il2CppString, vfsName: *mut Il2CppString, key: *mut Il2CppArray, cipherType: i32
 );
 
-// public virtual Void CloseDB() { }
 static mut CLOSEDB_ADDR: usize = 0;
 impl_addr_wrapper_fn!(CloseDB, CLOSEDB_ADDR, (), this: *mut Il2CppObject);
 

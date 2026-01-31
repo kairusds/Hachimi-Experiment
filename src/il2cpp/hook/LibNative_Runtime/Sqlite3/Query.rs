@@ -19,7 +19,6 @@ pub extern "C" fn Dispose(this: *mut Il2CppObject) {
 static mut GETINT_ADDR: usize = 0;
 impl_addr_wrapper_fn!(GetInt, GETINT_ADDR, i32, this: *mut Il2CppObject, index: i32);
 
-// public Boolean Step() { }
 static mut STEP_ADDR: usize = 0;
 impl_addr_wrapper_fn!(Step, STEP_ADDR, bool, this: *mut Il2CppObject);
 

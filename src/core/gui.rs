@@ -20,15 +20,14 @@ use crate::il2cpp::{
         umamusume::{CameraData::ShadowResolution, CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize, TimeUtil::BgSeason},
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
     },
-    symbols::Thread,
-    types::Il2CppObject
+    symbols::Thread
 };
 
 #[cfg(target_os = "android")]
 use crate::il2cpp::{
     hook::{umamusume::WebViewManager, UnityEngine_CoreModule::{TouchScreenKeyboard, TouchScreenKeyboardType}},
     symbols::GCHandle,
-    types::{Il2CppString, RangeInt}
+    types::{Il2CppObject, Il2CppString, RangeInt}
 };
 
 #[cfg(target_os = "windows")]

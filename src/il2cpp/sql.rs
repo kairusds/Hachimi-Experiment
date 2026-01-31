@@ -48,11 +48,11 @@ impl CharacterData {
 
     pub fn get_name(&self, id: i32) -> String {
         // check text_data_dict.json (category 170)
-        if let Some(category_170) = Hachimi::instance().localized_data.load().text_data_dict.get(&170) {
+        /* if let Some(category_170) = Hachimi::instance().localized_data.load().text_data_dict.get(&170) {
             if let Some(name) = category_170.get(&id) {
                 return name.clone();
             }
-        }
+        }*/
 
         // fallback to default Japanese name from mdb
         if let Some(name) = self.chara_names.get(&id) {
