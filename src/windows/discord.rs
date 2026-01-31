@@ -5,7 +5,7 @@ use std::{
 use discord_rich_presence::{activity::{Activity, ActivityType, Assets, Timestamps}, DiscordIpc, DiscordIpcClient};
 use crate::core::Error;
 
-static DISCORD_CLIENT: Lazy<Mutex<Option<DiscordIpcClient>>> = Lazy::new(|| {
+static DISCORD_CLIENT: LazyLock<Mutex<Option<DiscordIpcClient>>> = LazyLock::new(|| {
     Mutex::new(None)
 });
 
