@@ -1,10 +1,10 @@
 use crate::{
-    core::{gui::SkillInfoDialog, Gui, Hachimi, game::Region, utils::mul_int},
+    core::{Hachimi, game::Region, utils::{mul_int, str_visual_len}},
     il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::{UnityEngine_CoreModule::{Component, Object, UnityAction}, UnityEngine_UI::{EventSystem, Text}}, sql::{self, TextDataQuery}, symbols::{create_delegate, get_field_from_name, get_field_object_value, get_method_addr}, types::*}
 };
 use std::sync::{LazyLock, Mutex};
 use fnv::FnvHashMap;
-use super::{ButtonCommon, DialogCommon, DialogManager, MasterDataUtil, TextId};
+use super::{ButtonCommon, DialogCommon, DialogManager, MasterDataUtil};
 
 static SKILL_TEXT_CACHE: LazyLock<Mutex<FnvHashMap<i32, (String, String)>>> = LazyLock::new(|| Mutex::default());
 
@@ -153,16 +153,14 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
             if let Ok(id) = id_str.parse::<i32>() {
                 if let Some(data) = SKILL_TEXT_CACHE.lock().unwrap().get(&id) {
                     let (name, desc) = data;
-                    let dialog_data = DialogCommon::Data::new();
-                    DialogCommon::Data::SetSimpleOneButtonMessage(
-                        dialog_data,
-                        name.to_il2cpp_string(),
-                        desc.to_il2cpp_string(),
-                        std::ptr::null_mut(),
-                        TextId::from_name("Common0007"),
-                        9
-                    );
-                    DialogManager::PushDialog(dialog_data);
+                    let typ = if str_visual_len(desc.as_str()) <= 44 {
+                        DialogCommon::FormType::SMALL_ONE_BUTTON
+                    } else if str_visual_len(desc.as_str()) <= 106 {
+                        DialogCommon::FormType::MIDDLE_ONE_BUTTON
+                    } else {
+                        DialogCommon::FormType::BIG_ONE_BUTTON
+                    };
+                    DialogManager::single_button_message(name, desc, typ);
                 }
             }
         }

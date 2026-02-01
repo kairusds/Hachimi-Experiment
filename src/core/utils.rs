@@ -36,6 +36,32 @@ pub fn utf16_to_char_index(text: &str, utf16_idx: usize) -> usize {
     char_pos
 }
 
+pub fn str_visual_len(text: &str) -> usize {
+    let mut count = 0;
+    let mut is_in_tag = false;
+    let mut chars = text.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        match c {
+            '<' => is_in_tag = true,
+            '>' => is_in_tag = false,
+            '\\' => {
+                if let Some(&'n') = chars.peek() {
+                    chars.next();
+                } else if !is_in_tag {
+                    count += 1;
+                }
+            }
+            _ => {
+                if !is_in_tag {
+                    count += 1;
+                }
+            }
+        }
+    }
+    count
+}
+
 pub fn concat_unix_path(left: &str, right: &str) -> String {
     let mut str = String::with_capacity(left.len() + 1 + right.len());
     str.push_str(left);
