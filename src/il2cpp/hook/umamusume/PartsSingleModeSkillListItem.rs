@@ -4,7 +4,7 @@ use crate::{
 };
 use std::sync::{LazyLock, Mutex};
 use fnv::FnvHashMap;
-use super::{ButtonCommon, DialogCommon, MasterDataUtil, TextId};
+use super::{ButtonCommon, DialogCommon, DialogManager, MasterDataUtil, TextId};
 
 static SKILL_TEXT_CACHE: LazyLock<Mutex<FnvHashMap<i32, (String, String)>>> = LazyLock::new(|| Mutex::default());
 
@@ -154,7 +154,6 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
                 if let Some(data) = SKILL_TEXT_CACHE.lock().unwrap().get(&id) {
                     let (name, desc) = data;
                     let dialog_data = DialogCommon::Data::new();
-
                     DialogCommon::Data::SetSimpleOneButtonMessage(
                         dialog_data,
                         name.to_il2cpp_string(),
@@ -163,10 +162,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
                         TextId::from_name("Common0007"),
                         9
                     );
-
-                    let dialog = DialogCommon::new();
-                    DialogCommon::Initialize(dialog, dialog_data);
-                    DialogCommon::Open(dialog, std::ptr::null_mut());
+                    DialogManager::PushDialog(dialog_data);
                 }
             }
         }
