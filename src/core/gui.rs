@@ -51,10 +51,10 @@ macro_rules! add_font {
     };
 }
 
-static THEME_MAILBOX: Mutex<Option<hachimi::Config>> = Mutex::new(None);
+static PENDING_THEME: Mutex<Option<hachimi::Config>> = Mutex::new(None);
 
 pub fn enqueue_theme_preview(config: hachimi::Config) {
-    if let Ok(mut lock) = THEME_MAILBOX.lock() {
+    if let Ok(mut lock) = PENDING_THEME.lock() {
         *lock = Some(config);
     }
 }
@@ -75,6 +75,8 @@ pub struct Gui {
     fps_text: String,
     #[cfg(target_os = "android")]
     last_focused: Option<egui::Id>,
+    #[cfg(target_os = "android")]
+    ime_requested: bool,
 
     show_menu: bool,
 
@@ -96,8 +98,6 @@ pub struct Gui {
 }
 
 const PIXELS_PER_POINT_RATIO: f32 = 3.0/1080.0;
-const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgba_premultiplied(27, 27, 27, 220);
-const TEXT_COLOR: egui::Color32 = egui::Color32::from_gray(170);
 
 static INSTANCE: OnceLock<Mutex<Gui>> = OnceLock::new();
 static IS_CONSUMING_INPUT: AtomicBool = AtomicBool::new(false);
@@ -454,6 +454,8 @@ impl Gui {
             fps_text: "FPS: 0".to_string(),
             #[cfg(target_os = "android")]
             last_focused: None,
+            #[cfg(target_os = "android")]
+            ime_requested: false,
 
             show_menu: false,
 
@@ -544,7 +546,7 @@ impl Gui {
     }
 
     pub fn run(&mut self) -> egui::FullOutput {
-        if let Ok(mut lock) = THEME_MAILBOX.lock() {
+        if let Ok(mut lock) = PENDING_THEME.lock() {
             if let Some(config) = lock.take() {
                 self.config = config.clone();
                 Self::apply_theme(&self.context, &mut self.default_style, &config);
@@ -608,13 +610,22 @@ impl Gui {
             if focused.is_some() && focused != self.last_focused && wants_kb {
                 if unity_kb_ptr.is_null() && !IS_IME_VISIBLE.load(Ordering::Acquire) {
                     set_keyboard_visible(true);
+                    self.ime_requested = true;
                 }
             }
 
             if IS_IME_VISIBLE.load(Ordering::Acquire) {
+                self.ime_requested = false;
+
                 if !check_keyboard_status() {
                     self.context.memory_mut(|mem| mem.stop_text_input());
                     IS_IME_VISIBLE.store(false, Ordering::Release);
+                    self.last_focused = None;
+                }
+            } else if self.ime_requested {
+                // do nothing
+            } else {
+                if focused.is_none() {
                     self.last_focused = None;
                 }
             }
@@ -2537,9 +2548,7 @@ impl Window for ThemeEditorWindow {
             config.ui_window_rounding = hachimi::Config::default_window_rounding();
 
             self.config = config.clone();
-
-            let mut style = ctx.style().as_ref().clone();
-            Gui::apply_theme(ctx, &mut style, &self.config);
+            enqueue_theme_preview(self.config.clone());
             save_and_reload_config(self.config.clone());
         }
 
