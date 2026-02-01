@@ -10,7 +10,7 @@ use std::{
 };
 
 use egui_scale::EguiScale;
-use fnv::{FnvHashSet, FnvHashMap};
+use fnv::FnvHashSet;
 use rust_i18n::t;
 use chrono::{Utc, Datelike};
 
@@ -51,36 +51,12 @@ macro_rules! add_font {
     };
 }
 
-use egui::Color32;
+static THEME_MAILBOX: Mutex<Option<hachimi::Config>> = Mutex::new(None);
 
-static UNITY_COLORS: std::sync::OnceLock<FnvHashMap<&'static str, Color32>> = std::sync::OnceLock::new();
-pub fn get_unity_colors() -> &'static FnvHashMap<&'static str, Color32> {
-    UNITY_COLORS.get_or_init(|| {
-        let mut m = FnvHashMap::with_capacity_and_hasher(22, Default::default());
-        m.insert("aqua", Color32::from_rgb(0, 255, 255));
-        m.insert("cyan", Color32::from_rgb(0, 255, 255));
-        m.insert("black", Color32::from_rgb(0, 0, 0));
-        m.insert("blue", Color32::from_rgb(0, 0, 255));
-        m.insert("brown", Color32::from_rgb(165, 42, 42));
-        m.insert("darkblue", Color32::from_rgb(0, 0, 160));
-        m.insert("fuchsia", Color32::from_rgb(255, 0, 255));
-        m.insert("magenta", Color32::from_rgb(255, 0, 255));
-        m.insert("green", Color32::from_rgb(0, 128, 0));
-        m.insert("grey", Color32::from_rgb(128, 128, 128));
-        m.insert("lightblue", Color32::from_rgb(173, 216, 230));
-        m.insert("lime", Color32::from_rgb(0, 255, 0));
-        m.insert("maroon", Color32::from_rgb(128, 0, 0));
-        m.insert("navy", Color32::from_rgb(0, 0, 128));
-        m.insert("olive", Color32::from_rgb(128, 128, 0));
-        m.insert("orange", Color32::from_rgb(255, 165, 0));
-        m.insert("purple", Color32::from_rgb(128, 0, 128));
-        m.insert("red", Color32::from_rgb(255, 0, 0));
-        m.insert("silver", Color32::from_rgb(192, 192, 192));
-        m.insert("teal", Color32::from_rgb(0, 128, 128));
-        m.insert("white", Color32::from_rgb(255, 255, 255));
-        m.insert("yellow", Color32::from_rgb(255, 255, 0));
-        m
-    })
+pub fn enqueue_theme_preview(config: hachimi::Config) {
+    if let Ok(mut lock) = THEME_MAILBOX.lock() {
+        *lock = Some(config);
+    }
 }
 
 type BoxedWindow = Box<dyn Window + Send + Sync>;
@@ -407,7 +383,7 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
 }
 
 impl Gui {
-    pub fn apply_theme(&mut self, config: &hachimi::Config) {
+    pub fn apply_theme(ctx: &egui::Context, style: &mut egui::Style, config: &hachimi::Config) {
         let mut visuals = egui::Visuals::dark(); // Base theme
 
         visuals.window_fill = config.ui_window_fill;
@@ -423,7 +399,8 @@ impl Gui {
 
         visuals.override_text_color = Some(config.ui_text_color);
 
-        self.context.set_visuals(visuals);
+        style.visuals = visuals.clone();
+        ctx.set_visuals(visuals);
     }
 
     // Call this from the render thread!
@@ -446,14 +423,11 @@ impl Gui {
         style.spacing.button_padding = egui::Vec2::new(8.0, 5.0);
         style.interaction.selectable_labels = false;
 
-        context.set_style(style);
-        /*
-        let mut visuals = egui::Visuals::dark();
-        visuals.panel_fill = BACKGROUND_COLOR;
-        visuals.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0, TEXT_COLOR);
-        context.set_visuals(visuals); */
+        Self::apply_theme(&context, &mut style, &config);
 
-        let default_style = context.style().as_ref().clone();
+        context.set_style(style.clone());
+
+        let default_style = style.clone();
 
         let mut fps_value = hachimi.target_fps.load(atomic::Ordering::Relaxed);
         if fps_value == -1 {
@@ -466,7 +440,7 @@ impl Gui {
         }
 
         let now = Instant::now();
-        let mut instance = Gui {
+        let instance = Gui {
             context,
             config,
             input: egui::RawInput::default(),
@@ -509,8 +483,6 @@ impl Gui {
             notifications: Vec::new(),
             windows
         };
-
-        let _ = &instance.apply_theme(&**Hachimi::instance().config.load());
 
         unsafe {
             INSTANCE.set(Mutex::new(instance)).unwrap_unchecked();
@@ -572,14 +544,32 @@ impl Gui {
     }
 
     pub fn run(&mut self) -> egui::FullOutput {
+        if let Ok(mut lock) = THEME_MAILBOX.lock() {
+            if let Some(config) = lock.take() {
+                self.config = config.clone();
+                Self::apply_theme(&self.context, &mut self.default_style, &config);
+
+                let mut style = self.default_style.clone();
+                style.scale(self.gui_scale);
+                self.context.set_style(style)
+            }
+        }
+
         self.update_fps();
         let input = self.take_input();
 
         let live_scale = Hachimi::instance().config.load().gui_scale;
-        self.gui_scale = live_scale;
+        if self.gui_scale != live_scale {
+            self.gui_scale = live_scale;
+            if !self.context.is_using_pointer() {
+                self.finalized_scale = live_scale;
+            }
 
-        if !self.context.is_using_pointer() {
-            self.finalized_scale = live_scale;
+            let mut style = self.default_style.clone();
+            if live_scale != 1.0 {
+                style.scale(live_scale);
+            }
+            self.context.set_style(style);
         }
 
         self.context.data_mut(|d| {
@@ -2523,24 +2513,17 @@ impl Window for ThemeEditorWindow {
             );
         });
 
-        if theme_changed && !ctx.input(|i| i.pointer.any_down()) {
-            if let Some(mutex) = Gui::instance() {
-                mutex.lock().unwrap().apply_theme(&self.config);
-            }
+        if theme_changed {
+            enqueue_theme_preview(self.config.clone());
         }
 
         if cancel_clicked {
-            if let Some(mutex) = Gui::instance() {
-                mutex.lock().unwrap().apply_theme(&self.old_config);
-            }
+            enqueue_theme_preview(self.old_config.clone());
+            open2 = false;
         }
 
         if save_clicked {
-            if theme_changed {
-                if let Some(mutex) = Gui::instance() {
-                    mutex.lock().unwrap().apply_theme(&self.config);
-                }
-            }
+            enqueue_theme_preview(self.config.clone());
             save_and_reload_config(self.config.clone());
         }
 
@@ -2554,11 +2537,10 @@ impl Window for ThemeEditorWindow {
             config.ui_window_rounding = hachimi::Config::default_window_rounding();
 
             self.config = config.clone();
-            save_and_reload_config(config.clone());
 
-            if let Some(mutex) = Gui::instance() {
-                mutex.lock().unwrap().apply_theme(&config);
-            }
+            let mut style = ctx.style().as_ref().clone();
+            Gui::apply_theme(ctx, &mut style, &self.config);
+            save_and_reload_config(self.config.clone());
         }
 
         open &= open2;
