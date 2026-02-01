@@ -2442,9 +2442,8 @@ impl Window for LicenseWindow {
                 ui.heading("Open Font Licenses (OFL)");
                 ui.label(t!("license.ofl_fonts_header"));
                 ui.group(|ui| {
-                    ui.label(t!("license.font_font_awesome"));
                     ui.label(t!("license.font_inter"));
-                    ui.label(t!("license.font_noto_sans_jp"));
+                    ui.label(t!("license.font_font_awesome"));
                 });
 
                 ui.add_space(4.0);
