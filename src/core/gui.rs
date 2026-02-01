@@ -86,6 +86,7 @@ pub fn get_unity_colors() -> &'static FnvHashMap<&'static str, Color32> {
 type BoxedWindow = Box<dyn Window + Send + Sync>;
 pub struct Gui {
     pub context: egui::Context,
+    config: hachimi::Config,
     pub input: egui::RawInput,
     default_style: egui::Style,
     pub gui_scale: f32,
@@ -96,6 +97,7 @@ pub struct Gui {
     last_fps_update: Instant,
     tmp_frame_count: u32,
     fps_text: String,
+    last_focused: Option<egui::Id>,
 
     show_menu: bool,
 
@@ -249,10 +251,14 @@ fn get_scale(ctx: &egui::Context) -> f32 {
 #[cfg(target_os = "android")]
 fn is_ime_visible() -> bool {
     let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
-    if kb_ptr.is_null() {
-        return false;
-    }
-    TouchScreenKeyboard::get_status(kb_ptr) == TouchScreenKeyboard::Status::Visible
+    let unity_visible = if !kb_ptr.is_null() {
+        TouchScreenKeyboard::get_status(kb_ptr) == TouchScreenKeyboard::Status::Visible
+    } else {
+        false
+    };
+    let jni_visible = crate::android::utils::IS_IME_VISIBLE.load(Ordering::Acquire);
+
+    unity_visible || jni_visible
 }
 
 #[cfg(target_os = "android")]
@@ -265,6 +271,10 @@ fn ime_scroll_padding(ctx: &egui::Context) -> f32 {
 
 #[cfg(target_os = "android")]
 pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
+    if crate::android::utils::IS_IME_VISIBLE.load(Ordering::Acquire) {
+        return;
+    }
+
     if res.lost_focus() {
         let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
         if !kb_ptr.is_null() {
@@ -396,7 +406,8 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
 }
 
 impl Gui {
-    pub fn apply_theme(ctx: &egui::Context, config: &hachimi::Config) {
+    pub fn apply_theme(&mut self) {
+        let config = &self.config;
         let mut visuals = egui::Visuals::dark(); // Base theme
 
         visuals.window_fill = config.ui_window_fill;
@@ -412,7 +423,7 @@ impl Gui {
 
         visuals.override_text_color = Some(config.ui_text_color);
 
-        ctx.set_visuals(visuals);
+        self.context.set_visuals(visuals);
     }
 
     // Call this from the render thread!
@@ -424,7 +435,7 @@ impl Gui {
         }
 
         let hachimi = Hachimi::instance();
-        let config = hachimi.config.load();
+        let config = (**Hachimi::instance().config.load()).clone();
 
         let context = egui::Context::default();
         egui_extras::install_image_loaders(&context);
@@ -436,8 +447,6 @@ impl Gui {
         style.interaction.selectable_labels = false;
 
         context.set_style(style);
-
-        Self::apply_theme(&context, &config.clone());
         /*
         let mut visuals = egui::Visuals::dark();
         visuals.panel_fill = BACKGROUND_COLOR;
@@ -457,8 +466,9 @@ impl Gui {
         }
 
         let now = Instant::now();
-        let instance = Gui {
+        let mut instance = Gui {
             context,
+            config,
             input: egui::RawInput::default(),
             gui_scale: 1.0,
             finalized_scale: 1.0,
@@ -468,6 +478,7 @@ impl Gui {
             last_fps_update: now,
             tmp_frame_count: 0,
             fps_text: "FPS: 0".to_string(),
+            last_focused: None,
 
             show_menu: false,
 
@@ -497,6 +508,9 @@ impl Gui {
             notifications: Vec::new(),
             windows
         };
+
+        let _ = &instance.apply_theme();
+
         unsafe {
             INSTANCE.set(Mutex::new(instance)).unwrap_unchecked();
 
@@ -591,6 +605,31 @@ impl Gui {
             self.show_notification(&t!("notification.config_error"));
         }
 
+        #[cfg(target_os = "android")]
+        {
+            use crate::android::utils::{set_keyboard_visible, check_keyboard_status, IS_IME_VISIBLE};
+
+            let focused = self.context.memory(|m| m.focused());
+            let wants_kb = self.context.wants_keyboard_input();
+
+            let unity_kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
+
+            if focused.is_some() && focused != self.last_focused && wants_kb {
+                if unity_kb_ptr.is_null() && !IS_IME_VISIBLE.load(Ordering::Acquire) {
+                    set_keyboard_visible(true);
+                }
+            }
+
+            if IS_IME_VISIBLE.load(Ordering::Acquire) {
+                if !check_keyboard_status() {
+                    self.context.memory_mut(|mem| mem.stop_text_input());
+                    IS_IME_VISIBLE.store(false, Ordering::Release);
+                    self.last_focused = None;
+                }
+            }
+            self.last_focused = focused;
+        }
+
         // Store this as an atomic value so the input thread can check it without locking the gui
         IS_CONSUMING_INPUT.store(self.is_consuming_input(), atomic::Ordering::Relaxed);
 
@@ -627,7 +666,7 @@ impl Gui {
         })
         .show(ctx, |ui| {
             egui::Frame::NONE
-            .fill(BACKGROUND_COLOR)
+            .fill(self.config.ui_panel_fill)
             .inner_margin(egui::Margin::same((10.0 * scale) as i8))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
@@ -719,8 +758,6 @@ impl Gui {
                         ui.horizontal(|ui| {
                             ui.label(t!("menu.fps_label"));
                             let res = ui.add(egui::Slider::new(&mut self.menu_fps_value, 30..=240));
-                            #[cfg(target_os = "android")]
-                            handle_android_keyboard(&res, &mut self.menu_fps_value);
                             if res.lost_focus() || res.drag_stopped() {
                                 hachimi.target_fps.store(self.menu_fps_value, atomic::Ordering::Relaxed);
                                 Thread::main_thread().schedule(|| {
@@ -1148,7 +1185,7 @@ impl Gui {
         })
         .show(ctx, |ui| {
             egui::Frame::NONE
-            .fill(BACKGROUND_COLOR)
+            .fill(self.config.ui_panel_fill)
             .inner_margin(egui::Margin::same((4.0 * scale) as i8))
             .corner_radius(4.0 * scale)
             .show(ui, |ui| {
@@ -1278,6 +1315,7 @@ fn random_id() -> egui::Id {
 
 struct Notification {
     content: String,
+    config: hachimi::Config,
     tween: TweenInOutWithDelay,
     id: egui::Id
 }
@@ -1286,6 +1324,7 @@ impl Notification {
     fn new(content: String) -> Notification {
         Notification {
             content,
+            config: (**Hachimi::instance().config.load()).clone(),
             tween: TweenInOutWithDelay::new(0.2, 3.0, Easing::OutQuad),
             id: random_id()
         }
@@ -1309,7 +1348,7 @@ impl Notification {
         )
         .show(ctx, |ui| {
             egui::Frame::NONE
-            .fill(BACKGROUND_COLOR)
+            .fill(self.config.ui_panel_fill)
             .inner_margin(egui::Margin::symmetric(10, 8))
             .show(ui, |ui| {
                 ui.set_width(Self::WIDTH * scale);
@@ -1397,7 +1436,7 @@ fn parse_color(hex: &str) -> Result<egui::Color32, ()> {
 
 fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
     let mut changed = false;
-    ui.horizontal(|ui| {
+    ui.horizontal_wrapped(|ui| {
         ui.label(label);
         if ui.color_edit_button_srgba(color).changed() {
             changed = true;
@@ -1405,6 +1444,8 @@ fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) ->
 
         let mut hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
         let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(75.0));
+        #[cfg(target_os = "android")]
+        handle_android_keyboard(&res, &mut hex);
         if res.changed() {
             if let Ok(new_color) = parse_color(&hex) {
                 *color = new_color;
@@ -1677,9 +1718,7 @@ impl ConfigEditor {
 
         if let Some(num) = value.as_mut() {
             ui.label("");
-            let _res = ui.add(egui::Slider::new(num, range));
-            #[cfg(target_os = "android")]
-            handle_android_keyboard(&_res, num);
+            ui.add(egui::Slider::new(num, range));
             ui.end_row();
         }
     }
@@ -1720,9 +1759,7 @@ impl ConfigEditor {
                 ui.end_row();
 
                 ui.label(t!("config_editor.gui_scale"));
-                let _res = ui.add(egui::Slider::new(&mut config.gui_scale, 0.25..=2.0).step_by(0.05));
-                #[cfg(target_os = "android")]
-                handle_android_keyboard(&_res, &mut config.gui_scale);
+                ui.add(egui::Slider::new(&mut config.gui_scale, 0.25..=2.0).step_by(0.05));
                 ui.end_row();
 
                 ui.label(t!("theme_editor.title"));
@@ -1831,27 +1868,19 @@ impl ConfigEditor {
                 Self::option_slider(ui, &t!("config_editor.target_fps"), &mut config.target_fps, 30..=240);
 
                 ui.label(t!("config_editor.virtual_resolution_multiplier"));
-                let _res = ui.add(egui::Slider::new(&mut config.virtual_res_mult, 1.0..=4.0).step_by(0.1));
-                #[cfg(target_os = "android")]
-                handle_android_keyboard(&_res, &mut config.virtual_res_mult);
+                ui.add(egui::Slider::new(&mut config.virtual_res_mult, 1.0..=4.0).step_by(0.1));
                 ui.end_row();
 
                 ui.label(t!("config_editor.ui_scale"));
-                let _res = ui.add(egui::Slider::new(&mut config.ui_scale, 0.1..=10.0).step_by(0.05));
-                #[cfg(target_os = "android")]
-                handle_android_keyboard(&_res, &mut config.ui_scale);
+                ui.add(egui::Slider::new(&mut config.ui_scale, 0.1..=10.0).step_by(0.05));
                 ui.end_row();
 
                 ui.label(t!("config_editor.ui_animation_scale"));
-                let _res = ui.add(egui::Slider::new(&mut config.ui_animation_scale, 0.1..=10.0).step_by(0.1));
-                #[cfg(target_os = "android")]
-                handle_android_keyboard(&_res, &mut config.ui_animation_scale);
+                ui.add(egui::Slider::new(&mut config.ui_animation_scale, 0.1..=10.0).step_by(0.1));
                 ui.end_row();
 
                 ui.label(t!("config_editor.render_scale"));
-                let _res = ui.add(egui::Slider::new(&mut config.render_scale, 0.1..=10.0).step_by(0.1));
-                #[cfg(target_os = "android")]
-                handle_android_keyboard(&_res, &mut config.render_scale);
+                ui.add(egui::Slider::new(&mut config.render_scale, 0.1..=10.0).step_by(0.1));
                 ui.end_row();
 
                 ui.label(t!("config_editor.msaa"));
@@ -1944,15 +1973,11 @@ impl ConfigEditor {
                 ui.end_row();
 
                 ui.label(t!("config_editor.story_choice_auto_select_delay"));
-                let _res = ui.add(egui::Slider::new(&mut config.story_choice_auto_select_delay, 0.1..=10.0).step_by(0.05));
-                #[cfg(target_os = "android")]
-                handle_android_keyboard(&_res, &mut config.story_choice_auto_select_delay);
+                ui.add(egui::Slider::new(&mut config.story_choice_auto_select_delay, 0.1..=10.0).step_by(0.05));
                 ui.end_row();
 
                 ui.label(t!("config_editor.story_text_speed_multiplier"));
-                let _res = ui.add(egui::Slider::new(&mut config.story_tcps_multiplier, 0.1..=10.0).step_by(0.1));
-                #[cfg(target_os = "android")]
-                handle_android_keyboard(&_res, &mut config.story_tcps_multiplier);
+                ui.add(egui::Slider::new(&mut config.story_tcps_multiplier, 0.1..=10.0).step_by(0.1));
                 ui.end_row();
 
                 ui.label(t!("config_editor.force_allow_dynamic_camera"));
@@ -2445,6 +2470,8 @@ impl Window for ThemeEditorWindow {
         .show(ctx, |ui| {
             simple_window_layout(ui, self.id,
                 |ui| {
+                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+
                     egui::Frame::NONE
                     .inner_margin(egui::Margin::symmetric(8, 0))
                     .show(ui, |ui| {
@@ -2454,8 +2481,6 @@ impl Window for ThemeEditorWindow {
                         .spacing([40.0 * scale, 4.0 * scale])
                         .show(ui, |ui| {
                             ui.vertical(|ui| {
-                                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-
                                 theme_changed |= theme_color_row(ui, &t!("theme_editor.ui_accent_color"), &mut self.config.ui_accent_color);
                                 theme_changed |= theme_color_row(ui, &t!("theme_editor.ui_window_fill"), &mut self.config.ui_window_fill);
                                 theme_changed |= theme_color_row(ui, &t!("theme_editor.ui_panel_fill"), &mut self.config.ui_panel_fill);
@@ -2493,7 +2518,9 @@ impl Window for ThemeEditorWindow {
         });
 
         if theme_changed {
-            Gui::apply_theme(ctx, &self.config);
+            if let Some(mutex) = Gui::instance() {
+                mutex.lock().unwrap().apply_theme();
+            }
         }
 
         if save_clicked {

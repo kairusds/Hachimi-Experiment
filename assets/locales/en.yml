@@ -193,6 +193,7 @@ theme_editor:
   ui_panel_fill: "Panel Background Color"
   ui_extreme_bg_color: "Input Background"
   ui_text_color: "Text Color"
+  ui_window_rounding: "Rounded Corners"
 
 tl_update_dialog:
   title: "New update available"
