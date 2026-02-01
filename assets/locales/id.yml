@@ -125,7 +125,7 @@ config_editor:
   enable_file_logging: "Aktifkan pencatatan file"
   translator_mode: "Mode Translasi"
   skip_first_time_setup: "Lewati setup pertama kali"
-  lazy_auto_update: "Pembaruan otomatis cepat"
+  lazy_translation_updates: "Pembaruan terjemahan fleksibel"
   disable_auto_update_check: "Matikan cek pembaruan otomatis"
   disable_translations: "Matikan translasi"
   enable_ipc: "Nyalakan IPC"

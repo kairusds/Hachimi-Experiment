@@ -108,10 +108,7 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
     });
 }
 
-fn get_skill_text(skill_id: i32, _this: *mut Il2CppObject) -> (String, String) {
-    // let name = get__nameText(this);
-    // let desc = get__descText(this);
-
+fn get_skill_text(skill_id: i32) -> (String, String) {    
     let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
         opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
     };
@@ -143,7 +140,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     let button = get__bgButton(this);
     let button_obj = Component::get_gameObject(button);
     Object::set_name(button_obj, format!("HachimiSkill_{}", skill_id).to_il2cpp_string());
-    get_skill_text(skill_id, this);
+    get_skill_text(skill_id);
     // info!("SKILL_TEXT_CACHE len: {}", SKILL_TEXT_CACHE.lock().unwrap().len());
 
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {

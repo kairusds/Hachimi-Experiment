@@ -257,7 +257,7 @@ impl Updater {
                 false
             } else if let Some(hash) = repo_cache.files.get(&file.path) {
                 // lazy auto update, cached hash and repo hash matches. ignored during pedantic
-                if !pedantic && config.lazy_auto_update && hash == &file.hash {
+                if !pedantic && config.lazy_translation_updates && hash == &file.hash {
                     false
                 } else if let Some(path) = path { // get path or force download if path is invalid
                     // file doesn't exist -> download

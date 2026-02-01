@@ -494,9 +494,22 @@ impl Gui {
         let mut fonts = egui::FontDefinitions::default();
         let proportional_fonts = fonts.families.get_mut(&egui::FontFamily::Proportional).unwrap();
 
-        add_font!(fonts, proportional_fonts, "AlibabaPuHuiTi-3-45-Light.otf");
-        add_font!(fonts, proportional_fonts, "NotoSans-Regular.ttf");
+        add_font!(fonts, proportional_fonts, "Inter_24pt-Regular.ttf");
+
+        // Tsuku Min Pro E from the game i think
+        let dynamic01_path = format!("{}/dat/NH/NHVGXEIJZ74IIZZWJU3JATZN5YU7CGEB", utils::get_data_path()).to_string();
+        if let Ok(font_bytes) = std::fs::read(&dynamic01_path) {
+            fonts.font_data.insert(
+                "dynamic01.otf".to_owned(),
+                egui::FontData::from_owned(font_bytes).into()
+            );
+            proportional_fonts.push("dynamic01.otf".to_owned());
+        } else {
+            info!("Could not find game font at {}", dynamic01_path);
+        }
+
         add_font!(fonts, proportional_fonts, "NotoSansJP-Regular.ttf");
+        add_font!(fonts, proportional_fonts, "AlibabaPuHuiTi-3-45-Light.otf");
         add_font!(fonts, proportional_fonts, "FontAwesome.otf");
 
         fonts
@@ -1346,6 +1359,7 @@ struct StyleState {
 }
 
 fn parse_unity_text(ui: &egui::Ui, text: &str, wrap_width: f32) -> egui::text::LayoutJob {
+    let text = text.replace("\\n", "\n");
     let mut job = egui::text::LayoutJob::default();
     job.wrap.max_width = wrap_width;
     // job.halign = egui::Align::Center;
@@ -1738,7 +1752,7 @@ impl Window for SkillInfoDialog {
                     egui::ScrollArea::vertical()                    
                     .show(ui, |ui| {
                         ui.horizontal_wrapped(|ui| {
-                            rich_text_label(ui, &format!("<b><size=16>{}</bold></b>", self.name));
+                            rich_text_label(ui, &format!("<b><size=17>{}</bold></b>", self.name));
                             rich_text_label(ui, &format!("#<b>{}</b>", self.skill_id.to_string()));
                         });
 
@@ -1922,8 +1936,8 @@ impl ConfigEditor {
                 ui.checkbox(&mut config.skip_first_time_setup, "");
                 ui.end_row();
 
-                ui.label(t!("config_editor.lazy_auto_update"));
-                ui.checkbox(&mut config.lazy_auto_update, "");
+                ui.label(t!("config_editor.lazy_translation_updates"));
+                ui.checkbox(&mut config.lazy_translation_updates, "");
                 ui.end_row();
 
                 ui.label(t!("config_editor.disable_auto_update_check"));
@@ -2656,7 +2670,7 @@ impl Window for LicenseWindow {
                 ui.label(t!("license.ofl_fonts_header"));
                 ui.group(|ui| {
                     ui.label(t!("license.font_font_awesome"));
-                    ui.label(t!("license.font_noto_sans"));
+                    ui.label(t!("license.font_inter"));
                     ui.label(t!("license.font_noto_sans_jp"));
                 });
 

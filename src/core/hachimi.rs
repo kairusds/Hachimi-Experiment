@@ -311,7 +311,7 @@ pub struct Config {
     #[serde(default)]
     pub skip_first_time_setup: bool,
     #[serde(default)]
-    pub lazy_auto_update: bool,
+    pub lazy_translation_updates: bool,
     #[serde(default)]
     pub disable_auto_update_check: bool,
     #[serde(default)]

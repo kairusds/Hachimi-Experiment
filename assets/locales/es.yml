@@ -128,7 +128,7 @@ config_editor:
   enable_file_logging: "Habilitar registro en archivo"
   translator_mode: "Modo traductor"
   skip_first_time_setup: "Omitir instalación inicial"
-  lazy_auto_update: "Actualizaciones automáticas (rápidas)"
+  lazy_translation_updates: "Actualizaciones de traducciones (rápidas)"
   disable_auto_update_check: "Desactivar búsquedas de actualizaciones"
   disable_translations: "Desactivar traducciones"
   enable_ipc: "Habilitar IPC"

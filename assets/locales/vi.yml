@@ -114,7 +114,7 @@ config_editor:
   enable_file_logging: "Bật ghi nhật ký tệp"
   translator_mode: "Chế độ dịch"
   skip_first_time_setup: "Bỏ qua thiết lập lần đầu"
-  lazy_auto_update: "Tự động cập nhật nhanh"
+  lazy_translation_updates: "Cập nhật bản dịch tinh gọn"
   disable_auto_update_check: "Tắt kiểm tra cập nhật tự động"
   disable_translations: "Tắt bản dịch"
   enable_ipc: "Bật IPC"

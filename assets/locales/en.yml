@@ -109,7 +109,7 @@ license:
   font_alibaba_body: "Copyright (c) 2020-2023 Alibaba (China) Co., Ltd. All rights reserved."
   ofl_fonts_header: "This software bundles the following fonts under the SIL Open Font License 1.1:"
   font_noto_sans_jp: "Noto Sans JP: Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'"
-  font_noto_sans: "Noto Sans: Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)"
+  font_inter: "Inter: Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)"
   font_font_awesome: "Font Awesome Version 4.7.0: Copyright Dave Gandy (https://fontawesome.com) 2016. All rights reserved."
   ofl_notice: "SIL OFL 1.1 License Text"
 
@@ -134,7 +134,7 @@ config_editor:
   enable_file_logging: "Enable file logging"
   translator_mode: "Translator mode"
   skip_first_time_setup: "Skip first time setup"
-  lazy_auto_update: "Lazy auto updates"
+  lazy_translation_updates: "Lazy translation updates"
   disable_auto_update_check: "Disable auto update check"
   disable_translations: "Disable translations"
   enable_ipc: "Enable IPC"

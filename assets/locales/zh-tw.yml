@@ -117,7 +117,7 @@ config_editor:
   enable_file_logging: "啟用檔案記錄"
   translator_mode: "翻譯者模式"
   skip_first_time_setup: "跳過設定精靈"
-  lazy_auto_update: "快速自動更新"
+  lazy_translation_updates: "寬鬆翻譯更新檢查"
   disable_auto_update_check: "禁用自動更新檢查"
   disable_translations: "禁用翻譯"
   enable_ipc: "啟用 IPC"
