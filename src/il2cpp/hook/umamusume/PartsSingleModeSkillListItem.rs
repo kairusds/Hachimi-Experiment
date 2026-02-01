@@ -108,16 +108,18 @@ extern "C" fn UpdateItemOther(this: *mut Il2CppObject, skill_info: *mut Il2CppOb
     });
 }
 
-fn get_skill_text(skill_id: i32, this: *mut Il2CppObject) -> (String, String) {
+fn get_skill_text(skill_id: i32, _this: *mut Il2CppObject) -> (String, String) {
     // let name = get__nameText(this);
-    let desc = get__descText(this);
+    // let desc = get__descText(this);
 
     let to_s = |opt_ptr: Option<*mut Il2CppString>| unsafe {
         opt_ptr.and_then(|p| p.as_ref()).map(|s| s.as_utf16str().to_string())
     };
 
     let current_name = to_s(TextDataQuery::get_skill_name(skill_id)).unwrap_or_else(|| to_s(Some(MasterDataUtil::GetSkillName(skill_id))).unwrap());
-    let current_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(Some(Text::get_text(desc))).unwrap());
+    let current_desc = to_s(TextDataQuery::get_skill_desc(skill_id)).unwrap_or_else(|| to_s(
+        Some(Hachimi::instance().skill_info.load().get_desc(skill_id).to_il2cpp_string())
+    ).unwrap());
 
     let mut cache = SKILL_TEXT_CACHE.lock().unwrap();
 

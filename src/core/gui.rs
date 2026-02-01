@@ -991,7 +991,7 @@ impl Gui {
     ) -> bool {
         let mut changed = false;
         let scale = get_scale(ui.ctx());
-        let fixed_width = 135.0 * scale;
+        let fixed_width = 145.0 * scale;
         let row_height = 24.0 * scale;
         let padding = ui.spacing().button_padding;
 
@@ -1925,6 +1925,10 @@ impl ConfigEditor {
                 ui.checkbox(&mut config.disable_auto_update_check, "");
                 ui.end_row();
 
+                ui.label(t!("config_editor.disable_auto_update_check"));
+                ui.checkbox(&mut config.disable_auto_update_check, "");
+                ui.end_row();
+
                 ui.label(t!("config_editor.disable_translations"));
                 ui.checkbox(&mut config.disable_translations, "");
                 ui.end_row();
@@ -2157,8 +2161,8 @@ impl ConfigEditor {
         }
 
         // Column widths workaround
-        ui.horizontal(|ui| ui.add_space(100.0 * scale));
-        ui.horizontal(|ui| ui.add_space(150.0 * scale));
+        // ui.horizontal(|ui| ui.add_space(100.0 * scale));
+        // ui.horizontal(|ui| ui.add_space(150.0 * scale));
         ui.end_row();
     }
 }
@@ -2213,14 +2217,19 @@ impl Window for ConfigEditor {
 
                     egui::ScrollArea::vertical()
                     .id_salt("body_scroll")
+                    .hscroll(false)
                     .show(ui, |ui| {
                         egui::Frame::NONE
                         .inner_margin(egui::Margin::symmetric(8, 0))
                         .show(ui, |ui| {
+                            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+
                             egui::Grid::new(self.id.with("options_grid"))
                             .striped(true)
                             .num_columns(2)
-                            .spacing([40.0 * scale, 4.0 * scale])
+                            .min_col_width(0.0) 
+                            .max_col_width(ui.available_width() * 0.6)
+                            .spacing([20.0 * scale, 8.0 * scale])
                             .show(ui, |ui| {
                                 Self::run_options_grid(&mut config, ui, self.current_tab);
                             });
@@ -2484,14 +2493,12 @@ struct LiveVocalsSwapWindow {
 impl LiveVocalsSwapWindow {
     fn new() -> LiveVocalsSwapWindow {
         let hachimi = Hachimi::instance();
-        let chara_data = hachimi.chara_data.load_full();
         let mut chara_choices: Vec<(i32, String)> = Vec::new();
         chara_choices.push((0, t!("default").into_owned()));
 
-        if let Some(data) = chara_data.as_ref() {
-            for &id in &data.chara_ids {
-                chara_choices.push((id, data.get_name(id)));
-            }
+        let data = hachimi.chara_data.load();
+        for &id in &data.chara_ids {
+            chara_choices.push((id, data.get_name(id)));
         }
         chara_choices.sort_by_key(|choice| choice.0);
 
