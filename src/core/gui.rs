@@ -2640,6 +2640,8 @@ impl Window for LicenseWindow {
         .open(&mut open)
         .show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+
                 ui.heading(t!("hachimi"));
                 ui.collapsing(t!("license.gpl_v3_only_notice"), |ui| {
                     ui.add(egui::TextEdit::multiline(&mut include_str!("../../LICENSE"))
