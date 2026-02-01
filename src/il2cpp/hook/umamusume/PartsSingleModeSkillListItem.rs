@@ -153,9 +153,9 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
             if let Ok(id) = id_str.parse::<i32>() {
                 if let Some(data) = SKILL_TEXT_CACHE.lock().unwrap().get(&id) {
                     let (name, desc) = data;
-                    let typ = if str_visual_len(desc.as_str()) <= 170 {
+                    let typ = if str_visual_len(desc.as_str()) <= 250 {
                         DialogCommon::FormType::SMALL_ONE_BUTTON
-                    } else if str_visual_len(desc.as_str()) <= 260 {
+                    } else if str_visual_len(desc.as_str()) <= 490 {
                         DialogCommon::FormType::MIDDLE_ONE_BUTTON
                     } else {
                         DialogCommon::FormType::BIG_ONE_BUTTON
