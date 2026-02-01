@@ -17,7 +17,7 @@ use chrono::{Utc, Datelike};
 use crate::il2cpp::{
     ext::{StringExt, Il2CppStringExt},
     hook::{
-        umamusume::{CameraData::ShadowResolution, CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize, TimeUtil::BgSeason},
+        umamusume::{CameraData::ShadowResolution, CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize, TextId, TimeUtil::BgSeason},
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
     },
     symbols::Thread
@@ -495,19 +495,6 @@ impl Gui {
         let proportional_fonts = fonts.families.get_mut(&egui::FontFamily::Proportional).unwrap();
 
         add_font!(fonts, proportional_fonts, "Inter_24pt-Regular.ttf");
-
-        // Tsuku Min Pro E from the game i think
-        let dynamic01_path = format!("{}/dat/NH/NHVGXEIJZ74IIZZWJU3JATZN5YU7CGEB", utils::get_data_path()).to_string();
-        if let Ok(font_bytes) = std::fs::read(&dynamic01_path) {
-            fonts.font_data.insert(
-                "dynamic01.otf".to_owned(),
-                egui::FontData::from_owned(font_bytes).into()
-            );
-            proportional_fonts.push("dynamic01.otf".to_owned());
-        } else {
-            info!("Could not find game font at {}", dynamic01_path);
-        }
-
         add_font!(fonts, proportional_fonts, "NotoSansJP-Regular.ttf");
         add_font!(fonts, proportional_fonts, "AlibabaPuHuiTi-3-45-Light.otf");
         add_font!(fonts, proportional_fonts, "FontAwesome.otf");
@@ -2145,11 +2132,11 @@ impl ConfigEditor {
                 Gui::run_combo(ui, "homescreen_bgseason", &mut config.homescreen_bgseason, &[
                     (BgSeason::None, &t!("default")),
                     // Season IDs from TextId enum
-                    (BgSeason::Spring, unsafe { (*Localize::Get(1067)).as_utf16str() }.to_string().as_str()),
-                    (BgSeason::Summer, unsafe { (*Localize::Get(1068)).as_utf16str() }.to_string().as_str()),
-                    (BgSeason::Fall, unsafe { (*Localize::Get(1069)).as_utf16str() }.to_string().as_str()),
-                    (BgSeason::Winter, unsafe { (*Localize::Get(1070)).as_utf16str() }.to_string().as_str()),
-                    (BgSeason::CherryBlossom, unsafe { (*Localize::Get(1071)).as_utf16str() }.to_string().as_str())
+                    (BgSeason::Spring, unsafe { (*Localize::Get(TextId::from_name("Common0108"))).as_utf16str() }.to_string().as_str()),
+                    (BgSeason::Summer, unsafe { (*Localize::Get(TextId::from_name("Common0109"))).as_utf16str() }.to_string().as_str()),
+                    (BgSeason::Fall, unsafe { (*Localize::Get(TextId::from_name("Common0110"))).as_utf16str() }.to_string().as_str()),
+                    (BgSeason::Winter, unsafe { (*Localize::Get(TextId::from_name("Common0111"))).as_utf16str() }.to_string().as_str()),
+                    (BgSeason::CherryBlossom, unsafe { (*Localize::Get(TextId::from_name("Common0112"))).as_utf16str() }.to_string().as_str())
                 ]);
                 ui.end_row();
 

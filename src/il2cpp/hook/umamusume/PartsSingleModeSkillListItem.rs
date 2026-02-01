@@ -4,7 +4,7 @@ use crate::{
 };
 use std::sync::{LazyLock, Mutex};
 use fnv::FnvHashMap;
-use super::{ButtonCommon, MasterDataUtil};
+use super::{ButtonCommon, DialogCommon, MasterDataUtil, TextId};
 
 static SKILL_TEXT_CACHE: LazyLock<Mutex<FnvHashMap<i32, (String, String)>>> = LazyLock::new(|| Mutex::default());
 
@@ -141,7 +141,42 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
     let button_obj = Component::get_gameObject(button);
     Object::set_name(button_obj, format!("HachimiSkill_{}", skill_id).to_il2cpp_string());
     get_skill_text(skill_id);
-    // info!("SKILL_TEXT_CACHE len: {}", SKILL_TEXT_CACHE.lock().unwrap().len());
+
+    let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
+        let current_ev = EventSystem::get_current();
+        let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
+        let object_name = Object::get_name(clicked_obj);
+        let name_str = unsafe { (*object_name).as_utf16str() }.to_string();
+
+        if name_str.starts_with("HachimiSkill_") {
+            let id_str = &name_str["HachimiSkill_".len()..];
+            if let Ok(id) = id_str.parse::<i32>() {
+                if let Some(data) = SKILL_TEXT_CACHE.lock().unwrap().get(&id) {
+                    let (name, desc) = data;
+                    let dialog_data = DialogCommon::Data::new();
+
+                    DialogCommon::Data::SetSimpleOneButtonMessage(
+                        dialog_data,
+                        name.to_il2cpp_string(),
+                        desc.to_il2cpp_string(),
+                        std::ptr::null_mut(),
+                        TextId::from_name("Common0007"),
+                        9
+                    );
+
+                    let dialog = DialogCommon::new();
+                    DialogCommon::Initialize(dialog, dialog_data);
+                    DialogCommon::Open(dialog, std::ptr::null_mut());
+                }
+            }
+        }
+    });
+    /*
+    let button = get__bgButton(this);
+    let button_obj = Component::get_gameObject(button);
+    Object::set_name(button_obj, format!("HachimiSkill_{}", skill_id).to_il2cpp_string());
+    get_skill_text(skill_id);
+    info!("SKILL_TEXT_CACHE len: {}", SKILL_TEXT_CACHE.lock().unwrap().len());
 
     let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
         let current_ev = EventSystem::get_current();
@@ -165,7 +200,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
             }
         }
     });
-    ButtonCommon::SetOnClick(button, delegate.unwrap());
+    ButtonCommon::SetOnClick(button, delegate.unwrap()); */
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
