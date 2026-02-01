@@ -1846,6 +1846,7 @@ impl ConfigEditor {
 
     fn run_options_grid(config: &mut hachimi::Config, ui: &mut egui::Ui, tab: ConfigEditorTab) {
         let scale = get_scale(ui.ctx());
+        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
 
         match tab {
             ConfigEditorTab::General => {
@@ -1921,8 +1922,8 @@ impl ConfigEditor {
                 ui.checkbox(&mut config.skip_first_time_setup, "");
                 ui.end_row();
 
-                ui.label(t!("config_editor.disable_auto_update_check"));
-                ui.checkbox(&mut config.disable_auto_update_check, "");
+                ui.label(t!("config_editor.lazy_auto_update"));
+                ui.checkbox(&mut config.lazy_auto_update, "");
                 ui.end_row();
 
                 ui.label(t!("config_editor.disable_auto_update_check"));
@@ -2161,8 +2162,8 @@ impl ConfigEditor {
         }
 
         // Column widths workaround
-        // ui.horizontal(|ui| ui.add_space(100.0 * scale));
-        // ui.horizontal(|ui| ui.add_space(150.0 * scale));
+        ui.horizontal(|ui| ui.add_space(100.0 * scale));
+        ui.horizontal(|ui| ui.add_space(150.0 * scale));
         ui.end_row();
     }
 }
@@ -2217,19 +2218,14 @@ impl Window for ConfigEditor {
 
                     egui::ScrollArea::vertical()
                     .id_salt("body_scroll")
-                    .hscroll(false)
                     .show(ui, |ui| {
                         egui::Frame::NONE
                         .inner_margin(egui::Margin::symmetric(8, 0))
                         .show(ui, |ui| {
-                            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-
                             egui::Grid::new(self.id.with("options_grid"))
                             .striped(true)
                             .num_columns(2)
-                            .min_col_width(0.0) 
-                            .max_col_width(ui.available_width() * 0.6)
-                            .spacing([20.0 * scale, 8.0 * scale])
+                            .spacing([40.0 * scale, 4.0 * scale])
                             .show(ui, |ui| {
                                 Self::run_options_grid(&mut config, ui, self.current_tab);
                             });
