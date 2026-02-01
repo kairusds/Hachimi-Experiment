@@ -97,6 +97,7 @@ pub struct Gui {
     last_fps_update: Instant,
     tmp_frame_count: u32,
     fps_text: String,
+    #[cfg(target_os = "android")]
     last_focused: Option<egui::Id>,
 
     show_menu: bool,
@@ -406,8 +407,7 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
 }
 
 impl Gui {
-    pub fn apply_theme(&mut self) {
-        let config = &self.config;
+    pub fn apply_theme(&mut self, config: &hachimi::Config) {
         let mut visuals = egui::Visuals::dark(); // Base theme
 
         visuals.window_fill = config.ui_window_fill;
@@ -478,6 +478,7 @@ impl Gui {
             last_fps_update: now,
             tmp_frame_count: 0,
             fps_text: "FPS: 0".to_string(),
+            #[cfg(target_os = "android")]
             last_focused: None,
 
             show_menu: false,
@@ -509,7 +510,7 @@ impl Gui {
             windows
         };
 
-        let _ = &instance.apply_theme();
+        let _ = &instance.apply_theme(&**Hachimi::instance().config.load());
 
         unsafe {
             INSTANCE.set(Mutex::new(instance)).unwrap_unchecked();
@@ -2444,14 +2445,17 @@ impl Window for LiveVocalsSwapWindow {
 
 struct ThemeEditorWindow {
     id: egui::Id,
-    config: hachimi::Config
+    config: hachimi::Config,
+    old_config: hachimi::Config
 }
 
 impl ThemeEditorWindow {
     fn new() -> ThemeEditorWindow {
+        let current_cfg = (**Hachimi::instance().config.load()).clone();
         ThemeEditorWindow {
             id: random_id(),
-            config: (**Hachimi::instance().config.load()).clone()
+            config: current_cfg.clone(),
+            old_config: current_cfg
         }
     }
 }
@@ -2462,6 +2466,7 @@ impl Window for ThemeEditorWindow {
         let mut open = true;
         let mut open2 = true;
         let mut theme_changed = false;
+        let mut cancel_clicked = false;
         let mut save_clicked = false;
         let mut reset_clicked = false;
 
@@ -2505,6 +2510,7 @@ impl Window for ThemeEditorWindow {
 
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                             if ui.button(t!("cancel")).clicked() {
+                                cancel_clicked = true;
                                 open2 = false;
                             }
                             if ui.button(t!("save")).clicked() {
@@ -2517,25 +2523,42 @@ impl Window for ThemeEditorWindow {
             );
         });
 
-        if theme_changed {
+        if theme_changed && !ctx.input(|i| i.pointer.any_down()) {
             if let Some(mutex) = Gui::instance() {
-                mutex.lock().unwrap().apply_theme();
+                mutex.lock().unwrap().apply_theme(&self.config);
+            }
+        }
+
+        if cancel_clicked {
+            if let Some(mutex) = Gui::instance() {
+                mutex.lock().unwrap().apply_theme(&self.old_config);
             }
         }
 
         if save_clicked {
+            if theme_changed {
+                if let Some(mutex) = Gui::instance() {
+                    mutex.lock().unwrap().apply_theme(&self.config);
+                }
+            }
             save_and_reload_config(self.config.clone());
         }
 
         if reset_clicked {
-            let config = &mut self.config;
+            let mut config = self.config.clone();
             config.ui_accent_color = hachimi::Config::default_ui_accent();
             config.ui_window_fill = hachimi::Config::default_window_fill();
             config.ui_panel_fill = hachimi::Config::default_panel_fill();
             config.ui_extreme_bg_color = hachimi::Config::default_extreme_bg();
             config.ui_text_color = hachimi::Config::default_text_color();
             config.ui_window_rounding = hachimi::Config::default_window_rounding();
-            save_and_reload_config(self.config.clone());
+
+            self.config = config.clone();
+            save_and_reload_config(config.clone());
+
+            if let Some(mutex) = Gui::instance() {
+                mutex.lock().unwrap().apply_theme(&config);
+            }
         }
 
         open &= open2;

@@ -42,7 +42,7 @@ pub fn set_keyboard_visible(visible: bool) {
                 &imm, 
                 "showSoftInput", 
                 "(Landroid/view/View;I)Z", 
-                &[JValue::from(&decor_view), JValue::Int(1)]
+                &[JValue::from(&decor_view), JValue::Int(2)]
             )?;
             IS_IME_VISIBLE.store(true, Ordering::Release);
         } else {
