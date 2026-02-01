@@ -109,7 +109,7 @@ license:
 
 tl_updater:
   title: "Actualizando..."
-  warning: "Las traducciones dejarán de\nfuncionar mientras se actualizan"
+  warning: "Las traducciones dejarán de funcionar mientras se actualizan"
 
 config_editor:
   title: "Editor de Configuración"
@@ -125,15 +125,15 @@ config_editor:
     Si no es un cambio intencional, cierra este diálogo y DESACTIVA esta opción.
   meta_index_url: "URL meta de traducciones"
   debug_mode: "Modo depuración"
-  enable_file_logging: "Habilitar registro\nen archivo"
+  enable_file_logging: "Habilitar registro en archivo"
   translator_mode: "Modo traductor"
   skip_first_time_setup: "Omitir instalación inicial"
-  lazy_auto_update: "Actualizaciones automáticas\n(rápidas)"
-  disable_auto_update_check: "Desactivar búsquedas\nde actualizaciones"
+  lazy_auto_update: "Actualizaciones automáticas (rápidas)"
+  disable_auto_update_check: "Desactivar búsquedas de actualizaciones"
   disable_translations: "Desactivar traducciones"
   enable_ipc: "Habilitar IPC"
   ipc_listen_all: "IPC escuchar todo"
-  auto_translate_stories: "Traducir historias\nautomáticamente"
+  auto_translate_stories: "Traducir historias automáticamente"
   auto_tl_warning: >-
     Esta opción requiere que tengas instalado un servidor compatible y que sea
     capaz de enviar el contenido traducido al cliente tanto localmente como en
@@ -141,31 +141,31 @@ config_editor:
     proveedor instalado, tu juego se verá negativamente afectado y tampoco
     obtendrás contenido traducido desde el servidor. Mantén esta opción
     desactivada si no tienes ningún sistema de traducción local/nube disponible.
-  auto_translate_ui: "Auto-traducir UI\n(PUEDE ROMPER EL UI)"
+  auto_translate_ui: "Auto-traducir UI (PUEDE ROMPER EL UI)"
   target_fps: "FPS objetivo"
-  virtual_resolution_multiplier: "Multiplicador de\nresolución virtual"
+  virtual_resolution_multiplier: "Multiplicador de resolución virtual"
   ui_scale: "Escala del UI"
   gui_scale: "Escala de la superposición"
-  ui_animation_scale: "Escala de\nanimación del UI"
+  ui_animation_scale: "Escala de animación del UI"
   graphics_quality: "Calidad gráfica"
   vsync: "VSync"
-  auto_full_screen: "Pantalla completa\nautomática"
-  full_screen_mode: "Modo de pantalla\ncompleta"
+  auto_full_screen: "Pantalla completa automática"
+  full_screen_mode: "Modo de pantalla completa"
   full_screen_mode_exclusive: "Exclusiva"
   full_screen_mode_borderless: "Sin bordes"
-  block_minimize_in_full_screen: "No minimizar en\npantalla completa"
+  block_minimize_in_full_screen: "No minimizar en pantalla completa"
   resolution_scaling: "Escala de resolución"
   resolution_scaling_default: "Por defecto (1080p)"
   resolution_scaling_ssize: "Tamaño de pantalla"
   resolution_scaling_wsize: "Tamaño de ventana"
   window_always_on_top: "Ventana siempre visible"
-  story_choice_auto_select_delay: "Retraso de selección\nautomática (historia)"
-  story_text_speed_multiplier: "Velocidad del\ntexto (historia)"
-  force_allow_dynamic_camera: "Permitir siempre\nla cámara dinámica"
-  live_theater_allow_same_chara: "Permitir personajes\niguales en Live Theater"
-  physics_update_mode: "Modo de actualización\nde físicas"
-  disable_skill_name_translation: "No traducir\nhabilidades"
-  hide_ingame_ui_hotkey: "Atajo para ocultar\nUI del juego"
+  story_choice_auto_select_delay: "Retraso de selección automática (historia)"
+  story_text_speed_multiplier: "Velocidad del texto (historia)"
+  force_allow_dynamic_camera: "Permitir siempre la cámara dinámica"
+  live_theater_allow_same_chara: "Permitir personajes iguales en Live Theater"
+  physics_update_mode: "Modo de actualización de físicas"
+  disable_skill_name_translation: "No traducir habilidades"
+  hide_ingame_ui_hotkey: "Atajo para ocultar UI del juego"
   hide_ingame_ui_hotkey_info: >-
     Esta opción permitirá usar un atajo para alternar el UI del juego.
     En Android, pulsa dos veces el botón de Volumen + con un margen de 0.3 segundos.
@@ -178,8 +178,8 @@ config_editor:
   aniso_level: "Filtrado anisotrópico"
   live_vocals_swap: "Cambio de voces en vivo"
   live_vocals_swap_character_n: "Personaje %{index}"
-  skill_info_dialog: "Mostrar info. de\nhabilidad en la GUI"
-  homescreen_bgseason: "Temporada de fondo\nde la pantalla principal"
+  skill_info_dialog: "Mostrar info. de habilidad en la GUI"
+  homescreen_bgseason: "Temporada de fondo de la pantalla principal"
   shadow_resolution: "Resolución de sombras"
 
 tl_update_dialog:
