@@ -153,9 +153,9 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
             if let Ok(id) = id_str.parse::<i32>() {
                 if let Some(data) = SKILL_TEXT_CACHE.lock().unwrap().get(&id) {
                     let (name, desc) = data;
-                    let typ = if str_visual_len(desc.as_str()) <= 200 {
+                    let typ = if str_visual_len(desc.as_str()) <= 170 {
                         DialogCommon::FormType::SMALL_ONE_BUTTON
-                    } else if str_visual_len(desc.as_str()) <= 300 {
+                    } else if str_visual_len(desc.as_str()) <= 260 {
                         DialogCommon::FormType::MIDDLE_ONE_BUTTON
                     } else {
                         DialogCommon::FormType::BIG_ONE_BUTTON
@@ -166,36 +166,6 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
         }
     });
     ButtonCommon::SetOnClick(button, delegate.unwrap());
-    /*
-    let button = get__bgButton(this);
-    let button_obj = Component::get_gameObject(button);
-    Object::set_name(button_obj, format!("HachimiSkill_{}", skill_id).to_il2cpp_string());
-    get_skill_text(skill_id);
-    info!("SKILL_TEXT_CACHE len: {}", SKILL_TEXT_CACHE.lock().unwrap().len());
-
-    let delegate = create_delegate(unsafe { UnityAction::UNITYACTION_CLASS }, 0, || {
-        let current_ev = EventSystem::get_current();
-        let clicked_obj = EventSystem::get_currentSelectedGameObject(current_ev);
-        let object_name = Object::get_name(clicked_obj);
-        let name_str = unsafe { (*object_name).as_utf16str() }.to_string();
-
-        if name_str.starts_with("HachimiSkill_") {
-            let id_str = &name_str["HachimiSkill_".len()..];
-            if let Ok(id) = id_str.parse::<i32>() {
-                if let Some(data) = SKILL_TEXT_CACHE.lock().unwrap().get(&id) {
-                    let (name, desc) = data;
-                    if let Some(mutex) = Gui::instance() {
-                        mutex.lock().unwrap().show_window(Box::new(SkillInfoDialog::new(
-                            &id,
-                            &name,
-                            &desc
-                        )));
-                    }
-                }
-            }
-        }
-    });
-    ButtonCommon::SetOnClick(button, delegate.unwrap()); */
 }
 
 pub fn init(umamusume: *const Il2CppImage) {

@@ -17,6 +17,10 @@ pub fn instance() -> *mut Il2CppObject {
 static mut PUSHDIALOG_ADDR: usize = 0;
 impl_addr_wrapper_fn!(PushDialog, PUSHDIALOG_ADDR, (), data: *mut Il2CppObject);
 
+// public static DialogCommon PushSystemDialog(Data dialogData, Boolean isEnableOutsideClick) { }
+static mut PUSHSYSTEMDIALOG_ADDR: usize = 0;
+impl_addr_wrapper_fn!(PushSystemDialog, PUSHSYSTEMDIALOG_ADDR, (), dialogData: *mut Il2CppObject, isEnableOutsideClick: bool);
+
 pub fn single_button_message(title: &str, message: &str, typ: FormType) {
     let dialog_data = Data::new();
     Data::SetSimpleOneButtonMessage(
@@ -27,7 +31,8 @@ pub fn single_button_message(title: &str, message: &str, typ: FormType) {
         TextId::from_name("Common0007"),
         typ
     );
-    PushDialog(dialog_data);
+    // PushDialog(dialog_data);
+    PushSystemDialog(dialog_data, true);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
@@ -36,5 +41,6 @@ pub fn init(umamusume: *const Il2CppImage) {
     unsafe {
         CLASS = DialogManager;
         PUSHDIALOG_ADDR = get_method_addr(DialogManager, c"PushDialog", 1);
+        PUSHSYSTEMDIALOG_ADDR =get_method_addr(DialogManager, c"PushSystemDialog", 2);
     }
 }
