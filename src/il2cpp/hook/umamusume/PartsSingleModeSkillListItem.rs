@@ -171,6 +171,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
             }
         }
     });
+    ButtonCommon::SetOnClick(button, delegate.unwrap());
     /*
     let button = get__bgButton(this);
     let button_obj = Component::get_gameObject(button);
