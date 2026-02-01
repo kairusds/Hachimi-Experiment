@@ -171,7 +171,7 @@ config_editor:
   aniso_level: "各向异性过滤"
   live_vocals_swap: "Live演唱人声切换"
   live_vocals_swap_character_n: "角色 %{index}"
-  skill_info_dialog: "在GUI中显示技能信息"
+  skill_info_dialog: "自定技能信息弹窗"
   homescreen_bgseason: "主界面背景季节"
   shadow_resolution: "阴影分辨率"
 

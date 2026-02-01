@@ -182,9 +182,17 @@ config_editor:
   aniso_level: "Anisotropic Filtering"
   live_vocals_swap: "Live Vocals Swap"
   live_vocals_swap_character_n: "Character %{index}"
-  skill_info_dialog: "Show skill info in GUI"
+  skill_info_dialog: "Custom skill info dialog"
   homescreen_bgseason: "Homescreen Background Season"
   shadow_resolution: "Shadow Resolution"
+
+theme_editor:
+  title: "GUI Theme Editor"
+  ui_accent_color: "Accent Color"
+  ui_window_fill: "Window Background Color"
+  ui_panel_fill: "Panel Background Color"
+  ui_extreme_bg_color: "Input Background"
+  ui_text_color: "Text Color"
 
 tl_update_dialog:
   title: "New update available"

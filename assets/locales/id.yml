@@ -174,7 +174,7 @@ config_editor:
   aniso_level: "Filter Anisotropik"
   live_vocals_swap: "Tukar Vokal Langsung"
   live_vocals_swap_character_n: "Karakter %{index}"
-  skill_info_dialog: "Tampilkan info skill di GUI"
+  skill_info_dialog: "Dialog info skill kustom"
   homescreen_bgseason: "Musim Latar Belakang Layar Beranda"
   shadow_resolution: "Resolusi Bayangan"
 

@@ -396,6 +396,25 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
 }
 
 impl Gui {
+    pub fn apply_theme(ctx: &egui::Context, config: &hachimi::Config) {
+        let mut visuals = egui::Visuals::dark(); // Base theme
+
+        visuals.window_fill = config.ui_window_fill;
+        visuals.panel_fill = config.ui_panel_fill;
+        visuals.extreme_bg_color = config.ui_extreme_bg_color;
+        visuals.window_corner_radius = config.ui_window_rounding.into();
+
+        visuals.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0, config.ui_text_color);
+
+        visuals.widgets.active.bg_fill = config.ui_accent_color;
+        visuals.widgets.hovered.bg_fill = config.ui_accent_color.linear_multiply(0.8);
+        visuals.selection.bg_fill = config.ui_accent_color.linear_multiply(0.5);
+
+        visuals.override_text_color = Some(config.ui_text_color);
+
+        ctx.set_visuals(visuals);
+    }
+
     // Call this from the render thread!
     pub fn instance_or_init(
         #[cfg_attr(target_os = "windows", allow(unused))] open_key_id: &str
@@ -418,10 +437,12 @@ impl Gui {
 
         context.set_style(style);
 
+        Self::apply_theme(&context, &config.clone());
+        /*
         let mut visuals = egui::Visuals::dark();
         visuals.panel_fill = BACKGROUND_COLOR;
         visuals.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0, TEXT_COLOR);
-        context.set_visuals(visuals);
+        context.set_visuals(visuals); */
 
         let default_style = context.style().as_ref().clone();
 
@@ -566,7 +587,7 @@ impl Gui {
         self.run_notifications();
 
         if self.splash_visible { self.run_splash(); }
-        if hachimi::CONFIG_LOAD_ERROR.swap(false, Ordering::Relaxed) {
+        if hachimi::CONFIG_LOAD_ERROR.swap(false, Ordering::AcqRel) {
             self.show_notification(&t!("notification.config_error"));
         }
 
@@ -1361,6 +1382,39 @@ fn centered_and_wrapped_text(ui: &mut egui::Ui, text: &str) {
     ui.painter().galley(paint_pos, galley, text_color);
 }
 
+fn parse_color(hex: &str) -> Result<egui::Color32, ()> {
+    let hex = hex.trim_start_matches('#');
+    if hex.len() == 8 {
+        let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| ())?;
+        let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| ())?;
+        let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| ())?;
+        let a = u8::from_str_radix(&hex[6..8], 16).map_err(|_| ())?;
+        Ok(egui::Color32::from_rgba_unmultiplied(r, g, b, a))
+    } else {
+        Err(())
+    }
+}
+
+fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        ui.label(label);
+        if ui.color_edit_button_srgba(color).changed() {
+            changed = true;
+        }
+
+        let mut hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
+        let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(75.0));
+        if res.changed() {
+            if let Ok(new_color) = parse_color(&hex) {
+                *color = new_color;
+                changed = true;
+            }
+        }
+    });
+    changed
+}
+
 fn paginated_window_layout(
     ui: &mut egui::Ui,
     id: egui::Id,
@@ -1669,6 +1723,18 @@ impl ConfigEditor {
                 let _res = ui.add(egui::Slider::new(&mut config.gui_scale, 0.25..=2.0).step_by(0.05));
                 #[cfg(target_os = "android")]
                 handle_android_keyboard(&_res, &mut config.gui_scale);
+                ui.end_row();
+
+                ui.label(t!("theme_editor.title"));
+                ui.horizontal(|ui| {
+                    if ui.button(t!("open")).clicked() {
+                        thread::spawn(|| {
+                            Gui::instance().unwrap()
+                            .lock().unwrap()
+                            .show_window(Box::new(ThemeEditorWindow::new()));
+                        });
+                    }
+                });
                 ui.end_row();
 
                 #[cfg(target_os = "windows")]
@@ -2343,6 +2409,105 @@ impl Window for LiveVocalsSwapWindow {
         });
 
         if save_clicked {
+            save_and_reload_config(self.config.clone());
+        }
+
+        open &= open2;
+        open
+    }
+}
+
+struct ThemeEditorWindow {
+    id: egui::Id,
+    config: hachimi::Config
+}
+
+impl ThemeEditorWindow {
+    fn new() -> ThemeEditorWindow {
+        ThemeEditorWindow {
+            id: random_id(),
+            config: (**Hachimi::instance().config.load()).clone()
+        }
+    }
+}
+
+impl Window for ThemeEditorWindow {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let scale = get_scale(ctx);
+        let mut open = true;
+        let mut open2 = true;
+        let mut theme_changed = false;
+        let mut save_clicked = false;
+        let mut reset_clicked = false;
+
+        new_window(ctx, self.id, t!("theme_editor.title"))
+        .open(&mut open)
+        .show(ctx, |ui| {
+            simple_window_layout(ui, self.id,
+                |ui| {
+                    egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(8, 0))
+                    .show(ui, |ui| {
+                        egui::Grid::new(self.id.with("theme_editor_grid"))
+                        .striped(true)
+                        .num_columns(2)
+                        .spacing([40.0 * scale, 4.0 * scale])
+                        .show(ui, |ui| {
+                            ui.vertical(|ui| {
+                                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+
+                                theme_changed |= theme_color_row(ui, &t!("theme_editor.ui_accent_color"), &mut self.config.ui_accent_color);
+                                theme_changed |= theme_color_row(ui, &t!("theme_editor.ui_window_fill"), &mut self.config.ui_window_fill);
+                                theme_changed |= theme_color_row(ui, &t!("theme_editor.ui_panel_fill"), &mut self.config.ui_panel_fill);
+                                theme_changed |= theme_color_row(ui, &t!("theme_editor.ui_extreme_bg_color"), &mut self.config.ui_extreme_bg_color);
+                                theme_changed |= theme_color_row(ui, &t!("theme_editor.ui_text_color"), &mut self.config.ui_text_color);
+
+                                ui.horizontal(|ui| {
+                                    ui.label(t!("theme_editor.ui_window_rounding"));
+                                    if ui.add(egui::Slider::new(&mut self.config.ui_window_rounding, 0.0..=20.0)).changed() {
+                                        theme_changed = true;
+                                    }
+                                });
+                            });
+                        });
+                    });
+                },
+                |ui| {
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                        if ui.button(t!("config_editor.restore_defaults")).clicked() {
+                            reset_clicked = true;
+                        }
+
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                            if ui.button(t!("cancel")).clicked() {
+                                open2 = false;
+                            }
+                            if ui.button(t!("save")).clicked() {
+                                save_clicked = true;
+                                open2 = false;
+                            }
+                        });
+                    });
+                }
+            );
+        });
+
+        if theme_changed {
+            Gui::apply_theme(ctx, &self.config);
+        }
+
+        if save_clicked {
+            save_and_reload_config(self.config.clone());
+        }
+
+        if reset_clicked {
+            let config = &mut self.config;
+            config.ui_accent_color = hachimi::Config::default_ui_accent();
+            config.ui_window_fill = hachimi::Config::default_window_fill();
+            config.ui_panel_fill = hachimi::Config::default_panel_fill();
+            config.ui_extreme_bg_color = hachimi::Config::default_extreme_bg();
+            config.ui_text_color = hachimi::Config::default_text_color();
+            config.ui_window_rounding = hachimi::Config::default_window_rounding();
             save_and_reload_config(self.config.clone());
         }
 

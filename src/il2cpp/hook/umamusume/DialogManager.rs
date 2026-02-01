@@ -31,8 +31,8 @@ pub fn single_button_message(title: &str, message: &str, typ: FormType) {
         TextId::from_name("Common0007"),
         typ
     );
-    // PushDialog(dialog_data);
-    PushSystemDialog(dialog_data, true);
+    PushDialog(dialog_data);
+    // PushSystemDialog(dialog_data, true);
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
