@@ -11,7 +11,7 @@ use jni::{
     JNIEnv,
 };
 
-use crate::{core::{Error, Gui, Hachimi}, il2cpp::symbols::Thread};
+use crate::{android::utils, core::{Error, Gui, Hachimi}, il2cpp::symbols::Thread};
 
 use super::keymap;
 
@@ -179,6 +179,12 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                 if Hachimi::instance().config.load().hide_ingame_ui_hotkey && pressed
                     && key_code == Hachimi::instance().config.load().android.hide_ingame_ui_hotkey_bind {
                     Thread::main_thread().schedule(Gui::toggle_game_ui);
+                }
+                if pressed && key_code == keymap::KEYCODE_BACK {
+                    utils::BACK_BUTTON_PRESSED.store(pressed, Ordering::Release);
+                    if utils::IS_IME_VISIBLE.load(Ordering::Acquire) {
+                        return JNI_TRUE; 
+                    }
                 }
                 if Gui::is_consuming_input_atomic() {
                     let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {

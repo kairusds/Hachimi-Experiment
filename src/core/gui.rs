@@ -75,8 +75,6 @@ pub struct Gui {
     fps_text: String,
     #[cfg(target_os = "android")]
     last_focused: Option<egui::Id>,
-    #[cfg(target_os = "android")]
-    ime_requested: bool,
 
     show_menu: bool,
 
@@ -454,8 +452,6 @@ impl Gui {
             fps_text: "FPS: 0".to_string(),
             #[cfg(target_os = "android")]
             last_focused: None,
-            #[cfg(target_os = "android")]
-            ime_requested: false,
 
             show_menu: false,
 
@@ -600,7 +596,7 @@ impl Gui {
 
         #[cfg(target_os = "android")]
         {
-            use crate::android::utils::{set_keyboard_visible, check_keyboard_status, IS_IME_VISIBLE};
+            use crate::android::utils::{set_keyboard_visible, check_keyboard_status, BACK_BUTTON_PRESSED, IS_IME_VISIBLE};
 
             let focused = self.context.memory(|m| m.focused());
             let wants_kb = self.context.wants_keyboard_input();
@@ -609,26 +605,41 @@ impl Gui {
 
             if focused.is_some() && focused != self.last_focused && wants_kb {
                 if unity_kb_ptr.is_null() && !IS_IME_VISIBLE.load(Ordering::Acquire) {
-                    set_keyboard_visible(true);
-                    self.ime_requested = true;
+                    Thread::main_thread().schedule(|| {
+                        set_keyboard_visible(true);
+                    });
+                }
+            } else if focused.is_none() && self.last_focused.is_some() {
+                if unity_kb_ptr.is_null() && IS_IME_VISIBLE.load(Ordering::Acquire) {
+                    Thread::main_thread().schedule(|| {
+                        set_keyboard_visible(false);
+                    });
                 }
             }
 
-            if IS_IME_VISIBLE.load(Ordering::Acquire) {
-                self.ime_requested = false;
+            if BACK_BUTTON_PRESSED.swap(false, Ordering::AcqRel) {
+                if IS_IME_VISIBLE.load(Ordering::Acquire) {
+                    Thread::main_thread().schedule(|| {
+                        set_keyboard_visible(false);
+                    });
 
-                if !check_keyboard_status() {
                     self.context.memory_mut(|mem| mem.stop_text_input());
                     IS_IME_VISIBLE.store(false, Ordering::Release);
                     self.last_focused = None;
                 }
-            } else if self.ime_requested {
-                // do nothing
-            } else {
-                if focused.is_none() {
-                    self.last_focused = None;
+            }
+
+            // zombie check
+            if self.tmp_frame_count % 20 == 0 {
+                if IS_IME_VISIBLE.load(Ordering::Acquire) {
+                    if !check_keyboard_status() {
+                        self.context.memory_mut(|mem| mem.stop_text_input());
+                        IS_IME_VISIBLE.store(false, Ordering::Release);
+                        self.last_focused = None;
+                    }
                 }
             }
+
             self.last_focused = focused;
         }
 
