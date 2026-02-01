@@ -160,7 +160,7 @@ extern "C" fn SetupOnClickSkillButton(this: *mut Il2CppObject, info: *mut Il2Cpp
                     } else {
                         DialogCommon::FormType::BIG_ONE_BUTTON
                     };
-                    DialogManager::single_button_message(name, desc.replace("\\n", " | "), typ);
+                    DialogManager::single_button_message(name, &desc.replace("\\n", " | "), typ);
                 }
             }
         }
