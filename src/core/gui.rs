@@ -605,23 +605,17 @@ impl Gui {
 
             if focused.is_some() && focused != self.last_focused && wants_kb {
                 if unity_kb_ptr.is_null() && !IS_IME_VISIBLE.load(Ordering::Acquire) {
-                    Thread::main_thread().schedule(|| {
-                        set_keyboard_visible(true);
-                    });
+                    set_keyboard_visible(true);
                 }
             } else if focused.is_none() && self.last_focused.is_some() {
                 if unity_kb_ptr.is_null() && IS_IME_VISIBLE.load(Ordering::Acquire) {
-                    Thread::main_thread().schedule(|| {
-                        set_keyboard_visible(false);
-                    });
+                    set_keyboard_visible(false);
                 }
             }
 
-            if BACK_BUTTON_PRESSED.swap(false, Ordering::AcqRel) {
-                if IS_IME_VISIBLE.load(Ordering::Acquire) {
-                    Thread::main_thread().schedule(|| {
-                        set_keyboard_visible(false);
-                    });
+            if IS_IME_VISIBLE.load(Ordering::Acquire) {
+                if BACK_BUTTON_PRESSED.swap(false, Ordering::AcqRel) {
+                    set_keyboard_visible(false);
 
                     self.context.memory_mut(|mem| mem.stop_text_input());
                     IS_IME_VISIBLE.store(false, Ordering::Release);
