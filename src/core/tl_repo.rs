@@ -161,7 +161,10 @@ impl Updater {
     pub fn check_for_updates(self: Arc<Self>, pedantic: bool) {
         std::thread::spawn(move || {
             if let Err(e) = self.check_for_updates_internal(pedantic) {
-                error!("{}", e);
+                if let Some(mutex) = Gui::instance() {
+                    mutex.lock().unwrap().show_notification(&format!("{}", e));
+                }
+                info!("{}", e);
             }
         });
     }
