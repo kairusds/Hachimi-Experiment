@@ -214,6 +214,14 @@ pub static KEYBOARD_GC_HANDLE: LazyLock<Mutex<Option<GCHandle>>> = LazyLock::new
 static KEYBOARD_SELECTION: LazyLock<Mutex<RangeInt>> = LazyLock::new(|| {
     Mutex::new(RangeInt::new(0, 1))
 });
+#[cfg(target_os = "android")]
+pub static KEYBOARD_OWNER: Mutex<Option<KeyboardOwner>> = Mutex::new(None);
+#[cfg(target_os = "android")]
+#[derive(PartialEq)]
+pub enum KeyboardOwner {
+    JNI(egui::Id),
+    Unity(egui::Id)
+}
 
 fn get_scale_salt(ctx: &egui::Context) -> f32 {
     ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale_salt"))).unwrap_or(1.0)
@@ -246,18 +254,26 @@ fn ime_scroll_padding(ctx: &egui::Context) -> f32 {
 
 #[cfg(target_os = "android")]
 pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
-    if crate::android::utils::IS_IME_VISIBLE.load(Ordering::Acquire) {
-        return;
-    }
-
-    if res.lost_focus() {
-        let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
-        if !kb_ptr.is_null() {
-            TouchScreenKeyboard::set_active(kb_ptr, false);
-            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Release);
-            *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
+    {
+        let mut owner_lock = KEYBOARD_OWNER.lock().unwrap();
+        if let Some(KeyboardOwner::JNI(_)) = *owner_lock {
+            return;
         }
-        return;
+
+        if res.lost_focus() {
+            if let Some(KeyboardOwner::Unity(id)) = *owner_lock {
+                if id == res.id {
+                    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
+                    if !kb_ptr.is_null() {
+                        TouchScreenKeyboard::set_active(kb_ptr, false);
+                        ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Release);
+                        *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
+                    }
+                    *owner_lock = None;
+                }
+            }
+            return;
+        }
     }
 
     if !res.has_focus() {
@@ -283,6 +299,11 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
     };
     
     if res.gained_focus() {
+        {
+            let mut owner_lock = KEYBOARD_OWNER.lock().unwrap();
+            *owner_lock = Some(KeyboardOwner::Unity(res.id));
+        }
+
         res.scroll_to_me(Some(egui::Align::Center));
 
         let ptr = text.to_il2cpp_string();
@@ -601,25 +622,33 @@ impl Gui {
             let focused = self.context.memory(|m| m.focused());
             let wants_kb = self.context.wants_keyboard_input();
 
-            let unity_kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
+            {
+                let mut owner_lock = KEYBOARD_OWNER.lock().unwrap();
 
-            if focused.is_some() && focused != self.last_focused && wants_kb {
-                if unity_kb_ptr.is_null() && !IS_IME_VISIBLE.load(Ordering::Acquire) {
-                    set_keyboard_visible(true);
+                if focused.is_some() && focused != self.last_focused && wants_kb {
+                    if owner_lock.is_none() {
+                        if !IS_IME_VISIBLE.load(Ordering::Acquire) {
+                            set_keyboard_visible(true);
+                            if let Some(id) = focused {
+                                *owner_lock = Some(KeyboardOwner::JNI(id));
+                            }
+                        }
+                    }
+                } else if focused.is_none() && self.last_focused.is_some() {
+                    if let Some(KeyboardOwner::JNI(_)) = *owner_lock {
+                        set_keyboard_visible(false);
+                        *owner_lock = None;
+                    }
                 }
-            } else if focused.is_none() && self.last_focused.is_some() {
-                if unity_kb_ptr.is_null() && IS_IME_VISIBLE.load(Ordering::Acquire) {
-                    set_keyboard_visible(false);
-                }
-            }
 
-            if IS_IME_VISIBLE.load(Ordering::Acquire) {
-                if BACK_BUTTON_PRESSED.swap(false, Ordering::AcqRel) {
-                    set_keyboard_visible(false);
-
-                    self.context.memory_mut(|mem| mem.stop_text_input());
-                    IS_IME_VISIBLE.store(false, Ordering::Release);
-                    self.last_focused = None;
+                if let Some(KeyboardOwner::JNI(_)) = *owner_lock {
+                    if BACK_BUTTON_PRESSED.swap(false, Ordering::AcqRel) {
+                        set_keyboard_visible(false);
+                        self.context.memory_mut(|mem| mem.stop_text_input());
+                        IS_IME_VISIBLE.store(false, Ordering::Release);
+                        *owner_lock = None;
+                        self.last_focused = None;
+                    }
                 }
             }
 
@@ -629,6 +658,12 @@ impl Gui {
                     if !check_keyboard_status() {
                         self.context.memory_mut(|mem| mem.stop_text_input());
                         IS_IME_VISIBLE.store(false, Ordering::Release);
+
+                        if let Ok(mut lock) = KEYBOARD_OWNER.lock() {
+                            if let Some(KeyboardOwner::JNI(_)) = *lock {
+                                *lock = None;
+                            }
+                        }
                         self.last_focused = None;
                     }
                 }
