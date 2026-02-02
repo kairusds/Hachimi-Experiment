@@ -10,6 +10,7 @@ use crate::{
 use std::{path::PathBuf, sync::atomic::{AtomicBool, Ordering}};
 use super::game_impl;
 
+pub static BACK_BUTTON_PRESSED: AtomicBool = AtomicBool::new(false);
 pub static IS_IME_VISIBLE: AtomicBool = AtomicBool::new(false);
 
 pub fn set_keyboard_visible(visible: bool) {
