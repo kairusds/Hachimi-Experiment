@@ -652,7 +652,7 @@ impl Gui {
             }
 
             // zombie check
-            if self.tmp_frame_count % 20 == 0 {
+            /* if self.tmp_frame_count % 20 == 0 {
                 if IS_IME_VISIBLE.load(Ordering::Acquire) {
                     if !check_keyboard_status() {
                         self.context.memory_mut(|mem| mem.stop_text_input());
@@ -666,7 +666,7 @@ impl Gui {
                         self.last_focused = None;
                     }
                 }
-            }
+            }*/
 
             self.last_focused = focused;
         }
@@ -2466,8 +2466,14 @@ impl ThemeEditorWindow {
 }
 
 fn parse_color(hex: &str) -> Result<egui::Color32, ()> {
-    let hex = hex.trim_start_matches('#');
-    if hex.len() == 8 {
+    let hex = hex.trim().trim_start_matches('#');
+
+    if hex.len() == 6 {
+        let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| ())?;
+        let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| ())?;
+        let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| ())?;
+        Ok(egui::Color32::from_rgb(r, g, b))
+    } else if hex.len() == 8 {
         let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| ())?;
         let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| ())?;
         let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| ())?;
@@ -2534,6 +2540,10 @@ fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) ->
             }
         });
     });
+
+    if *color != last_valid_color {
+        last_valid_color = *color;
+    }
 
     ui.data_mut(|d| d.insert_temp(row_id, (hex_str, last_valid_color)));
     ui.end_row();
