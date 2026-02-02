@@ -10,7 +10,6 @@ use crate::{
 use std::{path::PathBuf, sync::atomic::{AtomicBool, Ordering}};
 use super::game_impl;
 
-pub static BACK_BUTTON_PRESSED: AtomicBool = AtomicBool::new(false);
 pub static IS_IME_VISIBLE: AtomicBool = AtomicBool::new(false);
 
 pub fn set_keyboard_visible(visible: bool) {
@@ -39,21 +38,29 @@ pub fn set_keyboard_visible(visible: bool) {
         if visible {
             // show: imm.showSoftInput(view, flags)
             // SHOW_IMPLICIT (1) or SHOW_FORCED (2)
-            env.call_method(
+            let shown = env.call_method(
                 &imm, 
                 "showSoftInput", 
                 "(Landroid/view/View;I)Z", 
                 &[JValue::from(&decor_view), JValue::Int(2)]
             )?.z()?;
+
+            if !shown {
+                env.call_method(
+                    &imm, 
+                    "toggleSoftInput", 
+                    "(II)V", 
+                    &[JValue::Int(2), JValue::Int(1)]
+                )?;
+            }
             IS_IME_VISIBLE.store(true, Ordering::Release);
         } else {
             // hide: imm.hideSoftInputFromWindow(token, flags)
-            // HIDE_IMPLICIT_ONLY (1) or HIDE_NOT_ALWAYS (2)
             env.call_method(
                 &imm, 
                 "hideSoftInputFromWindow", 
                 "(Landroid/os/IBinder;I)Z", 
-                &[JValue::from(&window_token), JValue::Int(2)]
+                &[JValue::from(&window_token), JValue::Int(0)]
             )?;
             IS_IME_VISIBLE.store(false, Ordering::Release);
         }
