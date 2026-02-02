@@ -264,10 +264,10 @@ impl Updater {
                     if !exists {
                         true
                     } else {
-                        if fs::metadata(&path).map(|m| m.len() as usize != file.size).unwrap_or(true) {
-                            true // size mismatch -> redownload
-                        } else if hash != &file.hash {
+                        if hash != &file.hash {
                             true // index hash changed -> update
+                        } else if fs::metadata(&path).map(|m| m.len() as usize != file.size).unwrap_or(true) {
+                            true // size mismatch -> redownload
                         } else if pedantic {
                             // full blake3 integrity check if user requested pedantic update
                             !file.verify_integrity(&path)
