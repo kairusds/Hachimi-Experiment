@@ -2526,6 +2526,12 @@ fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) ->
                     last_valid_color = new_color; 
                 }
             }
+
+            if res.lost_focus() {
+                if parse_color(&hex_str).is_err() {
+                    hex_str = to_hex(color);
+                }
+            }
         });
     });
 
