@@ -628,7 +628,9 @@ impl Gui {
                 if focused.is_some() && focused != self.last_focused && wants_kb {
                     if owner_lock.is_none() {
                         if !IS_IME_VISIBLE.load(Ordering::Acquire) {
-                            set_keyboard_visible(true);
+                            Thread::main_thread().schedule(|| {
+                                set_keyboard_visible(true);
+                            });
                             if let Some(id) = focused {
                                 *owner_lock = Some(KeyboardOwner::JNI(id));
                             }
@@ -636,7 +638,9 @@ impl Gui {
                     }
                 } else if focused.is_none() && self.last_focused.is_some() {
                     if let Some(KeyboardOwner::JNI(_)) = *owner_lock {
-                        set_keyboard_visible(false);
+                        Thread::main_thread().schedule(|| {
+                            set_keyboard_visible(false);
+                        });
                         *owner_lock = None;
                     }
                 }
@@ -647,23 +651,6 @@ impl Gui {
                         self.context.memory_mut(|mem| mem.stop_text_input());
                         IS_IME_VISIBLE.store(false, Ordering::Release);
                         *owner_lock = None;
-                        self.last_focused = None;
-                    }
-                }
-            }
-
-            // zombie check
-            if self.tmp_frame_count % 20 == 0 {
-                if IS_IME_VISIBLE.load(Ordering::Acquire) {
-                    if !check_keyboard_status() {
-                        self.context.memory_mut(|mem| mem.stop_text_input());
-                        IS_IME_VISIBLE.store(false, Ordering::Release);
-
-                        if let Ok(mut lock) = KEYBOARD_OWNER.lock() {
-                            if let Some(KeyboardOwner::JNI(_)) = *lock {
-                                *lock = None;
-                            }
-                        }
                         self.last_focused = None;
                     }
                 }
