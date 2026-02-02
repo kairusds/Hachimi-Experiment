@@ -2478,71 +2478,26 @@ impl ThemeEditorWindow {
     }
 }
 
-/*
-fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
-    let mut changed = false;
-    ui.horizontal_wrapped(|ui| {
-        ui.label(label);
-        if ui.color_edit_button_srgba(color).changed() {
-            changed = true;
-        }
-
-        let mut hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
-        let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(75.0));
-        if res.changed() {
-            if let Ok(new_color) = parse_color(&hex) {
-                *color = new_color;
-                changed = true;
-            }
-        }
-    });
-    changed
-}
-
-fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
-    let mut changed = false;
-    ui.horizontal_wrapped(|ui| {
-        ui.label(label);
-        if ui.color_edit_button_srgba(color).changed() {
-            changed = true;
-        }
-
-        let id = ui.make_persistent_id(label);
-        let mut hex = ui.data_mut(|d| d.get_temp::<String>(id))
-            .unwrap_or_else(|| format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a()));
-
-        let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(75.0));
-        #[cfg(target_os = "android")]
-        handle_android_keyboard(&res, &mut hex);
-
-        if res.changed() {
-            ui.data_mut(|d| d.insert_temp(id, hex.clone()));
-            if let Ok(new_color) = parse_color(&hex) {
-                *color = new_color;
-                changed = true;
-            }
-        }
-
-        if !res.has_focus() && !changed {
-             ui.data_mut(|d| d.remove::<String>(id));
-        }
-    });
-    changed
-}*/
-
 fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
     let mut changed = false;
     let id = ui.make_persistent_id(label);
+    let text_id = id.with("text_input");
 
-    let mut hex = ui.data_mut(|d| d.get_temp::<String>(id))
-        .unwrap_or_else(|| format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a()));
+    let is_editing = ui.memory(|mem| mem.has_focus(text_id));
+
+    let mut hex = if is_editing {
+        ui.data_mut(|d| d.get_temp::<String>(id))
+            .unwrap_or_else(|| format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a()))
+    } else {
+        format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a())
+    };
 
     ui.columns(3, |cols| {
         cols[0].with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.label(label);
         });
 
-        cols[1].with_layout(egui::Layout::centered_and_justified(egui::Direction::LeftToRight), |ui| {
+        cols[1].vertical_centered(|ui| {
             if ui.color_edit_button_srgba(color).changed() {
                 changed = true;
                 hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
@@ -2551,7 +2506,11 @@ fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) ->
         });
 
         cols[2].with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(75.0));     
+            let res = ui.add(
+                egui::TextEdit::singleline(&mut hex)
+                    .id(text_id) 
+                    .desired_width(75.0)
+            );
             #[cfg(target_os = "android")]
             handle_android_keyboard(&res, &mut hex);
 
