@@ -2480,17 +2480,7 @@ impl ThemeEditorWindow {
 
 fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
     let mut changed = false;
-    let id = ui.make_persistent_id(label);
-    let text_id = id.with("text_input");
-
-    let is_editing = ui.memory(|mem| mem.has_focus(text_id));
-
-    let mut hex = if is_editing {
-        ui.data_mut(|d| d.get_temp::<String>(id))
-            .unwrap_or_else(|| format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a()))
-    } else {
-        format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a())
-    };
+    let row_id = ui.make_persistent_id(label);
 
     ui.columns(3, |cols| {
         cols[0].with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
@@ -2500,12 +2490,22 @@ fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) ->
         cols[1].vertical_centered(|ui| {
             if ui.color_edit_button_srgba(color).changed() {
                 changed = true;
-                hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
-                ui.data_mut(|d| d.insert_temp(id, hex.clone()));
+                let new_hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
+                ui.data_mut(|d| d.insert_temp(row_id, new_hex));
             }
         });
 
         cols[2].with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            let text_id = ui.make_persistent_id("hex_text");
+
+            let is_editing = ui.memory(|mem| mem.has_focus(text_id));
+            let mut hex = if is_editing {
+                ui.data_mut(|d| d.get_temp::<String>(row_id))
+                    .unwrap_or_else(|| format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a()))
+            } else {
+                format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a())
+            };
+
             let res = ui.add(
                 egui::TextEdit::singleline(&mut hex)
                     .id(text_id) 
@@ -2515,19 +2515,18 @@ fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) ->
             handle_android_keyboard(&res, &mut hex);
 
             if res.changed() {
-                ui.data_mut(|d| d.insert_temp(id, hex.clone()));
-
+                ui.data_mut(|d| d.insert_temp(row_id, hex.clone()));
                 if let Ok(new_color) = parse_color(&hex) {
                     *color = new_color;
                     changed = true;
                 }
             }
-
             if res.lost_focus() {
-                ui.data_mut(|d| d.remove::<String>(id));
+                ui.data_mut(|d| d.remove::<String>(row_id));
             }
         });
     });
+    ui.end_row();
 
     changed
 }
