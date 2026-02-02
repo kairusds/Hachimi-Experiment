@@ -80,7 +80,6 @@ first_time_setup:
     Hachimi telah terpasang! Ini adalah proses pengaturan awal.
     Jika kamu tidak tertarik pada fitur translasi, kamu bisa melewatinya dengan menutup dialog ini.
 
-
     SANGGAHAN (DISCLAIMER):
     Hachimi adalah proyek komunitas. Translasi yang tersedia adalah hasil kontribusi dari beragam komunitas.
     Proyek ini tidak dibuat/didukung oleh Cygames, Inc., dan berpotensi melanggar S&K game ini. Kamu dianggap
@@ -177,6 +176,15 @@ config_editor:
   skill_info_dialog: "Dialog info skill kustom"
   homescreen_bgseason: "Musim Latar Belakang Layar Beranda"
   shadow_resolution: "Resolusi Bayangan"
+
+theme_editor:
+  title: "Editor Tema GUI"
+  ui_accent_color: "Warna Aksen"
+  ui_window_fill: "Warna Latar Jendela"
+  ui_panel_fill: "Warna Latar Panel"
+  ui_extreme_bg_color: "Latar Input"
+  ui_text_color: "Warna Teks"
+  ui_window_rounding: "Sudut Membulat"
 
 tl_update_dialog:
   title: "Pembaruan Translasi Tersedia"

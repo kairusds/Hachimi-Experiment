@@ -1475,26 +1475,6 @@ fn parse_color(hex: &str) -> Result<egui::Color32, ()> {
     }
 }
 
-fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
-    let mut changed = false;
-    ui.horizontal_wrapped(|ui| {
-        ui.label(label);
-        if ui.color_edit_button_srgba(color).changed() {
-            changed = true;
-        }
-
-        let mut hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
-        let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(75.0));
-        if res.changed() {
-            if let Ok(new_color) = parse_color(&hex) {
-                *color = new_color;
-                changed = true;
-            }
-        }
-    });
-    changed
-}
-
 fn paginated_window_layout(
     ui: &mut egui::Ui,
     id: egui::Id,
@@ -2498,6 +2478,108 @@ impl ThemeEditorWindow {
     }
 }
 
+/*
+fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
+    let mut changed = false;
+    ui.horizontal_wrapped(|ui| {
+        ui.label(label);
+        if ui.color_edit_button_srgba(color).changed() {
+            changed = true;
+        }
+
+        let mut hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
+        let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(75.0));
+        if res.changed() {
+            if let Ok(new_color) = parse_color(&hex) {
+                *color = new_color;
+                changed = true;
+            }
+        }
+    });
+    changed
+}
+
+fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
+    let mut changed = false;
+    ui.horizontal_wrapped(|ui| {
+        ui.label(label);
+        if ui.color_edit_button_srgba(color).changed() {
+            changed = true;
+        }
+
+        let id = ui.make_persistent_id(label);
+        let mut hex = ui.data_mut(|d| d.get_temp::<String>(id))
+            .unwrap_or_else(|| format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a()));
+
+        let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(75.0));
+        #[cfg(target_os = "android")]
+        handle_android_keyboard(&res, &mut hex);
+
+        if res.changed() {
+            ui.data_mut(|d| d.insert_temp(id, hex.clone()));
+            if let Ok(new_color) = parse_color(&hex) {
+                *color = new_color;
+                changed = true;
+            }
+        }
+
+        if !res.has_focus() && !changed {
+             ui.data_mut(|d| d.remove::<String>(id));
+        }
+    });
+    changed
+}*/
+
+fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
+    let scale = get_scale(ui.ctx());
+    let mut changed = false;
+    let row_height = ui.spacing().interact_size.y * scale;
+
+    ui.horizontal_wrapped(|ui| {
+        ui.allocate_ui_with_layout(
+            egui::vec2(140.0 * scale, row_height), 
+            egui::Layout::left_to_right(egui::Align::Center), 
+            |ui| {
+                ui.label(label);
+            }
+        );
+
+        ui.allocate_ui_with_layout(
+            egui::vec2(50.0 * scale, row_height), 
+            egui::Layout::centered_and_justified(egui::Direction::LeftToRight), 
+            |ui| {
+                if ui.color_edit_button_srgba(color).changed() {
+                    changed = true;
+                }
+            }
+        );
+
+        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            let id = ui.make_persistent_id(label);
+            let mut hex = ui.data_mut(|d| d.get_temp::<String>(id))
+                .unwrap_or_else(|| format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a()));
+
+            let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(85.0));
+            #[cfg(target_os = "android")]
+            handle_android_keyboard(&res, &mut hex);
+
+            if res.changed() {
+                ui.data_mut(|d| d.insert_temp(id, hex.clone()));
+                if let Ok(new_color) = parse_color(&hex) {
+                    *color = new_color;
+                    changed = true;
+                }
+            }
+
+            if !res.has_focus() && !changed {
+                 ui.data_mut(|d| d.remove::<String>(id));
+            }
+        });
+    });
+    
+    changed
+}
+
 impl Window for ThemeEditorWindow {
     fn run(&mut self, ctx: &egui::Context) -> bool {
         let scale = get_scale(ctx);
@@ -2586,7 +2668,6 @@ impl Window for ThemeEditorWindow {
 
             self.config = config.clone();
             enqueue_theme_preview(self.config.clone());
-            save_and_reload_config(self.config.clone());
         }
 
         open &= open2;
