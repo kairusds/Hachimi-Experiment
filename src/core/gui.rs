@@ -215,7 +215,8 @@ static KEYBOARD_SELECTION: LazyLock<Mutex<RangeInt>> = LazyLock::new(|| {
     Mutex::new(RangeInt::new(0, 1))
 });
 #[cfg(target_os = "android")]
-pub static KEYBOARD_OWNER: Mutex<Option<KeyboardOwner>> = Mutex::new(None);
+pub static KEYBOARD_OWNER: LazyLock<Mutex<Option<KeyboardOwner>>> = 
+    LazyLock::new(|| Mutex::new(None));
 #[cfg(target_os = "android")]
 #[derive(PartialEq)]
 pub enum KeyboardOwner {
@@ -255,7 +256,7 @@ fn ime_scroll_padding(ctx: &egui::Context) -> f32 {
 #[cfg(target_os = "android")]
 pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
     {
-        let mut owner_lock = KEYBOARD_OWNER.lock().unwrap();
+        let Ok(mut owner_lock) = KEYBOARD_OWNER.try_lock() else { return; };
         if let Some(KeyboardOwner::JNI(_)) = *owner_lock {
             return;
         }
@@ -622,15 +623,11 @@ impl Gui {
             let focused = self.context.memory(|m| m.focused());
             let wants_kb = self.context.wants_keyboard_input();
 
-            {
-                let mut owner_lock = KEYBOARD_OWNER.lock().unwrap();
-
+            if let Ok(mut owner_lock) = KEYBOARD_OWNER.try_lock() {
                 if focused.is_some() && focused != self.last_focused && wants_kb {
                     if owner_lock.is_none() {
                         if !IS_IME_VISIBLE.load(Ordering::Acquire) {
-                            Thread::main_thread().schedule(|| {
-                                set_keyboard_visible(true);
-                            });
+                            set_keyboard_visible(true);
                             if let Some(id) = focused {
                                 *owner_lock = Some(KeyboardOwner::JNI(id));
                             }
@@ -638,19 +635,34 @@ impl Gui {
                     }
                 } else if focused.is_none() && self.last_focused.is_some() {
                     if let Some(KeyboardOwner::JNI(_)) = *owner_lock {
-                        Thread::main_thread().schedule(|| {
-                            set_keyboard_visible(false);
-                        });
+                        set_keyboard_visible(false);
                         *owner_lock = None;
                     }
                 }
 
                 if let Some(KeyboardOwner::JNI(_)) = *owner_lock {
                     if BACK_BUTTON_PRESSED.swap(false, Ordering::AcqRel) {
+                        *owner_lock = None;
                         set_keyboard_visible(false);
                         self.context.memory_mut(|mem| mem.stop_text_input());
                         IS_IME_VISIBLE.store(false, Ordering::Release);
-                        *owner_lock = None;
+                        self.last_focused = None;
+                    }
+                }
+            }
+
+            // zombie check
+            if self.tmp_frame_count % 20 == 0 {
+                if IS_IME_VISIBLE.load(Ordering::Acquire) {
+                    if !check_keyboard_status() {
+                        self.context.memory_mut(|mem| mem.stop_text_input());
+                        IS_IME_VISIBLE.store(false, Ordering::Release);
+
+                        if let Ok(mut lock) = KEYBOARD_OWNER.try_lock() {
+                            if let Some(KeyboardOwner::JNI(_)) = *lock {
+                                *lock = None;
+                            }
+                        }
                         self.last_focused = None;
                     }
                 }
