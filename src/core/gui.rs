@@ -1486,8 +1486,6 @@ fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) ->
 
         let mut hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
         let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(75.0));
-        #[cfg(target_os = "android")]
-        handle_android_keyboard(&res, &mut hex);
         if res.changed() {
             if let Ok(new_color) = parse_color(&hex) {
                 *color = new_color;
