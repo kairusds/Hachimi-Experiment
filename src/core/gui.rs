@@ -624,7 +624,7 @@ impl Gui {
             }
 
             // zombie check
-            /* if self.tmp_frame_count % 20 == 0 {
+            if self.tmp_frame_count % 20 == 0 {
                 if IS_IME_VISIBLE.load(Ordering::Acquire) {
                     if !check_keyboard_status() {
                         self.context.memory_mut(|mem| mem.stop_text_input());
@@ -632,7 +632,7 @@ impl Gui {
                         self.last_focused = None;
                     }
                 }
-            }*/
+            }
 
             self.last_focused = focused;
         }
