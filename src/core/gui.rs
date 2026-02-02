@@ -1462,19 +1462,6 @@ fn centered_and_wrapped_text(ui: &mut egui::Ui, text: &str) {
     ui.painter().galley(paint_pos, galley, text_color);
 }
 
-fn parse_color(hex: &str) -> Result<egui::Color32, ()> {
-    let hex = hex.trim_start_matches('#');
-    if hex.len() == 8 {
-        let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| ())?;
-        let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| ())?;
-        let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| ())?;
-        let a = u8::from_str_radix(&hex[6..8], 16).map_err(|_| ())?;
-        Ok(egui::Color32::from_rgba_unmultiplied(r, g, b, a))
-    } else {
-        Err(())
-    }
-}
-
 fn paginated_window_layout(
     ui: &mut egui::Ui,
     id: egui::Id,
@@ -2478,9 +2465,37 @@ impl ThemeEditorWindow {
     }
 }
 
+fn parse_color(hex: &str) -> Result<egui::Color32, ()> {
+    let hex = hex.trim_start_matches('#');
+    if hex.len() == 8 {
+        let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| ())?;
+        let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| ())?;
+        let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| ())?;
+        let a = u8::from_str_radix(&hex[6..8], 16).map_err(|_| ())?;
+        Ok(egui::Color32::from_rgba_unmultiplied(r, g, b, a))
+    } else {
+        Err(())
+    }
+}
+
 fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
     let mut changed = false;
     let row_id = ui.make_persistent_id(label);
+    let text_id = row_id.with("text_edit");
+
+    let to_hex = |c: &egui::Color32| {
+        format!("#{:02X}{:02X}{:02X}{:02X}", c.r(), c.g(), c.b(), c.a())
+    };
+
+    let (mut hex_str, mut last_valid_color) = ui.data_mut(|d| {
+        d.get_temp::<(String, egui::Color32)>(row_id)
+            .unwrap_or((to_hex(color), *color))
+    });
+
+    if *color != last_valid_color {
+        hex_str = to_hex(color);
+        last_valid_color = *color;
+    }
 
     ui.columns(3, |cols| {
         cols[0].with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
@@ -2490,42 +2505,31 @@ fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) ->
         cols[1].vertical_centered(|ui| {
             if ui.color_edit_button_srgba(color).changed() {
                 changed = true;
-                let new_hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
-                ui.data_mut(|d| d.insert_temp(row_id, new_hex));
+                hex_str = to_hex(color);
+                last_valid_color = *color;
             }
         });
 
         cols[2].with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let text_id = ui.make_persistent_id("hex_text");
-
-            let is_editing = ui.memory(|mem| mem.has_focus(text_id));
-            let mut hex = if is_editing {
-                ui.data_mut(|d| d.get_temp::<String>(row_id))
-                    .unwrap_or_else(|| format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a()))
-            } else {
-                format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a())
-            };
-
             let res = ui.add(
-                egui::TextEdit::singleline(&mut hex)
+                egui::TextEdit::singleline(&mut hex_str)
                     .id(text_id) 
                     .desired_width(75.0)
             );
             #[cfg(target_os = "android")]
-            handle_android_keyboard(&res, &mut hex);
+            handle_android_keyboard(&res, &mut hex_str);
 
             if res.changed() {
-                ui.data_mut(|d| d.insert_temp(row_id, hex.clone()));
-                if let Ok(new_color) = parse_color(&hex) {
+                if let Ok(new_color) = parse_color(&hex_str) {
                     *color = new_color;
                     changed = true;
+                    last_valid_color = new_color; 
                 }
-            }
-            if res.lost_focus() {
-                ui.data_mut(|d| d.remove::<String>(row_id));
             }
         });
     });
+
+    ui.data_mut(|d| d.insert_temp(row_id, (hex_str, last_valid_color)));
     ui.end_row();
 
     changed
