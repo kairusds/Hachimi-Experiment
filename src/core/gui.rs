@@ -75,6 +75,8 @@ pub struct Gui {
     fps_text: String,
     #[cfg(target_os = "android")]
     last_focused: Option<egui::Id>,
+    #[cfg(target_os = "android")]
+    ime_cooldown: Option<Instant>,
 
     show_menu: bool,
 
@@ -474,6 +476,8 @@ impl Gui {
             fps_text: "FPS: 0".to_string(),
             #[cfg(target_os = "android")]
             last_focused: None,
+            #[cfg(target_os = "android")]
+            ime_cooldown: None,
 
             show_menu: false,
 
@@ -631,6 +635,7 @@ impl Gui {
                             if let Some(id) = focused {
                                 *owner_lock = Some(KeyboardOwner::JNI(id));
                             }
+                            self.ime_cooldown = Some(Instant::now() + std::time::Duration::from_millis(500));
                         }
                     }
                 } else if focused.is_none() && self.last_focused.is_some() {
@@ -647,13 +652,20 @@ impl Gui {
                         self.context.memory_mut(|mem| mem.stop_text_input());
                         IS_IME_VISIBLE.store(false, Ordering::Release);
                         self.last_focused = None;
+                        self.ime_cooldown = None;
                     }
                 }
             }
 
             // zombie check
-            /* if self.tmp_frame_count % 20 == 0 {
-                if IS_IME_VISIBLE.load(Ordering::Acquire) {
+            if self.tmp_frame_count % 20 == 0 {
+                let should_check = if let Some(until) = self.ime_cooldown {
+                    Instant::now() > until
+                } else {
+                    true
+                };
+
+                if should_check && IS_IME_VISIBLE.load(Ordering::Acquire) {
                     if !check_keyboard_status() {
                         self.context.memory_mut(|mem| mem.stop_text_input());
                         IS_IME_VISIBLE.store(false, Ordering::Release);
@@ -664,9 +676,10 @@ impl Gui {
                             }
                         }
                         self.last_focused = None;
+                        self.ime_cooldown = None;
                     }
                 }
-            }*/
+            }
 
             self.last_focused = focused;
         }
@@ -2465,87 +2478,20 @@ impl ThemeEditorWindow {
     }
 }
 
-fn parse_color(hex: &str) -> Result<egui::Color32, ()> {
-    let hex = hex.trim().trim_start_matches('#');
-
-    if hex.len() == 6 {
-        let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| ())?;
-        let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| ())?;
-        let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| ())?;
-        Ok(egui::Color32::from_rgb(r, g, b))
-    } else if hex.len() == 8 {
-        let r = u8::from_str_radix(&hex[0..2], 16).map_err(|_| ())?;
-        let g = u8::from_str_radix(&hex[2..4], 16).map_err(|_| ())?;
-        let b = u8::from_str_radix(&hex[4..6], 16).map_err(|_| ())?;
-        let a = u8::from_str_radix(&hex[6..8], 16).map_err(|_| ())?;
-        Ok(egui::Color32::from_rgba_unmultiplied(r, g, b, a))
-    } else {
-        Err(())
-    }
-}
-
 fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
     let mut changed = false;
-    let row_id = ui.make_persistent_id(label);
-    let text_id = row_id.with("text_edit");
 
-    let to_hex = |c: &egui::Color32| {
-        format!("#{:02X}{:02X}{:02X}{:02X}", c.r(), c.g(), c.b(), c.a())
-    };
-
-    let (mut hex_str, mut last_valid_color) = ui.data_mut(|d| {
-        d.get_temp::<(String, egui::Color32)>(row_id)
-            .unwrap_or((to_hex(color), *color))
-    });
-
-    if *color != last_valid_color {
-        hex_str = to_hex(color);
-        last_valid_color = *color;
-    }
-
-    ui.columns(3, |cols| {
+    ui.columns(2, |cols| {
         cols[0].with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.label(label);
         });
 
-        cols[1].vertical_centered(|ui| {
+        cols[1].with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             if ui.color_edit_button_srgba(color).changed() {
                 changed = true;
-                hex_str = to_hex(color);
-                last_valid_color = *color;
-            }
-        });
-
-        cols[2].with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let res = ui.add(
-                egui::TextEdit::singleline(&mut hex_str)
-                    .id(text_id) 
-                    .desired_width(75.0)
-            );
-            #[cfg(target_os = "android")]
-            handle_android_keyboard(&res, &mut hex_str);
-
-            if res.changed() {
-                if let Ok(new_color) = parse_color(&hex_str) {
-                    *color = new_color;
-                    changed = true;
-                    last_valid_color = new_color; 
-                }
-            }
-
-            if res.lost_focus() {
-                if parse_color(&hex_str).is_err() {
-                    hex_str = to_hex(color);
-                }
             }
         });
     });
-
-    if *color != last_valid_color {
-        last_valid_color = *color;
-    }
-
-    ui.data_mut(|d| d.insert_temp(row_id, (hex_str, last_valid_color)));
     ui.end_row();
 
     changed
