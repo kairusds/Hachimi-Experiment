@@ -2531,52 +2531,45 @@ fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) ->
 }*/
 
 fn theme_color_row(ui: &mut egui::Ui, label: &str, color: &mut egui::Color32) -> bool {
-    let scale = get_scale(ui.ctx());
     let mut changed = false;
-    let row_height = ui.spacing().interact_size.y * scale;
+    let id = ui.make_persistent_id(label);
 
-    ui.horizontal_wrapped(|ui| {
-        ui.allocate_ui_with_layout(
-            egui::vec2(140.0 * scale, row_height), 
-            egui::Layout::left_to_right(egui::Align::Center), 
-            |ui| {
-                ui.label(label);
+    let mut hex = ui.data_mut(|d| d.get_temp::<String>(id))
+        .unwrap_or_else(|| format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a()));
+
+    ui.columns(3, |cols| {
+        cols[0].with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+            ui.label(label);
+        });
+
+        cols[1].with_layout(egui::Layout::centered_and_justified(egui::Direction::LeftToRight), |ui| {
+            if ui.color_edit_button_srgba(color).changed() {
+                changed = true;
+                hex = format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a());
+                ui.data_mut(|d| d.insert_temp(id, hex.clone()));
             }
-        );
+        });
 
-        ui.allocate_ui_with_layout(
-            egui::vec2(50.0 * scale, row_height), 
-            egui::Layout::centered_and_justified(egui::Direction::LeftToRight), 
-            |ui| {
-                if ui.color_edit_button_srgba(color).changed() {
-                    changed = true;
-                }
-            }
-        );
-
-        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            let id = ui.make_persistent_id(label);
-            let mut hex = ui.data_mut(|d| d.get_temp::<String>(id))
-                .unwrap_or_else(|| format!("#{:02X}{:02X}{:02X}{:02X}", color.r(), color.g(), color.b(), color.a()));
-
-            let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(85.0));
+        cols[2].with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+            let res = ui.add(egui::TextEdit::singleline(&mut hex).desired_width(75.0));     
             #[cfg(target_os = "android")]
             handle_android_keyboard(&res, &mut hex);
 
             if res.changed() {
                 ui.data_mut(|d| d.insert_temp(id, hex.clone()));
+
                 if let Ok(new_color) = parse_color(&hex) {
                     *color = new_color;
                     changed = true;
                 }
             }
 
-            if !res.has_focus() && !changed {
-                 ui.data_mut(|d| d.remove::<String>(id));
+            if res.lost_focus() {
+                ui.data_mut(|d| d.remove::<String>(id));
             }
         });
     });
-    
+
     changed
 }
 
