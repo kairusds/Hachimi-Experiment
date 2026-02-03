@@ -97,6 +97,7 @@ pub fn get_scaling_res() -> Option<(i32, i32)> {
     match Hachimi::instance().config.load().windows.resolution_scaling {
         ResolutionScaling::Default => None,
         ResolutionScaling::ScaleToScreenSize => {
+            None
             // CRASHES ON BOTH GLOBAL AND JP, DISABLED FOR NOW
             /*
             let res = UnityScreen::get_currentResolution(); screen res, not game window res
