@@ -1681,22 +1681,6 @@ impl Window for SimpleOkDialog {
     }
 }
 
-// for homescreen_bgseason
-static SEASON_OPTS: LazyLock<Vec<(BgSeason, String)>> = LazyLock::new(|| {
-    let get_txt = |name: &str| unsafe {
-        (*Localize::Get(TextId::from_name(name))).as_utf16str().to_string()
-    };
-
-    vec![
-        (BgSeason::None, t!("default").to_string()),
-        (BgSeason::Spring, get_txt("Common0108")),
-        (BgSeason::Summer, get_txt("Common0109")),
-        (BgSeason::Fall, get_txt("Common0110")),
-        (BgSeason::Winter, get_txt("Common0111")),
-        (BgSeason::CherryBlossom, get_txt("Common0112")),
-    ]
-});
-
 struct ConfigEditor {
     last_ptr_config: usize,
     config: hachimi::Config,
@@ -2040,11 +2024,30 @@ impl ConfigEditor {
                 ui.end_row();
 
                 ui.label(t!("config_editor.homescreen_bgseason"));
-                let season_opts: Vec<(BgSeason, &str)> = SEASON_OPTS
-                    .iter()
-                    .map(|(k, v)| (*k, v.as_str()))
-                    .collect();
-                Gui::run_combo(ui, "homescreen_bgseason", &mut config.homescreen_bgseason, &season_opts);
+
+                let get_txt = |id: &str| -> String {
+                    let ptr = Localize::Get(TextId::from_name(id));
+                    if ptr.is_null() {
+                        return id.to_owned();
+                    }
+                    unsafe { (*ptr).as_utf16str() }.to_string()
+                };
+
+                let spring = get_txt("Common0108");
+                let summer = get_txt("Common0109");
+                let fall = get_txt("Common0110");
+                let winter = get_txt("Common0111");
+                let cherry = get_txt("Common0112");
+
+                Gui::run_combo(ui, "homescreen_bgseason", &mut config.homescreen_bgseason, &[
+                    (BgSeason::None, &t!("default")),
+                    // Season IDs from TextId enum
+                    (BgSeason::Spring, &spring),
+                    (BgSeason::Summer, &summer),
+                    (BgSeason::Fall, &fall),
+                    (BgSeason::Winter, &winter),
+                    (BgSeason::CherryBlossom, &cherry)
+                ]);
                 ui.end_row();
 
                 ui.label(t!("config_editor.disable_skill_name_translation"));
