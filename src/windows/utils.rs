@@ -15,7 +15,7 @@ use windows::{
     }
 };
 
-use crate::core::{Hachimi, utils::scale_to_aspect_ratio};
+use crate::core::{utils::scale_to_aspect_ratio, Hachimi};
 use rust_i18n::t;
 use windows::Win32::UI::Input::KeyboardAndMouse::{self as km, VIRTUAL_KEY};
 
