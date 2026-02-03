@@ -1705,9 +1705,43 @@ impl ConfigEditorTab {
     }
 }
 
+pub struct SeasonLabels {
+    pub spring: String,
+    pub summer: String,
+    pub fall: String,
+    pub winter: String,
+    pub cherry: String
+}
+
+impl SeasonLabels {
+    pub fn get() -> &'static Self {
+        static INSTANCE: OnceLock<SeasonLabels> = OnceLock::new();
+        INSTANCE.get_or_init(|| {
+            let get_txt = |id: &str| {
+                let text_id = TextId::from_name(id);
+                let ptr = Localize::Get(text_id);
+                if ptr.is_null() {
+                    id.to_owned()
+                } else {
+                    unsafe { (*ptr).as_utf16str() }.to_string()
+                }
+            };
+
+            Self {
+                spring: get_txt("Common0108"),
+                summer: get_txt("Common0109"),
+                fall: get_txt("Common0110"),
+                winter: get_txt("Common0111"),
+                cherry: get_txt("Common0112")
+            }
+        })
+    }
+}
+
 impl ConfigEditor {
     pub fn new() -> ConfigEditor {
         let handle = Hachimi::instance().config.load();
+        SeasonLabels::get();
         ConfigEditor {
             last_ptr_config: Arc::as_ptr(&handle) as usize,
             config: (**Hachimi::instance().config.load()).clone(),
@@ -2025,28 +2059,15 @@ impl ConfigEditor {
 
                 ui.label(t!("config_editor.homescreen_bgseason"));
 
-                let get_txt = |id: &str| -> String {
-                    let ptr = Localize::Get(TextId::from_name(id));
-                    if ptr.is_null() {
-                        return id.to_owned();
-                    }
-                    unsafe { (*ptr).as_utf16str() }.to_string()
-                };
-
-                let spring = get_txt("Common0108");
-                let summer = get_txt("Common0109");
-                let fall = get_txt("Common0110");
-                let winter = get_txt("Common0111");
-                let cherry = get_txt("Common0112");
+                let labels = SeasonLabels::get();
 
                 Gui::run_combo(ui, "homescreen_bgseason", &mut config.homescreen_bgseason, &[
                     (BgSeason::None, &t!("default")),
-                    // Season IDs from TextId enum
-                    (BgSeason::Spring, &spring),
-                    (BgSeason::Summer, &summer),
-                    (BgSeason::Fall, &fall),
-                    (BgSeason::Winter, &winter),
-                    (BgSeason::CherryBlossom, &cherry)
+                    (BgSeason::Spring, &labels.spring),
+                    (BgSeason::Summer, &labels.summer),
+                    (BgSeason::Fall, &labels.fall),
+                    (BgSeason::Winter, &labels.winter),
+                    (BgSeason::CherryBlossom, &labels.cherry)
                 ]);
                 ui.end_row();
 
