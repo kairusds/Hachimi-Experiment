@@ -2024,7 +2024,7 @@ impl ConfigEditor {
                 ui.checkbox(&mut config.skill_info_dialog, "");
                 ui.end_row();
 
-                ui.label(t!("config_editor.homescren_bgseason"));
+                ui.label(t!("config_editor.homescreen_bgseason"));
                 Gui::run_combo(ui, "homescreen_bgseason", &mut config.homescreen_bgseason, &[
                     (BgSeason::None, &t!("default")),
                     // Season text from TextId enum
