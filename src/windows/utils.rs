@@ -97,9 +97,12 @@ pub fn get_scaling_res() -> Option<(i32, i32)> {
     match Hachimi::instance().config.load().windows.resolution_scaling {
         ResolutionScaling::Default => None,
         ResolutionScaling::ScaleToScreenSize => {
-            let res = UnityScreen::get_currentResolution(); // screen res, not game window res
+            // CRASHES ON BOTH GLOBAL AND JP, DISABLED FOR NOW
+            /*
+            let res = UnityScreen::get_currentResolution(); screen res, not game window res
             let aspect_ratio = GallopScreen::get_Width_orig() as f32 / GallopScreen::get_Height_orig() as f32;
             Some(scale_to_aspect_ratio((res.width, res.height), aspect_ratio, true))
+            */
         },
         ResolutionScaling::ScaleToWindowSize => {
             let mut width = UnityScreen::get_width();

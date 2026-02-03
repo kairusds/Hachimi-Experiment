@@ -17,7 +17,7 @@ use chrono::{Utc, Datelike};
 use crate::il2cpp::{
     ext::{StringExt, Il2CppStringExt},
     hook::{
-        umamusume::{CameraData::ShadowResolution, CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize, TimeUtil::BgSeason},
+        umamusume::{CameraData::ShadowResolution, CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize, TimeUtil::BgSeason, TextId},
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
     },
     symbols::Thread
@@ -2024,14 +2024,20 @@ impl ConfigEditor {
                 ui.end_row();
 
                 ui.label(t!("config_editor.homescreen_bgseason"));
+
+                let s_spring = unsafe { (*Localize::Get(TextId::from_name("Common0108"))).as_utf16str() }.to_string();
+                let s_summer = unsafe { (*Localize::Get(TextId::from_name("Common0109"))).as_utf16str() }.to_string();
+                let s_fall   = unsafe { (*Localize::Get(TextId::from_name("Common0110"))).as_utf16str() }.to_string();
+                let s_winter = unsafe { (*Localize::Get(TextId::from_name("Common0111"))).as_utf16str() }.to_string();
+                let s_cherry = unsafe { (*Localize::Get(TextId::from_name("Common0112"))).as_utf16str() }.to_string();
+
                 Gui::run_combo(ui, "homescreen_bgseason", &mut config.homescreen_bgseason, &[
                     (BgSeason::None, &t!("default")),
-                    // Season IDs from TextId enum
-                    (BgSeason::Spring, unsafe { (*Localize::Get(1067)).as_utf16str() }.to_string().as_str()),
-                    (BgSeason::Summer, unsafe { (*Localize::Get(1068)).as_utf16str() }.to_string().as_str()),
-                    (BgSeason::Fall, unsafe { (*Localize::Get(1069)).as_utf16str() }.to_string().as_str()),
-                    (BgSeason::Winter, unsafe { (*Localize::Get(1070)).as_utf16str() }.to_string().as_str()),
-                    (BgSeason::CherryBlossom, unsafe { (*Localize::Get(1071)).as_utf16str() }.to_string().as_str())
+                    (BgSeason::Spring, &s_spring),
+                    (BgSeason::Summer, &s_summer),
+                    (BgSeason::Fall, &s_fall),
+                    (BgSeason::Winter, &s_winter),
+                    (BgSeason::CherryBlossom, &s_cherry)
                 ]);
                 ui.end_row();
 
