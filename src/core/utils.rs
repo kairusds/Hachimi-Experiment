@@ -1,10 +1,11 @@
-use std::{borrow::Cow, fs::File, io::Write, path::Path, time::SystemTime};
+use std::{borrow::Cow, fs::File, io::Write, sync::{LazyLock, Mutex}, path::Path, time::SystemTime};
 
 use serde::Serialize;
 use textwrap::{core::Word, wrap_algorithms, WordSeparator::UnicodeBreakProperties};
 use unicode_width::UnicodeWidthChar;
+use fnv::FnvHashMap;
 
-use crate::{core::Gui, il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::umamusume::{Localize, TextId}, types::{Il2CppObject, Il2CppString}}};
+use crate::{core::Gui, il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::umamusume::{Localize, TextId}, types::{Il2CppObject, Il2CppString}, symbols::Thread}};
 
 use super::{Error, Hachimi};
 
@@ -15,14 +16,34 @@ pub struct SendPtr(pub *mut Il2CppObject);
 unsafe impl Send for SendPtr {}
 unsafe impl Sync for SendPtr {}
 
-pub fn get_localized_string(id: &str) -> String {
-    unsafe {
-        let ptr = Localize::Get(TextId::from_name(id));
-        if ptr.is_null() {
-            return id.to_owned();
-        }
-        (*ptr).as_utf16str().to_string()
+static LOCALIZE_ID_CACHE: LazyLock<Mutex<FnvHashMap<String, i32>>> = 
+    LazyLock::new(|| Mutex::new(FnvHashMap::default()));
+
+pub fn get_localized_string(id_name: &str) -> String {
+    let id_opt = {
+        let cache = LOCALIZE_ID_CACHE.lock().unwrap();
+        cache.get(id_name).copied()
+    };
+
+    if let Some(id) = id_opt {
+        let ptr = Localize::Get(id);
+        if ptr.is_null() { return id_name.to_owned(); }
+        return unsafe { (*ptr).as_utf16str() }.to_string();
     }
+
+    let id_name = id_name.to_owned();
+
+    static PENDING_NAME: Mutex<Option<String>> = Mutex::new(None);
+    *PENDING_NAME.lock().unwrap() = Some(id_name.clone());
+
+    Thread::main_thread().schedule(|| {
+        if let Some(name) = PENDING_NAME.lock().unwrap().take() {
+            let val = TextId::from_name(&name);
+            LOCALIZE_ID_CACHE.lock().unwrap().insert(name, val);
+        }
+    });
+
+    id_name.to_owned()
 }
 
 pub fn char_to_utf16_index(text: &str, char_idx: usize) -> i32 {
