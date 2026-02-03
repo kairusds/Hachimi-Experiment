@@ -20,21 +20,25 @@ static LOCALIZE_ID_CACHE: LazyLock<Mutex<FnvHashMap<String, i32>>> =
     LazyLock::new(|| Mutex::new(FnvHashMap::default()));
 
 pub fn get_localized_string(id_name: &str) -> String {
-    let id_opt = {
+    let check_cache = |name: &str| -> Option<String> {
         let cache = LOCALIZE_ID_CACHE.lock().unwrap();
-        cache.get(id_name).copied()
+        if let Some(&id) = cache.get(name) {
+            let ptr = Localize::Get(id);
+            if !ptr.is_null() {
+                return Some(unsafe { (*ptr).as_utf16str() }.to_string());
+            }
+            return Some(name.to_owned());
+        }
+        None
     };
 
-    if let Some(id) = id_opt {
-        let ptr = Localize::Get(id);
-        if ptr.is_null() { return id_name.to_owned(); }
-        return unsafe { (*ptr).as_utf16str() }.to_string();
+    if let Some(result) = check_cache(id_name) {
+        return result;
     }
 
-    let id_name = id_name.to_owned();
-
+    let id_name_owned = id_name.to_owned();
     static PENDING_NAME: Mutex<Option<String>> = Mutex::new(None);
-    *PENDING_NAME.lock().unwrap() = Some(id_name.clone());
+    *PENDING_NAME.lock().unwrap() = Some(id_name_owned.clone());
 
     Thread::main_thread().schedule(|| {
         if let Some(name) = PENDING_NAME.lock().unwrap().take() {
@@ -43,7 +47,7 @@ pub fn get_localized_string(id_name: &str) -> String {
         }
     });
 
-    id_name.to_owned()
+    check_cache(id_name).unwrap_or_else(|| id_name.to_owned())
 }
 
 pub fn char_to_utf16_index(text: &str, char_idx: usize) -> i32 {
