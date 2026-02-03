@@ -4,7 +4,7 @@ use serde::Serialize;
 use textwrap::{core::Word, wrap_algorithms, WordSeparator::UnicodeBreakProperties};
 use unicode_width::UnicodeWidthChar;
 
-use crate::{core::Gui, il2cpp::{ext::{Il2CppStringExt, StringExt}, types::{Il2CppObject, Il2CppString}}};
+use crate::{core::Gui, il2cpp::{ext::{Il2CppStringExt, StringExt}, hook::umamusume::{Localize, TextId}, types::{Il2CppObject, Il2CppString}}};
 
 use super::{Error, Hachimi};
 
@@ -14,6 +14,16 @@ pub struct SendPtr(pub *mut Il2CppObject);
 
 unsafe impl Send for SendPtr {}
 unsafe impl Sync for SendPtr {}
+
+pub fn get_localized_string(id: &str) -> String {
+    unsafe {
+        let ptr = Localize::Get(TextId::from_name(id));
+        if ptr.is_null() {
+            return id.to_owned();
+        }
+        (*ptr).as_utf16str().to_string()
+    }
+}
 
 pub fn char_to_utf16_index(text: &str, char_idx: usize) -> i32 {
     text.chars()

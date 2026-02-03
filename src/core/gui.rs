@@ -17,7 +17,7 @@ use chrono::{Utc, Datelike};
 use crate::il2cpp::{
     ext::{StringExt, Il2CppStringExt},
     hook::{
-        umamusume::{CameraData::ShadowResolution, CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize, TimeUtil::BgSeason, TextId},
+        umamusume::{CameraData::ShadowResolution, CySpringController::SpringUpdateMode, GameSystem, GraphicSettings::{GraphicsQuality, MsaaQuality}, Localize, TimeUtil::BgSeason},
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
     },
     symbols::Thread
@@ -37,7 +37,7 @@ use super::{
     hachimi::{self, Language, REPO_PATH, WEBSITE_URL},
     http::AsyncRequest,
     tl_repo::{self, RepoInfo},
-    utils::{self, SendPtr},
+    utils::{self, get_localized_string, SendPtr},
     Hachimi
 };
 
@@ -1705,43 +1705,9 @@ impl ConfigEditorTab {
     }
 }
 
-pub struct SeasonLabels {
-    pub spring: String,
-    pub summer: String,
-    pub fall: String,
-    pub winter: String,
-    pub cherry: String
-}
-
-impl SeasonLabels {
-    pub fn get() -> &'static Self {
-        static INSTANCE: OnceLock<SeasonLabels> = OnceLock::new();
-        INSTANCE.get_or_init(|| {
-            let get_txt = |id: &str| {
-                let text_id = TextId::from_name(id);
-                let ptr = Localize::Get(text_id);
-                if ptr.is_null() {
-                    id.to_owned()
-                } else {
-                    unsafe { (*ptr).as_utf16str() }.to_string()
-                }
-            };
-
-            Self {
-                spring: get_txt("Common0108"),
-                summer: get_txt("Common0109"),
-                fall: get_txt("Common0110"),
-                winter: get_txt("Common0111"),
-                cherry: get_txt("Common0112")
-            }
-        })
-    }
-}
-
 impl ConfigEditor {
     pub fn new() -> ConfigEditor {
         let handle = Hachimi::instance().config.load();
-        SeasonLabels::get();
         ConfigEditor {
             last_ptr_config: Arc::as_ptr(&handle) as usize,
             config: (**Hachimi::instance().config.load()).clone(),
@@ -2056,18 +2022,17 @@ impl ConfigEditor {
                 ui.label(t!("config_editor.skill_info_dialog"));
                 ui.checkbox(&mut config.skill_info_dialog, "");
                 ui.end_row();
+                
 
-                ui.label(t!("config_editor.homescreen_bgseason"));
-
-                let labels = SeasonLabels::get();
-
+                ui.label(t!("config_editor.homescren_bgseason"));                
                 Gui::run_combo(ui, "homescreen_bgseason", &mut config.homescreen_bgseason, &[
                     (BgSeason::None, &t!("default")),
-                    (BgSeason::Spring, &labels.spring),
-                    (BgSeason::Summer, &labels.summer),
-                    (BgSeason::Fall, &labels.fall),
-                    (BgSeason::Winter, &labels.winter),
-                    (BgSeason::CherryBlossom, &labels.cherry)
+                    // Season text from TextId enum
+                    (BgSeason::Spring, &get_localized_string("Common0108").as_str()),
+                    (BgSeason::Summer, &get_localized_string("Common0109").as_str()),
+                    (BgSeason::Fall, &get_localized_string("Common0110").as_str()),
+                    (BgSeason::Winter, &get_localized_string("Common0111").as_str()),
+                    (BgSeason::CherryBlossom, &get_localized_string("Common0112").as_str())
                 ]);
                 ui.end_row();
 

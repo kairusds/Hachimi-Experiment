@@ -1,4 +1,4 @@
-use std::{cell::LazyCell, collections::{hash_map::Entry, BTreeMap}};
+use std::{collections::{hash_map::Entry, BTreeMap}, sync::{LazyLock, Mutex}};
 
 use fnv::FnvHashMap;
 
@@ -9,8 +9,8 @@ use crate::{
 
 use super::TextId;
 
-// SAFETY: Localize::Get is only called from the Unity main thread.
-static mut TEXTID_NAME_CACHE: LazyCell<FnvHashMap<i32, String>> = LazyCell::new(|| FnvHashMap::default());
+static TEXTID_NAME_CACHE: LazyLock<Mutex<FnvHashMap<i32, String>>> = 
+    LazyLock::new(|| Mutex::new(FnvHashMap::default()));
 
 /**
  * Gallop::Localize::Get
@@ -28,13 +28,17 @@ pub extern "C" fn Get(id: i32) -> *mut Il2CppString {
         return get_orig_fn!(Get, GetFn)(id);
     }
 
-    let name = match unsafe { TEXTID_NAME_CACHE.entry(id) } {
-        Entry::Occupied(e) => &*e.into_mut(),
-        Entry::Vacant(e) => {
-            let name = TextId::get_name(id);
-            let name_str = unsafe { (*name).as_utf16str().to_string() };
-            e.insert(name_str)
-        },
+    let name = {
+        let mut cache = TEXTID_NAME_CACHE.lock().unwrap();
+
+        match cache.entry(id) {
+            Entry::Occupied(e) => &*e.into_mut().clone(),
+            Entry::Vacant(e) => {
+                let name = TextId::get_name(id);
+                let name_str = unsafe { (*name).as_utf16str().to_string() };
+                &e.insert(name_str).clone()
+            }
+        }
     };
 
     if let Some(text) = localized_data.localize_dict.get(name) {
