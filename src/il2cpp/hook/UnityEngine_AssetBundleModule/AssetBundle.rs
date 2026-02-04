@@ -58,7 +58,7 @@ type LoadAssetAsyncFn = extern "C" fn(this: *mut Il2CppObject, name: *mut Il2Cpp
 extern "C" fn LoadAssetAsync_Internal(this: *mut Il2CppObject, name: *mut Il2CppString, type_: *mut Il2CppObject) -> *mut Il2CppObject {
     let request = get_orig_fn!(LoadAssetAsync_Internal, LoadAssetAsyncFn)(this, name, type_);
     let info = RequestInfo {
-        name_handle: GCHandle::new(name as _, false), // is name even guaranteed to survive in memory..?
+        name_handle: GCHandle::new(name as _, true), // is name even guaranteed to survive in memory..?
         bundle: this as usize
     };
     REQUEST_INFOS.lock().unwrap().insert(request as usize, info);
@@ -102,7 +102,7 @@ type LoadFromFileInternalFn = extern "C" fn(path: *mut Il2CppString, crc: u32, o
 extern "C" fn LoadFromFile_Internal(path: *mut Il2CppString, crc: u32, offset: u64) -> *mut Il2CppObject {
     let bundle = get_orig_fn!(LoadFromFile_Internal, LoadFromFileInternalFn)(path, crc, offset);
     if !bundle.is_null() {
-        BUNDLE_PATHS.lock().unwrap().insert(bundle as usize, GCHandle::new(path as _, false));
+        BUNDLE_PATHS.lock().unwrap().insert(bundle as usize, GCHandle::new(path as _, true));
     }
     bundle
 }

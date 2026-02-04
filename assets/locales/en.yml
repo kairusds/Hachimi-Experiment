@@ -133,7 +133,6 @@ config_editor:
   enable_file_logging: "Enable file logging"
   translator_mode: "Translator mode"
   skip_first_time_setup: "Skip first time setup"
-  lazy_translation_updates: "Lazy translation updates"
   disable_auto_update_check: "Disable auto update check"
   disable_translations: "Disable translations"
   enable_ipc: "Enable IPC"

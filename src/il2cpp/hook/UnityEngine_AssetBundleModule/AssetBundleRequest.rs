@@ -15,6 +15,7 @@ extern "C" fn GetResult(this: *mut Il2CppObject) -> *mut Il2CppObject {
         return asset;
     };
     AssetBundle::on_LoadAsset(info.bundle as _, asset, info.name());
+    drop(info.name_handle);
     asset
 }
 

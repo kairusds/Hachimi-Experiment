@@ -1844,10 +1844,6 @@ impl ConfigEditor {
                 ui.checkbox(&mut config.skip_first_time_setup, "");
                 ui.end_row();
 
-                ui.label(t!("config_editor.lazy_translation_updates"));
-                ui.checkbox(&mut config.lazy_translation_updates, "");
-                ui.end_row();
-
                 ui.label(t!("config_editor.disable_auto_update_check"));
                 ui.checkbox(&mut config.disable_auto_update_check, "");
                 ui.end_row();

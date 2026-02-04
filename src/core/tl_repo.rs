@@ -259,8 +259,8 @@ impl Updater {
                 // skip excluded file unless pedantic update or the file doesn't exist in the system
                 false
             } else if let Some(hash) = repo_cache.files.get(&file.path) {
-                // lazy auto update, cached hash and repo hash matches. ignored during pedantic
-                if !pedantic && config.lazy_translation_updates && hash == &file.hash {
+                // return 
+                if !pedantic && hash == &file.hash {
                     false
                 } else if let Some(path) = path { // get path or force download if path is invalid
                     // file doesn't exist -> download
@@ -269,8 +269,6 @@ impl Updater {
                     } else {
                         if hash != &file.hash {
                             true // index hash changed -> update
-                        } else if fs::metadata(&path).map(|m| m.len() as usize != file.size).unwrap_or(true) {
-                            true // size mismatch -> redownload
                         } else if pedantic {
                             // full blake3 integrity check if user requested pedantic update
                             !file.verify_integrity(&path)

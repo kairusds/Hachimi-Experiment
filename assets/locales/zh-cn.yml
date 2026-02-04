@@ -125,7 +125,6 @@ config_editor:
   enable_file_logging: "启用文件日志记录"
   translator_mode: "翻译者模式"
   skip_first_time_setup: "跳过初始化设置"
-  lazy_translation_updates: "宽松翻译更新检查"
   disable_auto_update_check: "禁用自动更新检查"
   disable_translations: "禁用翻译功能"
   enable_ipc: "启用 IPC"
