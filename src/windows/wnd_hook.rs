@@ -1,4 +1,4 @@
-use std::{os::raw::c_uint, ptr, sync::{atomic::{self, AtomicIsize}, Arc, Mutex, LazyLock}};
+use std::{os::raw::c_uint, ptr, sync::{atomic::{self, AtomicIsize}, Arc}};
 
 use windows::{core::w, Win32::{
     Foundation::{HWND, LPARAM, LRESULT, WPARAM},
@@ -87,22 +87,19 @@ extern "system" fn wnd_proc(hwnd: HWND, umsg: c_uint, wparam: WPARAM, lparam: LP
         return unsafe { orig_fn(hwnd, umsg, wparam, lparam) };
     }
 
-    // queue input for processing on the main thread to avoid deadlocks and race conditions
-    INPUT_QUEUE.lock().unwrap().push((umsg, wparam.0, lparam.0));
+    // A deadlock would *sometimes* consistently occur if this was done on the current thread
+    // (when moving the window, etc.)
+    // I assume that SwapChain::Present and WndProc are running on the same thread
+    std::thread::spawn(move || {
+        let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
+            return;
+        };
+
+        let zoom_factor = gui.context.zoom_factor();
+        input::process(&mut gui.input, zoom_factor, umsg, wparam.0, lparam.0);
+    });
 
     LRESULT(0)
-}
-
-static INPUT_QUEUE: LazyLock<Mutex<Vec<(u32, usize, isize)>>> = LazyLock::new(|| Mutex::new(Vec::new()));
-
-pub fn process_input_queue(gui: &mut Gui) {
-    let mut queue = INPUT_QUEUE.lock().unwrap();
-    if queue.is_empty() { return; }
-
-    let zoom_factor = gui.context.zoom_factor();
-    for (umsg, wparam, lparam) in queue.drain(..) {
-        input::process(&mut gui.input, zoom_factor, umsg, wparam, lparam);
-    }
 }
 
 static mut HCBTHOOK: HHOOK = HHOOK(ptr::null_mut());

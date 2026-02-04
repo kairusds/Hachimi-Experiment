@@ -551,9 +551,6 @@ impl Gui {
     }
 
     fn take_input(&mut self) -> egui::RawInput {
-        #[cfg(target_os = "windows")]
-        crate::windows::wnd_hook::process_input_queue(self);
-
         self.input.time = Some(self.start_time.elapsed().as_secs_f64());
         self.input.take()
     }
