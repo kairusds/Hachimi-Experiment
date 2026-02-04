@@ -551,6 +551,9 @@ impl Gui {
     }
 
     fn take_input(&mut self) -> egui::RawInput {
+        #[cfg(target_os = "windows")]
+        crate::windows::wnd_hook::process_input_queue(self);
+
         self.input.time = Some(self.start_time.elapsed().as_secs_f64());
         self.input.take()
     }
@@ -1772,13 +1775,8 @@ impl ConfigEditor {
                 }
                 ui.end_row();
 
-                let meta_index_url_id = ui.make_persistent_id("meta_index_url");
                 ui.label(t!("config_editor.meta_index_url"));
-                let res = ui.add(
-                    egui::TextEdit::singleline(&mut config.meta_index_url)
-                    .id(meta_index_url_id)
-                    .lock_focus(true)
-                );
+                let res = ui.add(egui::TextEdit::singleline(&mut config.meta_index_url).lock_focus(true));
                 #[cfg(target_os = "android")]
                 handle_android_keyboard(&res, &mut config.meta_index_url);
                 #[cfg(target_os = "windows")]
@@ -2264,11 +2262,7 @@ impl Window for FirstTimeSetupWindow {
                         });
                         ui.horizontal(|ui| {
                             ui.label(t!("config_editor.meta_index_url"));
-                            let res = ui.add(
-                                egui::TextEdit::singleline(&mut self.meta_index_url)
-                                .id(self.id.with("meta_index_url"))
-                                .lock_focus(true)
-                            );
+                            let res = ui.add(egui::TextEdit::singleline(&mut self.meta_index_url).lock_focus(true));
                             #[cfg(target_os = "android")]
                             handle_android_keyboard(&res, &mut self.meta_index_url);
                             #[cfg(target_os = "windows")]
