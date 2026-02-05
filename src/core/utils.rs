@@ -20,7 +20,6 @@ static LOCALIZE_ID_CACHE: LazyLock<Mutex<FnvHashMap<String, i32>>> =
     LazyLock::new(|| Mutex::new(FnvHashMap::default()));
 
 pub fn get_localized_string(id_name: &str) -> String {
-    /*
     let check_cache = |name: &str| -> Option<String> {
         let cache = LOCALIZE_ID_CACHE.lock().unwrap();
         if let Some(&id) = cache.get(name) {
@@ -48,8 +47,7 @@ pub fn get_localized_string(id_name: &str) -> String {
         }
     });
 
-    check_cache(id_name).unwrap_or_else(|| id_name.to_owned())*/
-    id_name.to_owned()
+    check_cache(id_name).unwrap_or_else(|| id_name.to_owned())
 }
 
 pub fn char_to_utf16_index(text: &str, char_idx: usize) -> i32 {
