@@ -481,6 +481,7 @@ impl Updater {
 
             let handle = thread::Builder::new()
                 .name("incremental_downloader".into())
+                .stack_size(8 * 1024 * 1024)
                 .spawn_with_priority(ThreadPriority::Min, move |result| {
                     if result.is_err() {
                         warn!("Failed to set background thread priority for incremental downloader.");
@@ -630,6 +631,7 @@ impl Updater {
 
                 let handle = thread::Builder::new()
                     .name("zip_extractor".into())
+                    .stack_size(8 * 1024 * 1024)
                     .spawn_with_priority(ThreadPriority::Min, move |result| {
                         if result.is_err() {
                             warn!("Failed to set background thread priority for zip extractor.");
