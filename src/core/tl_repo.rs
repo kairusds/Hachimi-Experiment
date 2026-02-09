@@ -40,14 +40,9 @@ impl RepoInfo {
 pub fn new_meta_index_request() -> AsyncRequest<Vec<RepoInfo>> {
     let meta_index_url = &Hachimi::instance().config.load().meta_index_url;
 
-    let config = ureq::config::Config::builder()
-        .ip_family(ureq::config::IpFamily::Ipv4Only)
-        .build();
-
     let req = ureq::http::Request::builder()
         .uri(meta_index_url)
         .method("GET")
-        .extension(config)
         .body(ureq::Body::builder().reader(std::io::empty()))
         .expect("Failed to build meta index request");
 

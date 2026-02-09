@@ -44,12 +44,10 @@ impl<T: Send + Sync + 'static> AsyncRequest<T> {
         self.running.store(true, atomic::Ordering::Release);
         let req = self.request.lock().unwrap().take().expect("Request run twice");
         std::thread::spawn(move || {
-            let config = req.extensions().get::<ureq::config::Config>().cloned();
-            let agent = if let Some(cfg) = config {
-                ureq::Agent::new_with_config(cfg)
-            } else {
-                ureq::Agent::new_with_defaults()
-            };
+            let config = ureq::config::Config::builder()
+                .ip_family(ureq::config::IpFamily::Ipv4Only)
+                .build();
+            let agent = ureq::Agent::new_with_config(config);
 
             let res = match agent.run(req) {
                 Ok(v) => (self.map_fn)(v),
