@@ -66,7 +66,7 @@ impl LocalizedDataExt for LocalizedData {
             return 0 as _;
         }
 
-        *handle_opt = Some(GCHandle::new(bundle, true));
+        *handle_opt = Some(GCHandle::new(bundle, false));
         bundle
     }
 
@@ -99,7 +99,7 @@ impl LocalizedDataExt for LocalizedData {
         }
         Object::set_hideFlags(font, HideFlags_DontUnloadUnusedAsset);
 
-        *handle_opt = Some(GCHandle::new(font, true));
+        *handle_opt = Some(GCHandle::new(font, false));
         font
     }
 
@@ -128,7 +128,7 @@ impl LocalizedDataExt for LocalizedData {
         }
         Object::set_hideFlags(font, HideFlags_DontUnloadUnusedAsset);
 
-        *handle_opt = Some(GCHandle::new(tmp_font, true));
+        *handle_opt = Some(GCHandle::new(tmp_font, false));
         tmp_font
     }
 }
