@@ -140,8 +140,8 @@ impl Updater {
         let installer_path = utils::get_tmp_installer_path();
 
         let res = ureq::get(&asset.browser_download_url).call()?;
-        let mut body = res.into_body();
-        std::io::copy(&mut body, &mut File::create(&installer_path)?)?;
+        let mut reader = res.into_body().into_reader();
+        std::io::copy(&mut reader, &mut File::create(&installer_path)?)?;
 
         // Verify the installer
         if let Some(expected_hash) = &asset.expected_hash {
