@@ -1,0 +1,15 @@
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: yesolutions/mirror-action@master
+        with:
+          REMOTE: "https://codeberg.org/UmaTL/hachimi-tl-en.git"
+          GIT_USERNAME: ${{ secrets.CODEBERG_USER }}
+          GIT_PASSWORD: ${{ secrets.CODEBERG_TOKEN }}
