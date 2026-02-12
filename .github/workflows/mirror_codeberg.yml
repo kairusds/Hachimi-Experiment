@@ -10,6 +10,6 @@ jobs:
 
       - uses: yesolutions/mirror-action@master
         with:
-          REMOTE: "https://codeberg.org/UmaTL/hachimi-tl-en.git"
+          REMOTE: "https://codeberg.org/kairusds/Hachimi-Experiment.git"
           GIT_USERNAME: ${{ secrets.CODEBERG_USER }}
           GIT_PASSWORD: ${{ secrets.CODEBERG_TOKEN }}
