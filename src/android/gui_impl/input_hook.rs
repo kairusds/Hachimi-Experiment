@@ -229,7 +229,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                                 return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
                             };
                             gui.toggle_menu();
-                            return JNI_TRUE; 
+                            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
                         }
                     }
                 }
@@ -239,7 +239,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     if real_x > (current_w as f32 - CORNER_ZONE_SIZE) && real_y < CORNER_ZONE_SIZE {
                         if TOGGLE_GAME_UI_TAP_STATE.register_tap(CORNER_TAP_LIMIT, TAP_WINDOW_MS) {
                             Thread::main_thread().schedule(Gui::toggle_game_ui);
-                            return JNI_TRUE;
+                            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
                         }
                     }
                 }
