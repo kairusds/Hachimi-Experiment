@@ -118,6 +118,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                 if pressed && repeat_count == 0 {
                     if VOLUME_UP_STATE.register_tap(VOLUME_TAP_LIMIT, TAP_WINDOW_MS) {
                         if Hachimi::instance().config.load().hide_ingame_ui_hotkey {
+                            Thread::main_thread().schedule(Gui::toggle_game_ui);
                             return JNI_TRUE;
                         }
                     }
@@ -212,7 +213,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                 let mut current_w = SCREEN_WIDTH.load(Ordering::Relaxed);
                 let mut current_h = SCREEN_HEIGHT.load(Ordering::Relaxed);
 
-                if current_h == 0 || current_w == 0 || real_y > current_h as f32 || real_x > current_w as f32 {
+                if current_h == 0 || real_y > current_h as f32 || real_x > current_w as f32 || (current_w < current_h && real_x > real_y) {
                      let (new_w, new_h) = get_screen_dimensions(unsafe { env.unsafe_clone() });
                      SCREEN_WIDTH.store(new_w, Ordering::Relaxed);
                      SCREEN_HEIGHT.store(new_h, Ordering::Relaxed);
@@ -228,7 +229,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                                 return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
                             };
                             gui.toggle_menu();
-                            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
+                            return JNI_TRUE;
                         }
                     }
                 }
@@ -238,7 +239,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     if real_x > (current_w as f32 - CORNER_ZONE_SIZE) && real_y < CORNER_ZONE_SIZE {
                         if TOGGLE_GAME_UI_TAP_STATE.register_tap(CORNER_TAP_LIMIT, TAP_WINDOW_MS) {
                             Thread::main_thread().schedule(Gui::toggle_game_ui);
-                            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
+                            return JNI_TRUE;
                         }
                     }
                 }
