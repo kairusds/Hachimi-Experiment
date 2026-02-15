@@ -54,16 +54,15 @@ impl MultiTapState {
             .unwrap_or_default()
             .as_millis() as i64;
 
-        let last_time = self.last_tap_time.load(Ordering::Relaxed);
+        let last_time = self.last_tap_time.swap(now, Ordering::Relaxed); // Update time immediately and get old
         let delta = now - last_time;
 
-        if delta > window_ms || delta < 0 {
+        if delta > window_ms || last_time == 0 {
             self.count.store(1, Ordering::Relaxed);
             return limit == 1;
         }
 
         let current = self.count.fetch_add(1, Ordering::Relaxed) + 1;
-        self.last_tap_time.store(now, Ordering::Relaxed);
 
         if current >= limit {
             self.count.store(0, Ordering::Relaxed);
@@ -215,10 +214,10 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
 
                 if current_h == 0 || current_w == 0 || real_y > current_h as f32 || real_x > current_w as f32 {
                      let (new_w, new_h) = get_screen_dimensions(unsafe { env.unsafe_clone() });
-                     SCREEN_HEIGHT.store(new_h, Ordering::Relaxed);
                      SCREEN_WIDTH.store(new_w, Ordering::Relaxed);
-                     current_h = new_h;
+                     SCREEN_HEIGHT.store(new_h, Ordering::Relaxed);
                      current_w = new_w;
+                     current_h = new_h;
                 }
 
                 // bottom left
