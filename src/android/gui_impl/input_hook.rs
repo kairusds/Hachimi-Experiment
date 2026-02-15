@@ -199,6 +199,15 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
     if env.is_instance_of(&input_event, &motion_event_class).unwrap() {
         let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
 
+        let real_x = env.call_method(&input_event, "getX", "()F", &[])
+            .unwrap()
+            .f()
+            .unwrap();
+        let real_y = env.call_method(&input_event, "getY", "()F", &[])
+            .unwrap()
+            .f()
+            .unwrap();
+
         if !is_consuming {
             if action_masked == ACTION_DOWN {
                 let mut current_w = SCREEN_WIDTH.load(Ordering::Relaxed);
@@ -241,15 +250,6 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
         if pointer_index != 0 {
             return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
         }
-
-        let real_x = env.call_method(&input_event, "getX", "()F", &[])
-            .unwrap()
-            .f()
-            .unwrap();
-        let real_y = env.call_method(&input_event, "getY", "()F", &[])
-            .unwrap()
-            .f()
-            .unwrap();
 
         let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
             return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
