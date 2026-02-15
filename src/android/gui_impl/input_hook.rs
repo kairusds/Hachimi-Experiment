@@ -199,8 +199,46 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
     if env.is_instance_of(&input_event, &motion_event_class).unwrap() {
         let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
 
+        if !is_consuming {
+            if action_masked == ACTION_DOWN {
+                let mut current_w = SCREEN_WIDTH.load(Ordering::Relaxed);
+                let mut current_h = SCREEN_HEIGHT.load(Ordering::Relaxed);
+
+                if current_h == 0 || current_w == 0 || real_y > current_h as f32 || real_x > current_w as f32 {
+                     let (new_w, new_h) = get_screen_dimensions(unsafe { env.unsafe_clone() });
+                     SCREEN_HEIGHT.store(new_h, Ordering::Relaxed);
+                     SCREEN_WIDTH.store(new_w, Ordering::Relaxed);
+                     current_h = new_h;
+                     current_w = new_w;
+                }
+
+                // bottom left
+                if !Hachimi::instance().config.load().disable_gui {
+                    if real_x < CORNER_ZONE_SIZE && real_y > (current_h as f32 - CORNER_ZONE_SIZE) {
+                        if CORNER_TAP_STATE.register_tap(CORNER_TAP_LIMIT, TAP_WINDOW_MS) {
+                            let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
+                                return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
+                            };
+                            gui.toggle_menu();
+                            return JNI_TRUE; 
+                        }
+                    }
+                }
+
+                // top right
+                if Hachimi::instance().config.load().hide_ingame_ui_hotkey {
+                    if real_x > (current_w as f32 - CORNER_ZONE_SIZE) && real_y < CORNER_ZONE_SIZE {
+                        if TOGGLE_GAME_UI_TAP_STATE.register_tap(CORNER_TAP_LIMIT, TAP_WINDOW_MS) {
+                            Thread::main_thread().schedule(Gui::toggle_game_ui);
+                            return JNI_TRUE;
+                        }
+                    }
+                }
+            }
+            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
+        }
+
         if pointer_index != 0 {
-            if is_consuming { return JNI_TRUE; }
             return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
         }
 
@@ -212,46 +250,6 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
             .unwrap()
             .f()
             .unwrap();
-
-        if action_masked == ACTION_DOWN {
-            let mut current_w = SCREEN_WIDTH.load(Ordering::Relaxed);
-            let mut current_h = SCREEN_HEIGHT.load(Ordering::Relaxed);
-
-            if current_h == 0 || current_w == 0 || real_y > current_h as f32 || real_x > current_w as f32 {
-                 let (new_w, new_h) = get_screen_dimensions(unsafe { env.unsafe_clone() });
-                 SCREEN_HEIGHT.store(new_h, Ordering::Relaxed);
-                 SCREEN_WIDTH.store(new_w, Ordering::Relaxed);
-                 current_h = new_h;
-                 current_w = new_w;
-            }
-
-            // bottom left
-            if !Hachimi::instance().config.load().disable_gui {
-                if real_x < CORNER_ZONE_SIZE && real_y > (current_h as f32 - CORNER_ZONE_SIZE) {
-                    if CORNER_TAP_STATE.register_tap(CORNER_TAP_LIMIT, TAP_WINDOW_MS) {
-                        let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
-                            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
-                        };
-                        gui.toggle_menu();
-                        return JNI_TRUE; 
-                    }
-                }
-            }
-
-            // top right
-            if Hachimi::instance().config.load().hide_ingame_ui_hotkey {
-                if real_x > (current_w as f32 - CORNER_ZONE_SIZE) && real_y < CORNER_ZONE_SIZE {
-                    if TOGGLE_GAME_UI_TAP_STATE.register_tap(CORNER_TAP_LIMIT, TAP_WINDOW_MS) {
-                        Thread::main_thread().schedule(Gui::toggle_game_ui);
-                        return JNI_TRUE;
-                    }
-                }
-            }
-
-            if !is_consuming {
-                return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
-            }
-        }
 
         let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
             return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
