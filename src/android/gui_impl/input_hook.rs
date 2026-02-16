@@ -212,18 +212,18 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
             if action_masked == ACTION_DOWN {
                 let mut current_w = SCREEN_WIDTH.load(Ordering::Relaxed);
                 let mut current_h = SCREEN_HEIGHT.load(Ordering::Relaxed);
-                info!(format!("current_w, current_h {} {}", current_w, current_h));
+                info!("TOUCH: [{}, {}] | CACHE: [{}, {}]", real_x, real_y, current_w, current_h);
 
                 let out_of_bounds = real_x > current_w as f32 || real_y > current_h as f32;
                 let orientation_swapped = (current_h > current_w && real_x > real_y) || (current_w > current_h && real_y > real_x);
-                info!(format!("out_of_bounds {}", out_of_bounds));
-                info!(format!("orientation_swapped {}", orientation_swapped));
+                info!("OOB: {} | SWAPPED: {}", out_of_bounds, orientation_swapped);
                 if current_h == 0 || real_y > current_h as f32 || real_x > current_w as f32 || (current_w < current_h && real_x > real_y) {
-                     let (new_w, new_h) = get_screen_dimensions(unsafe { env.unsafe_clone() });
-                     SCREEN_WIDTH.store(new_w, Ordering::Relaxed);
-                     SCREEN_HEIGHT.store(new_h, Ordering::Relaxed);
-                     current_w = new_w;
-                     current_h = new_h;
+                    let (new_w, new_h) = get_screen_dimensions(unsafe { env.unsafe_clone() });
+                    SCREEN_WIDTH.store(new_w, Ordering::Relaxed);
+                    SCREEN_HEIGHT.store(new_h, Ordering::Relaxed);
+                    current_w = new_w;
+                    current_h = new_h;
+                    info!("REFRESHED DIMS: {}x{}", current_w, current_h);
                 }
 
                 // bottom left
