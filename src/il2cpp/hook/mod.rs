@@ -67,6 +67,7 @@ macro_rules! impl_addr_wrapper_fn {
 }
 
 pub mod mscorlib;
+mod System;
 
 pub mod UnityEngine_CoreModule;
 pub mod UnityEngine_AssetBundleModule;
@@ -92,6 +93,7 @@ pub fn init() {
 
     // C# / .NET
     mscorlib::init();
+    System::init();
 
     // Unity
     UnityEngine_AssetBundleModule::init();

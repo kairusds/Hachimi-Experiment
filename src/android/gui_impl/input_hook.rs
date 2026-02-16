@@ -77,7 +77,7 @@ impl MultiTapState {
 const CORNER_TAP_LIMIT: usize = 3;
 const VOLUME_TAP_LIMIT: usize = 2;
 const TAP_WINDOW_MS: i64 = 300;
-const CORNER_ZONE_SIZE: f32 = 180.0;
+const CORNER_ZONE_SIZE: f32 = 150.0;
 
 static VOLUME_UP_STATE: MultiTapState = MultiTapState::new();
 static CORNER_TAP_STATE: MultiTapState = MultiTapState::new();

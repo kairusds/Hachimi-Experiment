@@ -1773,6 +1773,10 @@ impl ConfigEditor {
                 }
                 ui.end_row();
 
+                ui.label(t!("config_editor.ipv4_only"));
+                ui.checkbox(&mut config.ipv4_only, "");
+                ui.end_row();
+
                 ui.label(t!("config_editor.meta_index_url"));
                 let res = ui.add(egui::TextEdit::singleline(&mut config.meta_index_url).lock_focus(true));
                 #[cfg(target_os = "android")]
