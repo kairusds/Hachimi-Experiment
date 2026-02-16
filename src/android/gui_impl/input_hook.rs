@@ -77,7 +77,7 @@ impl MultiTapState {
 const CORNER_TAP_LIMIT: usize = 3;
 const VOLUME_TAP_LIMIT: usize = 2;
 const TAP_WINDOW_MS: i64 = 300;
-const CORNER_ZONE_SIZE: f32 = 300.0;
+const CORNER_ZONE_SIZE: f32 = 250.0;
 
 static VOLUME_UP_STATE: MultiTapState = MultiTapState::new();
 static CORNER_TAP_STATE: MultiTapState = MultiTapState::new();
@@ -212,18 +212,17 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
             if action_masked == ACTION_DOWN {
                 let mut current_w = SCREEN_WIDTH.load(Ordering::Relaxed);
                 let mut current_h = SCREEN_HEIGHT.load(Ordering::Relaxed);
-                info!("TOUCH: [{}, {}] | CACHE: [{}, {}]", real_x, real_y, current_w, current_h);
 
                 let out_of_bounds = real_x > current_w as f32 || real_y > current_h as f32;
-                let orientation_swapped = (current_h > current_w && real_x > real_y) || (current_w > current_h && real_y > real_x);
-                info!("OOB: {} | SWAPPED: {}", out_of_bounds, orientation_swapped);
-                if current_h == 0 || real_y > current_h as f32 || real_x > current_w as f32 || (current_w < current_h && real_x > real_y) {
+                let is_bottom_left_rotation = current_h > current_w && real_x < CORNER_ZONE_SIZE && real_y < (current_h as f32 * 0.6);
+                let looks_wrong = is_bottom_left_rotation || (current_w > current_h && real_y < CORNER_ZONE_SIZE && real_x < (current_w as f32 * 0.6));
+
+                if current_h == 0 || out_of_bounds || looks_wrong {
                     let (new_w, new_h) = get_screen_dimensions(unsafe { env.unsafe_clone() });
                     SCREEN_WIDTH.store(new_w, Ordering::Relaxed);
                     SCREEN_HEIGHT.store(new_h, Ordering::Relaxed);
                     current_w = new_w;
                     current_h = new_h;
-                    info!("REFRESHED DIMS: {}x{}", current_w, current_h);
                 }
 
                 // bottom left
