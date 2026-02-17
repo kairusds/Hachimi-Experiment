@@ -22,6 +22,7 @@ extern "C" fn GetHostAddresses(this: *mut Il2CppObject, hostNameOrAddress: *mut 
                 if !ip_obj.is_null() {
                     let family = get_AddressFamily(ip_obj);
                     if family == InterNetworkV6 {
+                        info!("Dns GetHostAddresses remove IPv6 {:p}", ip_obj);
                         *data_ptr.add(i) = null_mut();
                     }
                 }
