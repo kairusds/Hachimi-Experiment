@@ -225,9 +225,9 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     current_h = new_h;
                 }
 
-                // bottom left
+                // top left
                 if !Hachimi::instance().config.load().disable_gui {
-                    if real_x < CORNER_ZONE_SIZE && real_y > (current_h as f32 - CORNER_ZONE_SIZE) {
+                    if real_x < CORNER_ZONE_SIZE && real_y < CORNER_ZONE_SIZE {
                         if CORNER_TAP_STATE.register_tap(CORNER_TAP_LIMIT, TAP_WINDOW_MS) {
                             let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) else {
                                 return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
