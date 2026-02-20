@@ -211,7 +211,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
         if !is_consuming {
             if action_masked == ACTION_DOWN {
                 let mut current_w = SCREEN_WIDTH.load(Ordering::Relaxed);
-                let mut current_h = SCREEN_HEIGHT.load(Ordering::Relaxed);
+                let current_h = SCREEN_HEIGHT.load(Ordering::Relaxed);
 
                 let out_of_bounds = real_x > current_w as f32 || real_y > current_h as f32;
                 let is_bottom_left_rotation = current_h > current_w && real_x < CORNER_ZONE_SIZE && real_y < (current_h as f32 * 0.6);
@@ -222,7 +222,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     SCREEN_WIDTH.store(new_w, Ordering::Relaxed);
                     SCREEN_HEIGHT.store(new_h, Ordering::Relaxed);
                     current_w = new_w;
-                    current_h = new_h;
+                    // current_h = new_h;
                 }
 
                 // top left
