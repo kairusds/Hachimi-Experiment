@@ -112,6 +112,7 @@ config_editor:
     此選項會在您重新啟動遊戲後停用 Hachimi 覆蓋層，
     這意味著您將無法訪問設置編輯器。
     如果是不小心誤觸此選項，請關閉此對話框並禁用該選項。
+  ipv4_only: "僅限 IPv4 ureq"
   meta_index_url: "翻譯 Meta URL"
   debug_mode: "除錯模式"
   enable_file_logging: "啟用檔案記錄"

@@ -109,6 +109,7 @@ config_editor:
     Tùy chọn này sẽ tắt GUI của Hachimi sau khi bạn khởi động lại game,
     nghĩa là bạn sẽ KHÔNG thể truy cập trình chỉnh sửa cài đặt nữa.
     Nếu như bạn không có ý định này, hãy đóng hộp thoại và TẮT tùy chọn.
+  ipv4_only: "Chỉ IPv4 ureq"
   meta_index_url: "URL Meta bản dịch"
   debug_mode: "Chế độ gỡ lỗi"
   enable_file_logging: "Bật ghi nhật ký tệp"

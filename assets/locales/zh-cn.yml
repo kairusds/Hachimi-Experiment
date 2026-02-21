@@ -136,6 +136,7 @@ config_editor:
     或使用与 py3translationServer 相同框架的云服务才能正常工作。如果未安装这些提供程序，
     则不会进行任何额外的翻译，并且很可能会影响游戏体验。
     如果您没有安装翻译框架，请保持此选项为禁用状态。
+  ipv4_only: "仅限 IPv4 ureq"
   auto_translate_ui: "自动翻译游戏界面 (可能导致游戏界面异常)"
   target_fps: "目标帧率"
   virtual_resolution_multiplier: "分辨率缩放倍数"

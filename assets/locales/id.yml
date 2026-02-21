@@ -120,6 +120,7 @@ config_editor:
     Opsi ini akan mematikan overlay (GUI) Hachimi.
     Kamu tidak bisa mengakses editor konfigurasi setelah kamu memulai ulang game.
     Jika tidak disengaja dinyalakan, mohon tutup dialog ini dan matikan opsinya!
+  ipv4_only: "Khusus IPv4 ureq"
   meta_index_url: "URL Meta Terjemahan"
   debug_mode: "Mode Debug"
   enable_file_logging: "Nyalakan logging file"
