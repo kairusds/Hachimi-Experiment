@@ -123,7 +123,7 @@ config_editor:
     Esta opción desactivará el overlay de Hachimi una vez reinicies el juego.
     Esto se traduce en que NO podrás acceder al Editor de Configuración tras ello.
     Si no es un cambio intencional, cierra este diálogo y DESACTIVA esta opción.
-  ipv4_only: "Solo IPv4 ureq"
+  ipv4_only: "Usar IPv4 (sólo en ureq)"
   meta_index_url: "URL para las traducciones (meta)"
   debug_mode: "Modo depuración"
   enable_file_logging: "Guardar registro en un archivo"
