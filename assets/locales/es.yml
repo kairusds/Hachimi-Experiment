@@ -4,7 +4,7 @@ windows:
   menu_open_key: "Flecha Derecha"
 
 android:
-  menu_open_key: >-
+  menu_open_key: |
     Volumen + y Volumen -
     Triple toque arriba a la izquierda
 

@@ -4,7 +4,7 @@ windows:
   menu_open_key: "Panah Kanan"
 
 android:
-  menu_open_key: >-
+  menu_open_key: |
     Vol Atas + Bawah
     Ketuk tiga kali kiri atas
 

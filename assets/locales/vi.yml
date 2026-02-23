@@ -4,7 +4,7 @@ windows:
   menu_open_key: "Mũi tên phải"
 
 android:
-  menu_open_key: >-
+  menu_open_key: |
     Vol Up + Vol Down
     Chạm 3 lần phía trên bên trái
 
