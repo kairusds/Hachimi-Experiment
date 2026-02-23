@@ -4,9 +4,7 @@ windows:
   menu_open_key: "Right arrow"
 
 android:
-  menu_open_key: |
-    Vol Up + Vol Down
-    \uf25a or Triple-tap top left
+  menu_open_key: "Vol Up + Vol Down\n\uf25a or Triple-tap top left"
 
 splash_sub: "\uf015 Press %{open_key_str} to open menu."
 loading_label: "Loading..."

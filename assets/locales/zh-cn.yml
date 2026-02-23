@@ -4,9 +4,7 @@ windows:
   menu_open_key: "右方向键"
 
 android:
-  menu_open_key: |
-    「音量+」键 + 「音量-」键
-    \uf25a 或 三击左上角
+  menu_open_key: "「音量+」键 + 「音量-」键\n\uf25a 或 三击左上角"
 
 splash_sub: "\uf015 按 %{open_key_str} 打开菜单"
 loading_label: "加载中..."

@@ -4,9 +4,7 @@ windows:
   menu_open_key: "Mũi tên phải"
 
 android:
-  menu_open_key: |
-    Vol Up + Vol Down
-    \uf25a hoặc chạm 3 lần phía trên bên trái
+  menu_open_key: "Vol Up + Vol Down\n\uf25a hoặc chạm 3 lần phía trên bên trái"
 
 splash_sub: "\uf015 Nhấn nút %{open_key_str} để mở menu."
 loading_label: "Đang tải..."
