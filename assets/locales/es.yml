@@ -6,7 +6,7 @@ windows:
 android:
   menu_open_key: >-
     Volumen + y Volumen -
-    Triple toque arriba a la derecha
+    Triple toque arriba a la izquierda
 
 splash_sub: "\uf015 Pulsa %{open_key_str} para abrir el menú."
 loading_label: "Cargando..."
