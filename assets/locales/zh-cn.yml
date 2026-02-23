@@ -4,7 +4,9 @@ windows:
   menu_open_key: "右方向键"
 
 android:
-  menu_open_key: "「音量+」键 + 「音量-」键"
+  menu_open_key: >-
+    「音量+」键 + 「音量-」键
+    三击屏幕右上角
 
 splash_sub: "\uf015 按 %{open_key_str} 打开菜单"
 loading_label: "加载中..."
@@ -163,9 +165,9 @@ config_editor:
   disable_skill_name_translation: "禁用技能名称翻译"
   hide_ingame_ui_hotkey: "隐藏游戏内 UI 的快捷键"
   hide_ingame_ui_hotkey_info: >-
-    此选项允许使用一个快捷键来切换游戏内的UI是否显示。
-    在Android上，此快捷键为快速双击「音量+」键。
-    PC或带键盘的Android中此快捷键为 Insert 键。该快捷键也可以在配置文件中更改。
+    此选项允许使用快捷键切换游戏内界面（UI）的显示。
+    Android 端，您需要双击“音量上键”，或连续三次点击屏幕右上角。
+    对于配备键盘的 PC/Android 设备，默认按键为 Insert，并可在 GUI 或配置文件中进行更改。
   menu_open_key: "打开菜单按键"
   menu_open_key_set: "按下以设置"
   render_scale: "渲染比例"
