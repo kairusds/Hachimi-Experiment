@@ -626,6 +626,7 @@ pub fn get_data_path() -> String {
 }
 
 pub fn get_masterdb_path() -> String {
+    info!("get_masterdb_path base: {}", get_data_path());
     format!("{}/master/master.mdb", get_data_path())
 }
 
