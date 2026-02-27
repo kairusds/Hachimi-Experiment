@@ -330,6 +330,7 @@ unsafe extern "C" fn gui_ui_text_edit_singleline(
     let mut value = ui.memory(|mem| {
         mem.data.get_temp::<String>(id)
     }).unwrap_or_else(|| String::from_utf8_lossy(&bytes[..end]).into_owned());
+    let original_value = value.clone();
 
     let response = ui.add(
         egui::TextEdit::singleline(&mut value)
@@ -345,7 +346,7 @@ unsafe extern "C" fn gui_ui_text_edit_singleline(
 
     ui.memory_mut(|mem| mem.data.insert_temp(id, value.clone()));
 
-    let changed = response.changed();
+    let changed = value != original_value;
     if changed {
         bytes.fill(0);
         let src = value.as_bytes();
