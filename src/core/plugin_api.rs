@@ -325,9 +325,12 @@ unsafe extern "C" fn gui_ui_text_edit_singleline(
 
     let bytes = std::slice::from_raw_parts_mut(buffer as *mut u8, buffer_len);
     let end = bytes.iter().position(|b| *b == 0).unwrap_or(buffer_len);
-    let mut value = String::from_utf8_lossy(&bytes[..end]).into_owned();
 
     let id = ui.make_persistent_id(buffer as usize);
+    let mut value = ui.memory(|mem| {
+        mem.data.get_temp::<String>(id)
+    }).unwrap_or_else(|| String::from_utf8_lossy(&bytes[..end]).into_owned());
+
     let response = ui.add(
         egui::TextEdit::singleline(&mut value)
             .id(id)
@@ -339,6 +342,8 @@ unsafe extern "C" fn gui_ui_text_edit_singleline(
     if response.gained_focus() {
         response.scroll_to_me(Some(Align::Center));
     }
+
+    ui.memory_mut(|mem| mem.data.insert_temp(id, value.clone()));
 
     let changed = response.changed();
     if changed {
