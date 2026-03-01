@@ -123,6 +123,7 @@ config_editor:
   meta_index_url: "翻译 Meta URL"
   debug_mode: "调试模式"
   enable_file_logging: "启用文件日志记录"
+  apply_atlas_workaround: "\uf013 应用 TL Atlas 修复"
   translator_mode: "翻译者模式"
   skip_first_time_setup: "跳过初始化设置"
   lazy_translation_updates: "宽松翻译更新检查"

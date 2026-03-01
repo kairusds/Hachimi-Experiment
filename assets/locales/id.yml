@@ -124,6 +124,7 @@ config_editor:
   meta_index_url: "URL Meta Terjemahan"
   debug_mode: "Mode Debug"
   enable_file_logging: "Nyalakan logging file"
+  apply_atlas_workaround: "\uf013 Terapkan Perbaikan Atlas TL"
   translator_mode: "Mode Translator"
   skip_first_time_setup: "Lewati setup pertama kali"
   lazy_translation_updates: "Pembaruan terjemahan fleksibel"

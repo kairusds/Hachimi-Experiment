@@ -127,6 +127,7 @@ config_editor:
   meta_index_url: "URL para las traducciones (meta)"
   debug_mode: "Modo depuración"
   enable_file_logging: "Guardar registro en un archivo"
+  apply_atlas_workaround: "\uf013 Aplicar corrección Atlas TL"
   translator_mode: "Modo traductor"
   skip_first_time_setup: "Omitir instalación inicial"
   lazy_translation_updates: "Actualizaciones de traducciones (rápidas)"
