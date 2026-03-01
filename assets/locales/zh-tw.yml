@@ -116,7 +116,7 @@ config_editor:
   meta_index_url: "翻譯 Meta URL"
   debug_mode: "除錯模式"
   enable_file_logging: "啟用檔案記錄"
-  apply_atlas_workaround: "\uf013 套用 TL Atlas 修復"
+  apply_atlas_workaround: "套用 TL Atlas 修復"
   translator_mode: "翻譯者模式"
   skip_first_time_setup: "跳過設定精靈"
   lazy_translation_updates: "寬鬆翻譯更新檢查"

@@ -113,7 +113,7 @@ config_editor:
   meta_index_url: "URL Meta bản dịch"
   debug_mode: "Chế độ gỡ lỗi"
   enable_file_logging: "Bật ghi nhật ký tệp"
-  apply_atlas_workaround: "\uf013 Sửa lỗi Atlas TL"
+  apply_atlas_workaround: "Sửa lỗi Atlas TL"
   translator_mode: "Chế độ dịch"
   skip_first_time_setup: "Bỏ qua thiết lập lần đầu"
   lazy_translation_updates: "Cập nhật bản dịch tinh gọn"
