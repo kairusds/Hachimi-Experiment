@@ -631,9 +631,14 @@ pub fn get_data_path() -> String {
         let jp_steam_data_path = get_game_dir()
             .join("UmamusumePrettyDerby_Jpn_Data")
             .join("Persistent");
+        let new_jp_dmm_data_path = get_game_dir()
+            .join("umamusume_Data")
+            .join("Persistent");
 
         if game.region == Region::Japan && game.is_steam_release && jp_steam_data_path.exists() {
             jp_steam_data_path.to_string_lossy().to_string()
+        } else if game.region == Region::Japan && !game.is_steam_release && new_jp_dmm_data_path.exists() {
+            new_jp_dmm_data_path.to_string_lossy().to_string()
         } else {
             unsafe { (*Application::get_persistentDataPath()).as_utf16str() }.to_string()
         }
