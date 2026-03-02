@@ -621,7 +621,7 @@ pub fn get_data_path() -> String {
 
     #[cfg(target_os = "windows")]
     {
-        crate::windows::utils::get_game_dir().to_string_lossy().to_string()
+        format!("{}/UmamusumePrettyDerby_Jpn_Data/Persistent/", crate::windows::utils::get_game_dir().to_string_lossy().to_string())
     }
 }
 
