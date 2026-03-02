@@ -621,7 +621,22 @@ pub fn get_data_path() -> String {
 
     #[cfg(target_os = "windows")]
     {
-        format!("{}/UmamusumePrettyDerby_Jpn_Data/Persistent/", crate::windows::utils::get_game_dir().to_string_lossy().to_string())
+        use crate::{
+            core::game::Region,
+            il2cpp::hook::UnityEngine_CoreModule::Application,
+            windows::utils::get_game_dir
+        };
+
+        let game = Hachimi::instance().game;
+        let jp_steam_data_path = get_game_dir()
+            .join("UmamusumePrettyDerby_Jpn_Data")
+            .join("Persistent");
+
+        if game.region == Region::Japan && game.is_steam_release && Path::new(jp_steam_data_path).exists() {
+            jp_steam_data_path.to_string_lossy().to_string()
+        } else {
+            unsafe { (*Application::get_persistentDataPath()).as_utf16str() }.to_string()
+        }
     }
 }
 
