@@ -627,7 +627,7 @@ pub fn get_data_path() -> String {
             windows::utils::get_game_dir
         };
 
-        let game = Hachimi::instance().game;
+        let game = &Hachimi::instance().game;
         let jp_steam_data_path = get_game_dir()
             .join("UmamusumePrettyDerby_Jpn_Data")
             .join("Persistent");
