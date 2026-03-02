@@ -621,7 +621,7 @@ pub fn get_data_path() -> String {
 
     #[cfg(target_os = "windows")]
     {
-        unsafe { (*crate::il2cpp::hook::UnityEngine_CoreModule::Application::get_persistentDataPath()).as_utf16str() }.to_string()
+        crate::windows::utils::get_game_dir()
     }
 }
 
