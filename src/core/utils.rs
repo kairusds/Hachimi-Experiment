@@ -632,7 +632,7 @@ pub fn get_data_path() -> String {
             .join("UmamusumePrettyDerby_Jpn_Data")
             .join("Persistent");
 
-        if game.region == Region::Japan && game.is_steam_release && Path::new(jp_steam_data_path).exists() {
+        if game.region == Region::Japan && game.is_steam_release && jp_steam_data_path.exists() {
             jp_steam_data_path.to_string_lossy().to_string()
         } else {
             unsafe { (*Application::get_persistentDataPath()).as_utf16str() }.to_string()
