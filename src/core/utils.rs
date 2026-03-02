@@ -621,7 +621,7 @@ pub fn get_data_path() -> String {
 
     #[cfg(target_os = "windows")]
     {
-        crate::windows::utils::get_game_dir()
+        crate::windows::utils::get_game_dir().to_string_lossy()
     }
 }
 
