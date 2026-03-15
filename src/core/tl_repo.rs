@@ -390,30 +390,26 @@ impl Updater {
     fn create_dir(path: &Path, override_exists: bool) -> Result<(), Error> {
         #[cfg(target_os = "android")]
         {
+            use crate::android::utils::{jni_create_dir, jni_delete_dir};
+
             if override_exists {
                 if let Ok(meta) = fs::metadata(path) {
                     if meta.is_dir() {
-                        let rm_status = std::process::Command::new("/system/bin/rm")
-                            .arg("-rf")
-                            .arg(path)
-                            .status()?;
+                        let delete_status = jni_delete_dir(&*path.to_string_lossy());
             
-                        if !rm_status.success() {
-                            return Err(Error::RuntimeError(format!("System rm failed with status: {:?}", rm_status)));
+                        if !delete_status {
+                            return Err(Error::RuntimeError(format!("System rm failed with status: {:?}", delete_status)));
                         }
                     }
                 }
             }
 
-            let mkdir_status = std::process::Command::new("/system/bin/mkdir")
-                .arg("-p")
-                .arg(path)
-                .status()?;
+            let create_status = jni_create_dir(&*path.to_string_lossy());
 
-            if mkdir_status.success() {
+            if create_status {
                 Ok(())
             } else {
-                return Err(Error::RuntimeError(format!("System mkdir failed with status: {:?}", mkdir_status)));
+                return Err(Error::RuntimeError(format!("System mkdir failed with status: {:?}", create_status)));
             }
         }
 
