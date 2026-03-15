@@ -539,7 +539,7 @@ impl Gui {
         let is_landscape = width > height;
         let main_axis_size = if is_landscape { height } else { width.min(height) };
 
-        #[cfg(target_os = "android"))]
+        #[cfg(target_os = "android")]
         let orientation_scale = 1.0;
         
         #[cfg(target_os = "windows")]
