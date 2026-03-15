@@ -544,7 +544,7 @@ impl Gui {
         #[cfg(target_os = "windows")]
         {
             let orientation_ratio = if is_landscape { height as f32 / width as f32 } else { 1.0 };
-            orientation_scale = if is_landscape { orientation_ratio * Hachimi::instance().config.load().windows.gui_landscape_ratio } else { 1.0 };
+            let orientation_scale = if is_landscape { orientation_ratio * Hachimi::instance().config.load().windows.gui_landscape_ratio } else { 1.0 };
         }
 
         let pixels_per_point = main_axis_size as f32 * PIXELS_PER_POINT_RATIO * orientation_scale;
