@@ -430,7 +430,7 @@ impl Updater {
 
             // mkdir -p
             fs::create_dir_all(path)?;
-            Ok(());
+            Ok(())
         }
     }
 
