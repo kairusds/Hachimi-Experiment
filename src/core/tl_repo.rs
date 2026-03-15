@@ -419,7 +419,7 @@ impl Updater {
 
         #[cfg(target_os = "windows")]
         {
-            if update_info.is_new_repo {
+            if override_exists {
                 // rm -rf
                 if let Ok(meta) = fs::metadata(path) {
                     if meta.is_dir() {
