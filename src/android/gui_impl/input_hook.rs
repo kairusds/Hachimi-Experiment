@@ -140,8 +140,11 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     if let Some(mut gui) = Gui::instance().map(|m| m.lock().unwrap()) {
                         gui.toggle_menu();
                     }
-                } else if RESET_GUI_CONSUMING_STATE.register_tap(RESET_GUI_CONSUMING_TAP_LIMIT, TAP_WINDOW_MS) {
+                }
+                
+                if pressed && RESET_GUI_CONSUMING_STATE.register_tap(RESET_GUI_CONSUMING_TAP_LIMIT, TAP_WINDOW_MS) {
                     Gui::set_consuming_input_atomic(false);
+                    return JNI_TRUE;
                 }
             }
 
