@@ -212,7 +212,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
             .f()
             .unwrap();
 
-        if !is_consuming {
+        if !is_consuming || !Gui::wants_input_atomic() {
             if action_masked == ACTION_DOWN {
                 let mut current_w = SCREEN_WIDTH.load(Ordering::Relaxed);
                 let mut current_h = SCREEN_HEIGHT.load(Ordering::Relaxed);
