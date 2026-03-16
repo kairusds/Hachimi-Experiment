@@ -201,6 +201,10 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
 
     let motion_event_class = env.find_class("android/view/MotionEvent").unwrap();
     if env.is_instance_of(&input_event, &motion_event_class).unwrap() {
+        if Gui::wants_input_atomic() {
+            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
+        }
+
         let pointer_index = (action & ACTION_POINTER_INDEX_MASK) >> ACTION_POINTER_INDEX_SHIFT;
 
         let real_x = env.call_method(&input_event, "getX", "()F", &[])
@@ -262,10 +266,6 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     }
                 }
             }
-            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
-        }
-
-        if Gui::wants_input_atomic() {
             return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
         }
 
