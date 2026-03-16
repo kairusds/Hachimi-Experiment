@@ -700,7 +700,7 @@ impl Gui {
         }
 
         // Store this as an atomic value so the input thread can check it without locking the gui
-        IS_CONSUMING_INPUT.store(self.is_consuming_input(), atomic::Ordering::Relaxed);
+        Self::set_consuming_input_atomic(self.is_consuming_input());
 
         self.context.end_pass()
     }
@@ -1296,6 +1296,10 @@ impl Gui {
 
     pub fn is_consuming_input_atomic() -> bool {
         IS_CONSUMING_INPUT.load(atomic::Ordering::Relaxed)
+    }
+
+    pub fn set_consuming_input_atomic(val: bool) {
+        IS_CONSUMING_INPUT.store(val, atomic::Ordering::Relaxed);
     }
 
     pub fn toggle_menu(&mut self) {
