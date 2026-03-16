@@ -212,7 +212,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
             .f()
             .unwrap();
 
-        if !is_consuming || !Gui::wants_input_atomic() {
+        if !is_consuming {
             if action_masked == ACTION_DOWN {
                 let mut current_w = SCREEN_WIDTH.load(Ordering::Relaxed);
                 let mut current_h = SCREEN_HEIGHT.load(Ordering::Relaxed);
@@ -262,6 +262,10 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     }
                 }
             }
+            return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
+        }
+
+        if Gui::wants_input_atomic() {
             return get_orig_fn!(nativeInjectEvent, NativeInjectEventFn)(env, obj, input_event, extra_param);
         }
 
