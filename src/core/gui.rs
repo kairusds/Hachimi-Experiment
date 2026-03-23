@@ -701,7 +701,7 @@ impl Gui {
         }
 
         // Store this as an atomic value so the input thread can check it without locking the gui
-        Self::set_consuming_input_atomic(self.is_consuming_input());
+        self.set_consuming_input(self.is_consuming_input());
 
         WANTS_INPUT.store(
             self.context.wants_pointer_input() || 
@@ -1306,7 +1306,12 @@ impl Gui {
         IS_CONSUMING_INPUT.load(atomic::Ordering::Relaxed)
     }
 
-    pub fn set_consuming_input_atomic(val: bool) {
+    pub fn set_consuming_input(&mut self, val: bool) {
+        if !self.windows.is_empty() && !val {
+            self.windows.clear();
+        }
+
+        self.menu_visible = val;
         IS_CONSUMING_INPUT.store(val, atomic::Ordering::Relaxed);
     }
 
