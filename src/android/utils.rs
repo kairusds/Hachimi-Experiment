@@ -172,68 +172,6 @@ pub fn open_app_or_fallback(package_name: &str, activity_class: &str, fallback_u
     }
 }
 
-pub fn jni_create_dir(path: &str) -> bool {
-    let vm = java_vm().expect("JavaVM not initialized");
-    let mut env = vm.attach_current_thread().expect("Failed to attach thread");
-
-    let result = (|| -> jni::errors::Result<bool> {
-        let file_class = env.find_class("java/io/File")?;
-
-        let path_jstr = env.new_string(path)?;
-
-        let file_obj = env.new_object(
-            &file_class, 
-            "(Ljava/lang/String;)V", 
-            &[JValue::from(&path_jstr)]
-        )?;
-
-        let created = env.call_method(&file_obj, "mkdirs", "()Z", &[])?.z()?;
-
-        if !created {
-            let exists = env.call_method(&file_obj, "exists", "()Z", &[])?.z()?;
-            return Ok(exists);
-        }
-
-        Ok(created)
-    })();
-
-    result.unwrap_or(false)
-}
-
-pub fn jni_delete_dir(path: &str) -> bool {
-    let vm = java_vm().expect("JavaVM not initialized");
-    let mut env = vm.attach_current_thread().expect("Failed to attach thread");
-
-    let result = (|| -> jni::errors::Result<bool> {
-        let file_class = env.find_class("java/io/File")?;
-        let path_jstr = env.new_string(path)?;
-        let file_obj = env.new_object(&file_class, "(Ljava/lang/String;)V", &[JValue::from(&path_jstr)])?;
-
-        fn delete_recursive(env: &mut JNIEnv, file: &JObject) -> jni::errors::Result<bool> {
-            let is_dir = env.call_method(file, "isDirectory", "()Z", &[])?.z()?;
-
-            if is_dir {
-                let files_obj = env.call_method(file, "listFiles", "()[Ljava/io/File;", &[])?.l()?;
-
-                if !files_obj.is_null() {
-                    let files_array = jni::objects::JObjectArray::from(files_obj);
-
-                    let len = env.get_array_length(&files_array)?;
-                    for i in 0..len {
-                        let child = env.get_object_array_element(&files_array, i)?;
-                        delete_recursive(env, &child)?;
-                    }
-                }
-            }
-            env.call_method(file, "delete", "()Z", &[])?.z()
-        }
-
-        delete_recursive(&mut env, &file_obj)
-    })();
-
-    result.unwrap_or(false)
-}
-
 pub fn get_activity(mut env: JNIEnv<'_>) -> Option<JObject<'_>> {
     let activity_thread_class = env.find_class("android/app/ActivityThread").ok()?;
     let activity_thread = env

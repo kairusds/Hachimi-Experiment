@@ -394,46 +394,18 @@ impl Updater {
     }
 
     fn create_dir(path: &Path, override_exists: bool) -> Result<(), Error> {
-        #[cfg(target_os = "android")]
-        {
-            use crate::android::utils::{jni_create_dir, jni_delete_dir};
-
-            if override_exists {
-                if let Ok(meta) = fs::metadata(path) {
-                    if meta.is_dir() {
-                        let delete_status = jni_delete_dir(&*path.to_string_lossy());
-            
-                        if !delete_status {
-                            return Err(Error::RuntimeError(format!("System rm failed with status: {:?}", delete_status)));
-                        }
-                    }
+        if override_exists {
+            // rm -rf
+            if let Ok(meta) = fs::metadata(path) {
+                if meta.is_dir() {
+                    fs::remove_dir_all(path)?;
                 }
-            }
-
-            let create_status = jni_create_dir(&*path.to_string_lossy());
-
-            if create_status {
-                Ok(())
-            } else {
-                return Err(Error::RuntimeError(format!("System mkdir failed with status: {:?}", create_status)));
             }
         }
 
-        #[cfg(target_os = "windows")]
-        {
-            if override_exists {
-                // rm -rf
-                if let Ok(meta) = fs::metadata(path) {
-                    if meta.is_dir() {
-                        fs::remove_dir_all(path)?;
-                    }
-                }
-            }
-
-            // mkdir -p
-            fs::create_dir_all(path)?;
-            Ok(())
-        }
+        // mkdir -p
+        fs::create_dir_all(path)?;
+        Ok(())
     }
 
     fn run_internal(self: Arc<Self>) -> Result<(), Error> {
