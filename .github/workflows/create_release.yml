@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, '[ci skip]')"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
 
@@ -37,7 +37,7 @@ jobs:
           RELEASE: ${{ github.event.inputs.debug == 'true' && '0' || '1' }}
 
       - name: Upload Android binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android
           path: |
@@ -50,7 +50,7 @@ jobs:
       !contains(github.event.head_commit.message, '[ci skip]') &&
       github.event.inputs.skip_windows == 'false'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
 
@@ -95,7 +95,7 @@ jobs:
           EOF
 
       - name: Upload Windows binaries
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows
           path: |
@@ -125,7 +125,7 @@ jobs:
           echo "release_version=v$VERSION" >> $GITHUB_OUTPUT
 
       - name: Download all build artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
 
