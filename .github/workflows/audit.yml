@@ -42,11 +42,11 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           
-          if [ -n "$(git status --porcelain)" ]; then
+          if [ -n "$(git status --porcelain Cargo.toml Cargo.lock)" ]; then
             echo "Changes detected, pushing to branch..."
             git checkout -b auto-security-fix
 
-            git add Cargo.lock
+            git add Cargo.toml Cargo.lock
             git commit -m "Security patch" -m "$COMMIT_IDS"
             git push origin auto-security-fix --force
 
