@@ -26,6 +26,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Security update"
           title: "Automated Security Update"
           body: "Automated `cargo audit fix` to fix security vulnerabilities."
