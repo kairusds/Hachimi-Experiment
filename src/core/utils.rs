@@ -641,7 +641,7 @@ pub fn get_data_path() -> String {
             .join("umamusume_Data")
             .join("Persistent");
 
-        let dir_ok = |path: &std::path::Path| {
+        let dir_ok = |path: &Path| {
             path.exists() && std::fs::read_dir(path)
                 .map(|mut d| d.next().is_some())
                 .unwrap_or(false)
