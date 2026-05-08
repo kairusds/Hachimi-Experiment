@@ -1,7 +1,7 @@
 // Originally from sy1ntexx/egui-d3d11
 use egui::{Event, Key, Modifiers, MouseWheelUnit, PointerButton, Pos2, RawInput, Vec2};
 use std::ffi::CStr;
-use ::windows::Win32::{
+use windows::Win32::{
     Foundation::HWND,
     System::{
         DataExchange::{CloseClipboard, GetClipboardData, OpenClipboard},

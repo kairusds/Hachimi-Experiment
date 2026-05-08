@@ -3,12 +3,15 @@ use std::{os::raw::{c_uint, c_void}, sync::Mutex};
 
 use once_cell::sync::OnceCell;
 use windows::{
+    core::{HRESULT, Interface, w},
     Win32::{
         Foundation::{HINSTANCE, HMODULE, HWND, LPARAM, LRESULT, RECT, WPARAM}, Graphics::{
             Direct3D::{D3D_DRIVER_TYPE_HARDWARE, D3D_FEATURE_LEVEL, D3D_FEATURE_LEVEL_11_0},
-            Direct3D11::{D3D11_CREATE_DEVICE_FLAG, D3D11_SDK_VERSION, D3D11CreateDeviceAndSwapChain, ID3D11Device},
+            Direct3D11::{D3D11CreateDeviceAndSwapChain, ID3D11Device, D3D11_CREATE_DEVICE_FLAG, D3D11_SDK_VERSION},
             Dxgi::{
-                Common::{DXGI_FORMAT, DXGI_FORMAT_R8G8B8A8_UNORM}, DXGI_SWAP_CHAIN_DESC, DXGI_USAGE_RENDER_TARGET_OUTPUT, IDXGISwapChain
+                Common::{DXGI_FORMAT, DXGI_FORMAT_R8G8B8A8_UNORM},
+                IDXGISwapChain, DXGI_SWAP_CHAIN_DESC,
+                DXGI_USAGE_RENDER_TARGET_OUTPUT
             }
         },
         System::LibraryLoader::GetModuleHandleW,
@@ -16,8 +19,7 @@ use windows::{
             CreateWindowExW, DefWindowProcW, DestroyWindow, GetClientRect, IsIconic,
             RegisterClassExW, UnregisterClassW, WINDOW_EX_STYLE, WNDCLASSEXW, WS_DISABLED
         }
-    },
-    core::{HRESULT, Interface, w}
+    }
 };
 
 use crate::{core::{Error, Gui, Hachimi, Interceptor}, windows::wnd_hook};
