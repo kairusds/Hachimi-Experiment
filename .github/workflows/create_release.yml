@@ -26,6 +26,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
 
+      - name: Setup and Patch Dependencies
+        run: |
+          pushd ..
+          git clone --revision 44cdd653e2317d300fb8a6c9c36b03f23991e803 https://github.com/emilk/egui.git
+          cd egui
+          sed -i 's/ui.set_min_width(ui.available_width());/\/\/ ui.set_min_width(ui.available_width());/' crates/egui/src/containers/combo_box.rs
+          popd
+
+          echo -e "\negui = { path = '../egui/crates/egui' }" >> Cargo.toml
+          echo "egui_extras = { path = '../egui/crates/egui_extras' }" >> Cargo.toml
+
       - name: Grant execute permission to build script
         run: chmod +x tools/android/build_mini.sh
 
@@ -35,6 +46,13 @@ jobs:
           ./tools/android/build_mini.sh
         env:
           RELEASE: ${{ github.event.inputs.debug == 'true' && '0' || '1' }}
+
+      - name: Attest Android
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            build/*.so
+            build/sha256.json
 
       - name: Upload Android binaries
         uses: actions/upload-artifact@v7
@@ -53,6 +71,38 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: swatinem/rust-cache@v2
+
+      - name: Setup and Patch Dependencies
+        shell: powershell
+        run: |
+          pushd ..
+
+          git clone --revision 44cdd653e2317d300fb8a6c9c36b03f23991e803 https://github.com/emilk/egui.git
+          cd egui
+
+          $File = "crates/egui/src/containers/combo_box.rs"
+          (Get-Content $File) -replace 'ui.set_min_width\(ui.available_width\(\)\);', '// ui.set_min_width(ui.available_width());' | Set-Content $File
+
+          cd ..
+
+          git clone --revision 903043939a076dc81e122a1c8451755bfb3979c8 https://github.com/Nekomaru-PKU/egui-directx11.git
+          cd egui-directx11
+
+          $fxc = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits" -Recurse -Filter "fxc.exe" | Where-Object { $_.FullName -like "*x64*" } | Select-Object -First 1
+          if (-not $fxc) { Write-Error "fxc.exe not found"; exit 1 }
+
+          & $fxc.FullName /nologo /O3 /T vs_4_0 /E vs_egui /Fo shaders/vs_egui.bin shaders/egui.hlsl
+          & $fxc.FullName /nologo /O3 /T ps_4_0 /E ps_egui /Fo shaders/ps_egui.bin shaders/egui.hlsl
+
+          popd
+
+          Add-Content -Path "Cargo.toml" -Value "`n"
+          $patches = @(
+            "egui-directx11 = { path = '../egui-directx11' }",
+            "egui = { path = '../egui/crates/egui' }",
+            "egui_extras = { path = '../egui/crates/egui_extras' }"
+          )
+          Add-Content -Path "Cargo.toml" -Value $patches
 
       - name: Build Hachimi for Windows
         run: |
@@ -93,6 +143,14 @@ jobs:
             "hachimi_installer.exe": "$EXE_HASH"
           }
           EOF
+
+      - name: Attest Windows
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            build/blake3.json
+            build/hachimi.dll
+            build/hachimi_installer.exe
 
       - name: Upload Windows binaries
         uses: actions/upload-artifact@v7
