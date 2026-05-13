@@ -2135,7 +2135,7 @@ impl ConfigEditor {
                 let default_label = t!("default");
                 let spring = get_localized_string("Common0108");
                 let summer = get_localized_string("Common0109");
-                let fall   = get_localized_string("Common0110");
+                let fall = get_localized_string("Common0110");
                 let winter = get_localized_string("Common0111");
                 let cherry = get_localized_string("Common0112");
 
