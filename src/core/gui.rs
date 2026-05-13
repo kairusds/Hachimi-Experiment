@@ -36,6 +36,7 @@ use crate::il2cpp::{
 use crate::il2cpp::hook::UnityEngine_CoreModule::QualitySettings;
 
 use super::{
+    game::Region,
     hachimi::{self, Language, REPO_PATH, WEBSITE_URL},
     http::AsyncRequest,
     tl_repo::{self, RepoInfo},
@@ -2130,15 +2131,25 @@ impl ConfigEditor {
                 ui.end_row();
 
                 ui.label(t!("config_editor.homescreen_bgseason"));
-                Gui::run_combo(ui, "homescreen_bgseason", &mut config.homescreen_bgseason, &[
-                    (BgSeason::None, &t!("default")),
-                    // Season text from TextId enum
-                    (BgSeason::Spring, &get_localized_string("Common0108").as_str()),
-                    (BgSeason::Summer, &get_localized_string("Common0109").as_str()),
-                    (BgSeason::Fall, &get_localized_string("Common0110").as_str()),
-                    (BgSeason::Winter, &get_localized_string("Common0111").as_str()),
-                    (BgSeason::CherryBlossom, &get_localized_string("Common0112").as_str())
-                ]);
+                // Season text from TextId enum
+                let default_label = t!("default");
+                let spring = get_localized_string("Common0108");
+                let summer = get_localized_string("Common0109");
+                let fall   = get_localized_string("Common0110");
+                let winter = get_localized_string("Common0111");
+                let cherry = get_localized_string("Common0112");
+
+                let mut seasons: Vec<(BgSeason, &str)> = vec![
+                    (BgSeason::None, default_lavel.as_str()),
+                    (BgSeason::Spring, spring.as_str())
+                ];
+                if Hachimi::instance().game.region == Region::Japan {
+                    seasons.push((BgSeason::Summer, &get_localized_string("Common0109").as_str()));
+                    seasons.push((BgSeason::Fall, &get_localized_string("Common0110").as_str()));
+                    seasons.push((BgSeason::Winter, &get_localized_string("Common0111").as_str()));
+                    seasons.push((BgSeason::CherryBlossom, &get_localized_string("Common0112").as_str()));
+                }
+                Gui::run_combo(ui, "homescreen_bgseason", &mut config.homescreen_bgseason, &seasons);
                 ui.end_row();
 
                 ui.label(t!("config_editor.disable_skill_name_translation"));
