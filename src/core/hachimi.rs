@@ -318,14 +318,6 @@ impl Hachimi {
 
                 fs::rename(&old_data_dir, self.game.data_dir.join(format!("localized_data_{id}")))?;
 
-                let old_cache = self.get_data_path(".tl_repo_cache");
-                let new_cache = self.get_data_path(format!(".tl_repo_cache_{id}"));
-                if old_cache.exists() {
-                    if let Err(e) = fs::rename(&old_cache, &new_cache) {
-                        warn!("Failed to rename legacy cache file: {e}");
-                    }
-                }
-
                 let mut new_config = (**config).clone();
                 new_config.selected_tl_repo_id = Some(id);
                 new_config.localized_data_dir = Some(format!("localized_data_{id}"));
@@ -333,9 +325,6 @@ impl Hachimi {
             } else {
                 manager.save(&repos_path)?;
             }
-
-            *manager = tl_repo::RepoList::load(&repos_path).unwrap_or_default();
-            return Ok(());
         }
 
         *manager = if repos_path.exists() {
@@ -378,20 +367,14 @@ impl Hachimi {
                         new_config.selected_tl_repo_id = Some(new_id);
                         new_config.localized_data_dir = Some(format!("localized_data_{new_id}"));
                         self.save_and_reload_config(new_config)?;
+                    } else {
+                        let data_dir = self.game.data_dir.join(format!("localized_data_{id}"));
+                        if !data_dir.is_dir() {
+                            warn!("TL repo data folder '{}' is missing, clearing localised data until next update...", data_dir.display());
+                            self.localized_data.store(Arc::new(LocalizedData::default()));
+                            gui::request_notification(gui::NotificationRequest::TLFolderMissing);
+                        }
                     }
-
-                    if manager_dirty {
-                        manager.save(&repos_path)?;
-                    }
-                    return Ok(());
-                }
-
-                let data_dir = self.game.data_dir.join(format!("localized_data_{id}"));
-                if !data_dir.is_dir() {
-                    warn!("TL repo data folder '{}' is missing, clearing localised data until next update...", data_dir.display());
-                    self.localized_data.store(Arc::new(LocalizedData::default()));
-                    gui::request_notification(gui::NotificationRequest::TLFolderMissing);
-                    return Ok(());
                 }
             }
 
@@ -415,6 +398,17 @@ impl Hachimi {
 
         if manager_dirty {
             manager.save(&repos_path)?;
+        }
+
+        if let Some(id) = self.config.load().selected_tl_repo_id {
+            let old_cache = self.get_data_path(".tl_repo_cache");
+            if old_cache.exists() {
+                let new_cache = self.get_data_path(format!(".tl_repo_cache_{}", id));
+                info!("Migrating standalone legacy tl repo cache file to {}", new_cache.display());
+                if let Err(e) = fs::rename(&old_cache, &new_cache) {
+                    warn!("Failed to rename legacy tp repo cache file: {e}");
+                }
+            }
         }
 
         Ok(())
