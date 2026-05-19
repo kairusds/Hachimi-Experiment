@@ -206,12 +206,7 @@ impl Hachimi {
     pub fn get_active_tl_dir(&self) -> Option<PathBuf> {
         let config = self.config.load();
         let id = config.selected_tl_repo_id?;
-        let dir = self.game.data_dir.join(format!("localized_data_{id}"));
-        if dir.is_dir() {
-            Some(dir)
-        } else {
-            None
-        }
+        Some(self.game.data_dir.join(format!("localized_data_{id}")))
     }
 
     pub fn load_localized_data(&self) {
