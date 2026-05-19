@@ -321,7 +321,7 @@ impl Hachimi {
                 let mut new_config = (**config).clone();
                 new_config.selected_tl_repo_id = Some(id);
                 new_config.localized_data_dir = Some(format!("localized_data_{id}"));
-                self.save_and_reload_config(new_config)?;
+                self.save_config(&new_config)?;
             } else {
                 manager.save(&repos_path)?;
             }
@@ -366,7 +366,7 @@ impl Hachimi {
                         let mut new_config = self.config.load().as_ref().clone();
                         new_config.selected_tl_repo_id = Some(new_id);
                         new_config.localized_data_dir = Some(format!("localized_data_{new_id}"));
-                        self.save_and_reload_config(new_config)?;
+                        self.save_config(&new_config)?;
                     } else {
                         let data_dir = self.game.data_dir.join(format!("localized_data_{id}"));
                         if !data_dir.is_dir() {
@@ -391,7 +391,7 @@ impl Hachimi {
                     let mut new_config = (**config).clone();
                     new_config.selected_tl_repo_id = Some(id);
                     new_config.localized_data_dir = Some(format!("localized_data_{id}"));
-                    self.save_and_reload_config(new_config)?;
+                    self.save_config(&new_config)?;
                 }
             }
         }
