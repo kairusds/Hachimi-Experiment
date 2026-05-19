@@ -74,6 +74,8 @@ notification:
   menu_open_key_set: "Open-menu hotkey set to %{key}"
   ipc_softreset_exec: "IPC remote soft-reset executed"
   atlas_workaround_reset: "Atlas files modified: workaround disabled."
+  tl_repo_changed: "Translation repository changed. Localized data reloaded."
+  tl_repo_folder_missing: "Translation data folder is missing. Please check for updates to restore translations."
 
 first_time_setup:
   title: "First Time Setup"

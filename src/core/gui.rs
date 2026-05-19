@@ -62,6 +62,22 @@ pub fn enqueue_theme_preview(config: hachimi::Config) {
     }
 }
 
+#[derive(Debug)]
+pub enum NotificationRequest {
+    ConfigLoadError,
+    TLRepoChanged,
+    TLFolderMissing,
+    Custom(String),
+}
+
+static NOTIFICATION_REQUESTS: Lazy<Mutex<Vec<NotificationRequest>>> = Lazy::new(|| Mutex::new(Vec::new()));
+
+pub fn request_notification(request: NotificationRequest) {
+    if let Ok(mut queue) = NOTIFICATION_REQUESTS.lock() {
+        queue.push(request);
+    }
+}
+
 type BoxedWindow = Box<dyn Window + Send + Sync>;
 pub struct Gui {
     pub context: egui::Context,
@@ -583,6 +599,31 @@ impl Gui {
         }
     }
 
+    fn process_notification_requests(&mut self) {
+        let requests = if let Ok(mut queue) = NOTIFICATION_REQUESTS.lock() {
+            std::mem::take(&mut *queue)
+        } else {
+            Vec::new()
+        };
+
+        for req in requests {
+            match req {
+                NotificationRequest::ConfigLoadError => {
+                    self.show_notification(&t!("notification.config_error"));
+                }
+                NotificationRequest::TLRepoChanged => {
+                    self.show_notification(&t!("notification.tl_repo_changed"));
+                }
+                NotificationRequest::TLFolderMissing => {
+                    self.show_notification(&t!("notification.tl_repo_folder_missing"));
+                }
+                NotificationRequest::Custom(msg) => {
+                    self.show_notification(&msg);
+                }
+            }
+        }
+    }
+
     pub fn run(&mut self) -> egui::FullOutput {
         if let Ok(mut lock) = PENDING_THEME.lock() {
             if let Some(config) = lock.take() {
@@ -632,9 +673,7 @@ impl Gui {
         self.run_notifications();
 
         if self.splash_visible { self.run_splash(); }
-        if hachimi::CONFIG_LOAD_ERROR.swap(false, Ordering::AcqRel) {
-            self.show_notification(&t!("notification.config_error"));
-        }
+        self.process_notification_requests();
 
         #[cfg(target_os = "windows")]
         {
@@ -2140,14 +2179,14 @@ impl ConfigEditor {
                 let cherry = get_localized_string("Common0112");
 
                 let mut seasons: Vec<(BgSeason, &str)> = vec![
-                    (BgSeason::None, default_lavel.as_str()),
+                    (BgSeason::None, &default_label),
                     (BgSeason::Spring, spring.as_str())
                 ];
                 if Hachimi::instance().game.region == Region::Japan {
-                    seasons.push((BgSeason::Summer, &get_localized_string("Common0109").as_str()));
-                    seasons.push((BgSeason::Fall, &get_localized_string("Common0110").as_str()));
-                    seasons.push((BgSeason::Winter, &get_localized_string("Common0111").as_str()));
-                    seasons.push((BgSeason::CherryBlossom, &get_localized_string("Common0112").as_str()));
+                    seasons.push((BgSeason::Summer, summer.as_str()));
+                    seasons.push((BgSeason::Fall, fall.as_str()));
+                    seasons.push((BgSeason::Winter, winter.as_str()));
+                    seasons.push((BgSeason::CherryBlossom, cherry.as_str()));
                 }
                 Gui::run_combo(ui, "homescreen_bgseason", &mut config.homescreen_bgseason, &seasons);
                 ui.end_row();
@@ -2478,7 +2517,26 @@ impl Window for FirstTimeSetupWindow {
             self.config.skip_first_time_setup = true;
 
             if !page_open {
-                self.config.translation_repo_index = self.current_tl_repo.clone();
+                // user selected a tl repo (or skipped)
+                if let Some(ref index) = self.current_tl_repo {
+                    let hachimi = Hachimi::instance();
+                    let mut manager = hachimi.tl_repo_manager.lock().unwrap();
+                    let repos_path = hachimi.get_data_path(".tl_repos");
+
+                    let id = if let Some(existing) = manager.find_by_index(index) {
+                        existing
+                    } else {
+                        let new_id = manager.add(index.clone());
+                        manager.save(&repos_path).ok();
+                        new_id
+                    };
+
+                    self.config.selected_tl_repo_id = Some(id);
+                    self.config.translation_repo_index = Some(index.clone());
+                } else {
+                    self.config.translation_repo_index = None;
+                    self.config.selected_tl_repo_id = None;
+                }
             }
 
             save_and_reload_config(self.config.clone());

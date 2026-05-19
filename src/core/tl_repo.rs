@@ -120,7 +120,7 @@ impl UpdateProgress {
     }
 }
 
-const REPO_CACHE_FILENAME: &str = ".tl_repo_cache";
+// const REPO_CACHE_FILENAME: &str = ".tl_repo_cache";
 #[derive(Serialize, Deserialize, Default)]
 struct RepoCache {
     base_url: String,
@@ -135,7 +135,7 @@ pub struct Updater {
     progress: ArcSwap<Option<UpdateProgress>>
 }
 
-const LOCALIZED_DATA_DIR: &str = "localized_data";
+// const LOCALIZED_DATA_DIR: &str = "localized_data";
 const CHUNK_SIZE: usize = 8192; // 8KiB
 static NUM_THREADS: Lazy<usize> = Lazy::new(|| {
     let parallelism = thread::available_parallelism().unwrap().get();
@@ -207,6 +207,10 @@ impl Updater {
         true
     }
 
+    fn get_repo_cache_path(id: u32) -> PathBuf {
+        Hachimi::instance().get_data_path(format!(".tl_repo_cache_{}", id))
+    }
+
     fn check_for_updates_internal(&self, pedantic: bool) -> Result<(), Error> {
         // Prevent multiple update checks running at the same time
         let Ok(_guard) = self.update_check_mutex.try_lock() else {
@@ -218,7 +222,6 @@ impl Updater {
         let Some(index_url) = &config.translation_repo_index else {
             return Ok(());
         };
-        let ld_dir_path = config.localized_data_dir.as_ref().map(|p| hachimi.get_data_path(p));
 
         let checking_notif_id = if let Some(mutex) = Gui::instance() {
             Some(mutex.lock().unwrap().show_persistent_notification(&t!("notification.checking_for_tl_updates")))
@@ -229,7 +232,30 @@ impl Updater {
 
         let index: RepoIndex = http::get_json(index_url)?;
 
-        let cache_path = hachimi.get_data_path(REPO_CACHE_FILENAME);
+        let repo_id = if let Some(id) = config.selected_tl_repo_id {
+            id
+        } else {
+            let mut manager = hachimi.tl_repo_manager.lock().unwrap();
+            let repos_path = hachimi.get_data_path(".tl_repos");
+            let id = if let Some(existing_id) = manager.find_by_index(index_url) {
+                existing_id
+            } else {
+                let new_id = manager.add(index_url.clone());
+                manager.save(&repos_path)?;
+                new_id
+            };
+        
+            let mut new_config = (**config).clone();
+            new_config.selected_tl_repo_id = Some(id);
+            new_config.localized_data_dir = Some(format!("localized_data_{}", id));
+            hachimi.save_and_reload_config(new_config)?;
+            id
+        };
+
+        let config = hachimi.config.load(); // in case repo id was migrated
+        let ld_dir_path = config.localized_data_dir.as_ref().map(|p| hachimi.get_data_path(p));
+
+        let cache_path = Self::get_repo_cache_path(repo_id);
         let repo_cache = if fs::metadata(&cache_path).is_ok() {
             let json = fs::read_to_string(&cache_path)?;
             serde_json::from_str(&json)?
@@ -426,7 +452,7 @@ impl Updater {
         let hachimi = Hachimi::instance();
         hachimi.localized_data.store(Arc::new(LocalizedData::default()));
 
-        let localized_data_dir = hachimi.get_data_path(LOCALIZED_DATA_DIR);
+        let localized_data_dir = hachimi.get_active_tl_dir().expect("Active TL repo directory not set.");
 
         if update_info.is_new_repo {
             Self::create_dir(&localized_data_dir, true)?;
@@ -447,7 +473,7 @@ impl Updater {
         let config = hachimi.config.load();
         if config.localized_data_dir.is_none() {
             let mut new_config = (**config).clone();
-            new_config.localized_data_dir = Some(LOCALIZED_DATA_DIR.to_owned());
+            new_config.localized_data_dir = Some(format!("localized_data_{:?}", config.selected_tl_repo_id));
             hachimi.save_and_reload_config(new_config)?;
         }
         if config.apply_atlas_workaround && (update_info.modifies_atlas || update_info.will_use_zip) {
@@ -470,7 +496,8 @@ impl Updater {
             base_url: update_info.base_url.clone(),
             files: cached_files.lock().unwrap().clone()
         };
-        let cache_path = hachimi.get_data_path(REPO_CACHE_FILENAME);
+        let repo_id = hachimi.config.load().selected_tl_repo_id.expect("TL repo ID not set after update");
+        let cache_path = Self::get_repo_cache_path(repo_id);
         utils::write_json_file(&repo_cache, &cache_path)?;
 
         if let Some(mutex) = Gui::instance() {
@@ -777,5 +804,53 @@ impl Updater {
 
     pub fn progress(&self) -> Option<UpdateProgress> {
         (**self.progress.load()).clone()
+    }
+}
+
+// new tl repo manager
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct RepoList {
+    pub repos: Vec<RepoEntry>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RepoEntry {
+    pub id: u32,
+    pub index: String,
+}
+
+impl RepoList {
+    pub fn load(path: &Path) -> Result<Self, Error> {
+        if path.exists() {
+            let data = fs::read_to_string(path)?;
+            Ok(serde_json::from_str(&data)?)
+        } else {
+            Ok(Self::default())
+        }
+    }
+
+    pub fn save(&self, path: &Path) -> Result<(), Error> {
+        let data = serde_json::to_string_pretty(self)?;
+        fs::write(path, data)?;
+        Ok(())
+    }
+
+    pub fn next_id(&self) -> u32 {
+        self.repos.last().map(|r| r.id + 1).unwrap_or(1)
+    }
+
+    pub fn add(&mut self, index: String) -> u32 {
+        let id = self.next_id();
+        self.repos.push(RepoEntry { id, index });
+        id
+    }
+
+    pub fn find_by_index(&self, index: &str) -> Option<u32> {
+        self.repos.iter().find(|r| r.index == index).map(|r| r.id)
+    }
+
+    pub fn find_by_id(&self, id: u32) -> Option<&str> {
+        self.repos.iter().find(|r| r.id == id).map(|r| r.index.as_str())
     }
 }
