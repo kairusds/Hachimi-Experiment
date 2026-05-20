@@ -204,9 +204,8 @@ impl Hachimi {
     }
 
     pub fn get_active_tl_dir(&self) -> Option<PathBuf> {
-        let config = self.config.load();
-        let id = config.selected_tl_repo_id?;
-        Some(self.game.data_dir.join(format!("localized_data_{id}")))
+        let id = self.config.load().selected_tl_repo_id?;
+        Some(self.get_repo_dir(id))
     }
 
     pub fn load_localized_data(&self) {
@@ -298,6 +297,16 @@ impl Hachimi {
         self.game.data_dir.join(rel_path)
     }
 
+    pub fn get_repo_dir(&self, id: u32) -> PathBuf {
+        if id == 1 {
+            let legacy = self.game.data_dir.join("localized_data");
+            if legacy.is_dir() {
+                return legacy;
+            }
+        }
+        self.game.data_dir.join(format!("localized_data_{id}"))
+    }
+
     fn repair_tl_repo_state(&self) -> Result<(), Error> {
         let repos_path = self.get_data_path(".tl_repos");
         let old_data_dir = self.game.data_dir.join("localized_data");
@@ -311,11 +320,11 @@ impl Hachimi {
                 let id = manager.add(index.clone());
                 manager.save(&repos_path)?;
 
-                fs::rename(&old_data_dir, self.game.data_dir.join(format!("localized_data_{id}")))?;
+                // fs::rename(&old_data_dir, self.game.data_dir.join(format!("localized_data_{id}")))?;
 
                 let mut new_config = (**config).clone();
                 new_config.selected_tl_repo_id = Some(id);
-                new_config.localized_data_dir = Some(format!("localized_data_{id}"));
+                // new_config.localized_data_dir = Some(format!("localized_data_{id}"));
                 self.save_config(&new_config)?;
             } else {
                 manager.save(&repos_path)?;

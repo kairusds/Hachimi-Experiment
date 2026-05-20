@@ -253,7 +253,7 @@ impl Updater {
         };
 
         let config = hachimi.config.load(); // in case repo id was migrated
-        let ld_dir_path = config.localized_data_dir.as_ref().map(|p| hachimi.get_data_path(p));
+        let ld_dir_path = hachimi.get_active_tl_dir();
 
         let cache_path = Self::get_repo_cache_path(repo_id);
         let repo_cache = if fs::metadata(&cache_path).is_ok() {
