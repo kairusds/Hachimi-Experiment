@@ -2527,7 +2527,9 @@ impl Window for FirstTimeSetupWindow {
                         existing
                     } else {
                         let new_id = manager.add(index.clone());
-                        manager.save(&repos_path).ok();
+                        if let Err(e) = manager.save(&repos_path) {
+                            warn!("Failed to persist .tl_repos: {e}");
+                        }
                         new_id
                     };
 

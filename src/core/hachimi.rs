@@ -320,12 +320,9 @@ impl Hachimi {
                 let id = manager.add(index.clone());
                 manager.save(&repos_path)?;
 
-                // fs::rename(&old_data_dir, self.game.data_dir.join(format!("localized_data_{id}")))?;
-
                 let mut new_config = (**config).clone();
                 new_config.selected_tl_repo_id = Some(id);
-                // new_config.localized_data_dir = Some(format!("localized_data_{id}"));
-                self.save_config(&new_config)?;
+                self.save_and_reload_config(new_config)?;
             } else {
                 manager.save(&repos_path)?;
             }
@@ -353,7 +350,6 @@ impl Hachimi {
 
                     let mut cleared = (**config).clone();
                     cleared.selected_tl_repo_id = None;
-                    cleared.localized_data_dir = None;
                     self.save_config(&cleared)?;
                     self.config.store(Arc::new(cleared));
 
@@ -369,10 +365,9 @@ impl Hachimi {
 
                         let mut new_config = self.config.load().as_ref().clone();
                         new_config.selected_tl_repo_id = Some(new_id);
-                        new_config.localized_data_dir = Some(format!("localized_data_{new_id}"));
-                        self.save_config(&new_config)?;
+                        self.save_and_reload_config(new_config)?;
                     } else {
-                        let data_dir = self.game.data_dir.join(format!("localized_data_{id}"));
+                        let data_dir = self.get_repo_dir(id);
                         if !data_dir.is_dir() {
                             warn!("TL repo data folder '{}' is missing, clearing localised data until next update...", data_dir.display());
                             self.localized_data.store(Arc::new(LocalizedData::default()));
@@ -394,8 +389,7 @@ impl Hachimi {
                     };
                     let mut new_config = (**config).clone();
                     new_config.selected_tl_repo_id = Some(id);
-                    new_config.localized_data_dir = Some(format!("localized_data_{id}"));
-                    self.save_config(&new_config)?;
+                    self.save_and_reload_config(new_config)?;
                 }
             }
         }
@@ -452,6 +446,8 @@ pub struct Config {
     pub disable_gui: bool,
     #[serde(default)]
     pub disable_gui_once: bool,
+    // legacy fallback path. populated by old versions, new code uses selected_tl_repo_id + get_active_tl_dir() exclusively
+    // do NOT write this in new code
     pub localized_data_dir: Option<String>,
     pub target_fps: Option<i32>,
     #[serde(default = "Config::default_open_browser_url")]

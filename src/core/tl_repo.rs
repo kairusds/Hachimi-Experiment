@@ -1,6 +1,7 @@
-use std::{collections::HashSet, fs, io::{Read, Write, Cursor}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, mpsc, Arc, Mutex}, thread, cmp::max};
+use std::{collections::HashSet, fs, io::{Read, Write, Cursor}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, Arc, Mutex}, thread, cmp::max};
 
 use arc_swap::ArcSwap;
+use crossbeam_channel::unbounded;
 use fnv::FnvHashMap;
 use rust_i18n::t;
 use serde::{Deserialize, Serialize};
@@ -22,6 +23,10 @@ pub struct RepoInfo {
     pub region: Region
 }
 
+static SYS_LOCALE: Lazy<String> = Lazy::new(|| {
+    sys_locale::get_locale().as_deref().unwrap_or("en").to_lowercase()
+});
+
 impl RepoInfo {
     pub fn is_recommended(&self, current_lang_str: &str) -> bool {
         let Some(repo_tag) = self.language.as_deref() else { return false };
@@ -32,8 +37,8 @@ impl RepoInfo {
             return true;
         }
 
-        let sys = sys_locale::get_locale().as_deref().unwrap_or("en").to_lowercase();
-        repo_tag.starts_with(&sys) || sys.starts_with(&repo_tag)
+        let sys = &*SYS_LOCALE;
+        repo_tag.starts_with(&*sys) || sys.starts_with(&repo_tag)
     }
 }
 
@@ -76,7 +81,7 @@ impl RepoFile {
     fn verify_integrity(&self, full_path: &Path) -> bool {
         let Ok(mut file) = fs::File::open(full_path) else { return false };
         let mut hasher = blake3::Hasher::new();
-        let mut buffer = vec![0u8; 8192];
+        let mut buffer = [0u8; 8192];
 
         while let Ok(n) = file.read(&mut buffer) {
             if n == 0 { break; }
@@ -165,6 +170,17 @@ impl DownloadJob {
     }
 }
 
+fn store_progress(progress: &ArcSwap<Option<UpdateProgress>>, current: usize, total: usize) {
+    // only allocate + store when the half-percent bucket changes, or on the final byte
+    let prev = match **progress.load() {
+        Some(ref p) => p.current,
+        None => 0,
+    };
+    if total == 0 || current == total || (current * 200 / total) != (prev * 200 / total) {
+        progress.store(Arc::new(Some(UpdateProgress::new(current, total))));
+    }
+}
+
 impl Updater {
     pub fn check_for_updates(self: Arc<Self>, pedantic: bool) {
         std::thread::spawn(move || {
@@ -247,7 +263,6 @@ impl Updater {
         
             let mut new_config = (**config).clone();
             new_config.selected_tl_repo_id = Some(id);
-            new_config.localized_data_dir = Some(format!("localized_data_{}", id));
             hachimi.save_and_reload_config(new_config)?;
             id
         };
@@ -281,57 +296,67 @@ impl Updater {
         let mut update_files: Vec<RepoFile> = Vec::new();
         let mut update_size: usize = 0;
         let mut total_size: usize = 0;
-        for file in index.files.iter() {
-            if file.path.contains("..") || Path::new(&file.path).has_root() {
-                warn!("File path '{}' sanitized", file.path);
-                continue;
+        
+        if is_new_repo {
+            // skip all filesystem checks, the directory will be wiped anyway
+            for file in &index.files {
+                if file.path.contains("..") || Path::new(&file.path).has_root() {
+                    warn!("File path '{}' sanitized", file.path);
+                    continue;
+                }
+                if file.path.contains("/atlas/") && !modifies_atlas {
+                    modifies_atlas = true;
+                }
+                update_files.push(file.clone());
+                update_size += file.size;
+                total_size += file.size;
             }
+        } else {
+            for file in index.files.iter() {
+                if file.path.contains("..") || Path::new(&file.path).has_root() {
+                    warn!("File path '{}' sanitized", file.path);
+                    continue;
+                }
 
-            let path = ld_dir_path.as_ref().map(|p| p.join(&file.path));
-            let exists = path.as_ref().map(|p| p.is_file()).unwrap_or(false);
+                let path = ld_dir_path.as_ref().map(|p| p.join(&file.path));
+                let exists = path.as_ref().map(|p| p.is_file()).unwrap_or(false);
 
-            let updated = if is_new_repo {
-                // redownload every single file because the directory will be deleted
-                true
-            } else if !pedantic && exists && excludes.contains(&file.path) {
-                // skip excluded file unless pedantic update or the file doesn't exist in the system
-                false
-            } else if let Some(hash) = repo_cache.files.get(&file.path) {
-                // lazy auto update, cached hash and repo hash matches. ignored during pedantic
-                if !pedantic && config.lazy_translation_updates && hash == &file.hash {
+                let updated = if !pedantic && exists && excludes.contains(&file.path) {
+                    // skip excluded file unless pedantic update or the file doesn't exist in the system
                     false
-                } else if let Some(path) = path { // get path or force download if path is invalid
-                    // file doesn't exist -> download
-                    if !exists {
-                        true
-                    } else {
-                        if hash != &file.hash {
+                } else if let Some(hash) = repo_cache.files.get(&file.path) {
+                    // lazy auto update, cached hash and repo hash matches. ignored during pedantic
+                    if !pedantic && config.lazy_translation_updates && hash == &file.hash {
+                        false
+                    } else if let Some(path) = path {
+                        // file doesn't exist -> download
+                        if !exists {
+                            true
+                        } else if hash != &file.hash {
                             true // index hash changed -> update
                         } else if fs::metadata(&path).map(|m| m.len() as usize != file.size).unwrap_or(true) {
                             true // size mismatch -> redownload
                         } else if pedantic {
-                            // full blake3 integrity check if user requested pedantic update
-                            !file.verify_integrity(&path)
+                            !file.verify_integrity(&path) // full blake3 integrity check if user requested pedantic update
                         } else {
                             false // everything matches -> skip
                         }
+                    } else {
+                        true // path invalid -> download
                     }
                 } else {
-                    true // path invalid -> download
-                }
-            } else {
-                // file doesn't exist in cache at all -> download it
-                true
-            };
+                    true // file doesn't exist in cache at all -> download it
+                };
 
-            if updated {
-                update_files.push(file.clone());
-                update_size += file.size;
-                if file.path.contains("/atlas/") {
-                    modifies_atlas = true;
+                if updated {
+                    update_files.push(file.clone());
+                    update_size += file.size;
+                    if file.path.contains("/atlas/") && !modifies_atlas {
+                        modifies_atlas = true;
+                    }
                 }
+                total_size += file.size;
             }
-            total_size += file.size;
         }
 
         if !update_files.is_empty() {
@@ -438,7 +463,7 @@ impl Updater {
     }
 
     fn run_internal(self: Arc<Self>) -> Result<(), Error> {
-        let Some(update_info) = (**self.new_update.load()).clone() else {
+        let Some(mut update_info) = (**self.new_update.load()).clone() else {
             return Ok(());
         };
         self.new_update.store(Arc::new(None));
@@ -461,7 +486,7 @@ impl Updater {
         }
 
         // Download the files - use the pre-determined strategy
-        let cached_files = Arc::new(Mutex::new(update_info.cached_files.clone()));
+        let cached_files = Arc::new(Mutex::new(std::mem::take(&mut update_info.cached_files)));
         let error_count = if update_info.will_use_zip {
             self.clone().download_zip(&update_info, &localized_data_dir, cached_files.clone())
         }
@@ -469,13 +494,7 @@ impl Updater {
             self.clone().download_incremental(&update_info, &localized_data_dir, cached_files.clone())
         }?;
 
-        // Modify the config if needed
         let config = hachimi.config.load();
-        if config.localized_data_dir.is_none() {
-            let mut new_config = (**config).clone();
-            new_config.localized_data_dir = Some(format!("localized_data_{:?}", config.selected_tl_repo_id));
-            hachimi.save_and_reload_config(new_config)?;
-        }
         if config.apply_atlas_workaround && (update_info.modifies_atlas || update_info.will_use_zip) {
             let mut new_config = (**config).clone();
             new_config.apply_atlas_workaround = false;
@@ -524,8 +543,7 @@ impl Updater {
 
         let shared_agent: ureq::Agent = ureq::Agent::new_with_config(ureq_config());
 
-        let (sender, receiver) = mpsc::channel::<RepoFile>();
-        let receiver = Arc::new(Mutex::new(receiver));
+        let (sender, receiver) = unbounded::<RepoFile>();
 
         let mut handles = Vec::with_capacity(*NUM_THREADS);
         for _ in 0..*NUM_THREADS {
@@ -537,7 +555,7 @@ impl Updater {
             let non_fatal_error_count_clone = Arc::clone(&non_fatal_error_count);
             let fatal_error_clone = Arc::clone(&fatal_error);
             let stop_signal_clone = Arc::clone(&stop_signal);
-            let receiver_clone = Arc::clone(&receiver);
+            let receiver_clone = receiver.clone();
 
             let thread_agent = shared_agent.clone();
 
@@ -550,7 +568,7 @@ impl Updater {
                     }
                     let mut job = DownloadJob::new(thread_agent);
 
-                    while let Ok(repo_file) = receiver_clone.lock().unwrap().recv() {
+                    while let Ok(repo_file) = receiver_clone.recv() {
                         if stop_signal_clone.load(atomic::Ordering::Relaxed) { break; }
 
                         let file_path = repo_file.get_fs_path(&localized_data_dir_clone);
@@ -565,8 +583,8 @@ impl Updater {
 
                             http::download_file_buffered(res, &mut file, &mut job.buffer, |bytes| {
                                 job.hasher.update(bytes);
-                                let prev_size = current_bytes_clone.fetch_add(bytes.len(), atomic::Ordering::SeqCst);
-                                updater.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + bytes.len(), total_size))));
+                                let prev_size = current_bytes_clone.fetch_add(bytes.len(), atomic::Ordering::Relaxed);
+                                store_progress(&updater.progress, prev_size + bytes.len(), total_size);
                             })?;
 
                             let hash = job.hasher.finalize().to_hex().to_string();
@@ -589,7 +607,7 @@ impl Updater {
                                     return;
                                 } else {
                                     error!("Non-fatal error during incremental download: {}", e);
-                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst);
+                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::Relaxed);
                                 }
                             }
                         }
@@ -626,7 +644,7 @@ impl Updater {
         let mut error_count = 0;
 
         {
-            let total_size_header = ureq::agent().head(&update_info.zip_url).call()
+            let total_size_header = ureq::Agent::new_with_config(ureq_config()).head(&update_info.zip_url).call()
                 .ok()
                 .and_then(|res| {
                     res.headers()
@@ -653,7 +671,7 @@ impl Updater {
             let progress_bar = Arc::new(move |bytes_read: usize| {
                 let prev_size = downloaded_clone.fetch_add(bytes_read, atomic::Ordering::Relaxed);
                 let current = prev_size + bytes_read;
-                self_clone.progress.store(Arc::new(Some(UpdateProgress::new(current, progress_total))));
+                store_progress(&self_clone.progress, current, progress_total);
             });
 
             http::download_file_parallel(
@@ -674,14 +692,15 @@ impl Updater {
             let zip_file = fs::File::open(&zip_path)?;
             let mmap = Arc::new(unsafe { memmap2::Mmap::map(&zip_file)? });
 
+            let zip_len = zip::ZipArchive::new(Cursor::new(&mmap[..]))?.len();
+
             let total_size = update_info.size;
             let current_bytes = Arc::new(AtomicUsize::new(0));
             let non_fatal_error_count = Arc::new(AtomicUsize::new(0));
             let fatal_error = Arc::new(Mutex::new(None::<Error>));
             let stop_signal = Arc::new(AtomicBool::new(false));
 
-            let (sender, receiver) = mpsc::channel::<usize>();
-            let receiver = Arc::new(Mutex::new(receiver));
+            let (sender, receiver) = unbounded::<usize>();
             let mut handles = Vec::with_capacity(*NUM_THREADS);
 
             for _ in 0..*NUM_THREADS {
@@ -694,7 +713,7 @@ impl Updater {
                 let non_fatal_error_count_clone = Arc::clone(&non_fatal_error_count);
                 let fatal_error_clone = Arc::clone(&fatal_error);
                 let stop_signal_clone = Arc::clone(&stop_signal);
-                let receiver_clone = Arc::clone(&receiver);
+                let receiver_clone = receiver.clone();
 
                 let handle = thread::Builder::new()
                     .name("zip_extractor".into())
@@ -712,13 +731,13 @@ impl Updater {
                         let mut buffer = vec![0u8; CHUNK_SIZE];
                         let mut hasher = blake3::Hasher::new();
 
-                        while let Ok(i) = receiver_clone.lock().unwrap().recv() {
+                        while let Ok(i) = receiver_clone.recv() {
                             if stop_signal_clone.load(atomic::Ordering::Relaxed) { break; }
 
                             let mut zip_entry = match archive.by_index(i) {
                                 Ok(entry) => entry,
                                 Err(_) => {
-                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst);
+                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::Relaxed);
                                     continue;
                                 }
                             };
@@ -731,7 +750,7 @@ impl Updater {
                             let path = repo_file.get_fs_path(&localized_data_dir_clone);
                             if let Some(parent) = path.parent() {
                                 if Self::create_dir(parent, false).is_err() {
-                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst);
+                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::Relaxed);
                                     continue;
                                 }
                             }
@@ -739,7 +758,7 @@ impl Updater {
                             let mut out_file = match fs::File::create(&path) {
                                 Ok(file) => file,
                                 Err(_) => {
-                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst);
+                                    non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::Relaxed);
                                     continue;
                                 }
                             };
@@ -755,11 +774,11 @@ impl Updater {
                                             return;
                                         }
                                         hasher.update(data_slice);
-                                        let prev_size = current_bytes_clone.fetch_add(read_bytes, atomic::Ordering::SeqCst);
-                                        updater.progress.store(Arc::new(Some(UpdateProgress::new(prev_size + read_bytes, total_size))));
+                                        let prev_size = current_bytes_clone.fetch_add(read_bytes, atomic::Ordering::Relaxed);
+                                        store_progress(&updater.progress, prev_size + read_bytes, total_size);
                                     }
                                     Err(_) => {
-                                        non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::SeqCst);
+                                        non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::Relaxed);
                                         break;
                                     }
                                 }
@@ -780,7 +799,6 @@ impl Updater {
                 handles.push(handle);
             }
 
-            let zip_len = zip::ZipArchive::new(Cursor::new(&mmap[..]))?.len();
             for i in 0..zip_len {
                 if sender.send(i).is_err() { break; }
             }
@@ -837,7 +855,7 @@ impl RepoList {
     }
 
     pub fn next_id(&self) -> u32 {
-        self.repos.last().map(|r| r.id + 1).unwrap_or(1)
+        self.repos.iter().map(|r| r.id).max().map(|m| m + 1).unwrap_or(1)
     }
 
     pub fn add(&mut self, index: String) -> u32 {
