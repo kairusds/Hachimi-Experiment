@@ -219,16 +219,12 @@ fn drain_plugin_notifications() -> Vec<String> {
     std::mem::take(&mut *notifications)
 }
 
-use std::sync::atomic::Ordering;
-
 #[cfg(target_os = "android")]
-use std::sync::atomic::{AtomicI32, AtomicPtr};
+static PENDING_KB_TYPE: atomic::AtomicI32 = atomic::AtomicI32::new(0);
 #[cfg(target_os = "android")]
-static PENDING_KB_TYPE: AtomicI32 = AtomicI32::new(0);
+static PENDING_KEYBOARD_TEXT: atomic::AtomicPtr<Il2CppString> = atomic::AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
-static PENDING_KEYBOARD_TEXT: AtomicPtr<Il2CppString> = AtomicPtr::new(std::ptr::null_mut());
-#[cfg(target_os = "android")]
-static ACTIVE_KEYBOARD: AtomicPtr<Il2CppObject> = AtomicPtr::new(std::ptr::null_mut());
+static ACTIVE_KEYBOARD: atomic::AtomicPtr<Il2CppObject> = atomic::AtomicPtr::new(std::ptr::null_mut());
 #[cfg(target_os = "android")]
 pub static KEYBOARD_GC_HANDLE: Lazy<Mutex<Option<GCHandle>>> = Lazy::new(|| Mutex::default());
 #[cfg(target_os = "android")]
@@ -255,13 +251,13 @@ fn get_scale(ctx: &egui::Context) -> f32 {
 
 #[cfg(target_os = "android")]
 fn is_ime_visible() -> bool {
-    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
+    let kb_ptr = ACTIVE_KEYBOARD.load(atomic::Ordering::Acquire);
     let unity_visible = if !kb_ptr.is_null() {
         TouchScreenKeyboard::get_status(kb_ptr) == TouchScreenKeyboard::Status::Visible
     } else {
         false
     };
-    let jni_visible = crate::android::utils::IS_IME_VISIBLE.load(Ordering::Acquire);
+    let jni_visible = crate::android::utils::IS_IME_VISIBLE.load(atomic::Ordering::Acquire);
 
     unity_visible || jni_visible
 }
@@ -285,10 +281,10 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
         if res.lost_focus() {
             if let Some(KeyboardOwner::Unity(id)) = *owner_lock {
                 if id == res.id {
-                    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
+                    let kb_ptr = ACTIVE_KEYBOARD.load(atomic::Ordering::Acquire);
                     if !kb_ptr.is_null() {
                         TouchScreenKeyboard::set_active(kb_ptr, false);
-                        ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Release);
+                        ACTIVE_KEYBOARD.store(std::ptr::null_mut(), atomic::Ordering::Release);
                         *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
                     }
                     *owner_lock = None;
@@ -306,15 +302,15 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
     use egui::{text::{CCursor, CCursorRange}, widgets::text_edit::TextEditState};
 
     let val_any = val as &dyn std::any::Any;
-    PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::Default as i32, Ordering::Release);
+    PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::Default as i32, atomic::Ordering::Release);
 
     let text = if let Some(s) = val_any.downcast_ref::<String>() {
         s.clone()
     } else if let Some(f) = val_any.downcast_ref::<f32>() {
-        PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::DecimalPad as i32, Ordering::Release);
+        PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::DecimalPad as i32, atomic::Ordering::Release);
         if f.fract() == 0.0 { format!("{:.1}", f) } else { f.to_string() }
     } else if let Some(i) = val_any.downcast_ref::<i32>() {
-        PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::NumberPad as i32, Ordering::Release);
+        PENDING_KB_TYPE.store(TouchScreenKeyboardType::KeyboardType::NumberPad as i32, atomic::Ordering::Release);
         i.to_string()
     } else {
         String::new() 
@@ -329,7 +325,7 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
         res.scroll_to_me(Some(egui::Align::Center));
 
         let ptr = text.to_il2cpp_string();
-        PENDING_KEYBOARD_TEXT.store(ptr, Ordering::Release);
+        PENDING_KEYBOARD_TEXT.store(ptr, atomic::Ordering::Release);
 
         let initial_selection = res.ctx.data(|data| {
             data.get_temp::<TextEditState>(res.id)
@@ -348,20 +344,20 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
         *KEYBOARD_SELECTION.lock().unwrap() = initial_selection;
 
         Thread::main_thread().schedule(|| {
-            let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), Ordering::AcqRel);
-            let typ: TouchScreenKeyboardType::KeyboardType = unsafe { *(&PENDING_KB_TYPE.load(Ordering::Acquire) as *const i32 as *const TouchScreenKeyboardType::KeyboardType) };
+            let ptr = PENDING_KEYBOARD_TEXT.swap(std::ptr::null_mut(), atomic::Ordering::AcqRel);
+            let typ: TouchScreenKeyboardType::KeyboardType = unsafe { *(&PENDING_KB_TYPE.load(atomic::Ordering::Acquire) as *const i32 as *const TouchScreenKeyboardType::KeyboardType) };
 
             if !ptr.is_null() {
                 let keyboard = TouchScreenKeyboard::Open(ptr, typ, false, false, false);
                 TouchScreenKeyboard::set_selection(keyboard, *KEYBOARD_SELECTION.lock().unwrap());
                 let handle = GCHandle::new(keyboard, false);
                 *KEYBOARD_GC_HANDLE.lock().unwrap() = Some(handle);
-                ACTIVE_KEYBOARD.store(keyboard, Ordering::Release);
+                ACTIVE_KEYBOARD.store(keyboard, atomic::Ordering::Release);
             }
         });
     }
 
-    let kb_ptr = ACTIVE_KEYBOARD.load(Ordering::Acquire);
+    let kb_ptr = ACTIVE_KEYBOARD.load(atomic::Ordering::Acquire);
     if !kb_ptr.is_null() {
         let status = TouchScreenKeyboard::get_status(kb_ptr);
 
@@ -416,7 +412,7 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
                 data.remove::<egui::widgets::text_edit::TextEditState>(res.id);
             });
 
-            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), Ordering::Release);
+            ACTIVE_KEYBOARD.store(std::ptr::null_mut(), atomic::Ordering::Release);
             *KEYBOARD_GC_HANDLE.lock().unwrap() = None;
             res.ctx.request_repaint();
         }
@@ -705,7 +701,7 @@ impl Gui {
             if let Ok(mut owner_lock) = KEYBOARD_OWNER.try_lock() {
                 if focused.is_some() && focused != self.last_focused && wants_kb {
                     if owner_lock.is_none() {
-                        if !IS_IME_VISIBLE.load(Ordering::Acquire) {
+                        if !IS_IME_VISIBLE.load(atomic::Ordering::Acquire) {
                             set_keyboard_visible(true);
                             if let Some(id) = focused {
                                 *owner_lock = Some(KeyboardOwner::JNI(id));
@@ -721,11 +717,11 @@ impl Gui {
                 }
 
                 if let Some(KeyboardOwner::JNI(_)) = *owner_lock {
-                    if BACK_BUTTON_PRESSED.swap(false, Ordering::AcqRel) {
+                    if BACK_BUTTON_PRESSED.swap(false, atomic::Ordering::AcqRel) {
                         *owner_lock = None;
                         set_keyboard_visible(false);
                         self.context.memory_mut(|mem| mem.stop_text_input());
-                        IS_IME_VISIBLE.store(false, Ordering::Release);
+                        IS_IME_VISIBLE.store(false, atomic::Ordering::Release);
                         self.last_focused = None;
                         self.ime_cooldown = None;
                     }
@@ -740,10 +736,10 @@ impl Gui {
                     true
                 };
 
-                if should_check && IS_IME_VISIBLE.load(Ordering::Acquire) {
+                if should_check && IS_IME_VISIBLE.load(atomic::Ordering::Acquire) {
                     if !check_keyboard_status() {
                         self.context.memory_mut(|mem| mem.stop_text_input());
-                        IS_IME_VISIBLE.store(false, Ordering::Release);
+                        IS_IME_VISIBLE.store(false, atomic::Ordering::Release);
 
                         if let Ok(mut lock) = KEYBOARD_OWNER.try_lock() {
                             if let Some(KeyboardOwner::JNI(_)) = *lock {
