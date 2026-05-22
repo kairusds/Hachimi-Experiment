@@ -1,4 +1,4 @@
-use std::{collections::HashSet, fs, io::{Read, Write, Cursor}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool}, Arc, Mutex}, thread, cmp::max};
+use std::{collections::HashSet, fs, io::{Read, Write, Cursor}, path::{Path, PathBuf}, sync::{atomic::{self, AtomicUsize, AtomicBool, AtomicU64}, Arc, Mutex}, thread, cmp::max};
 
 use arc_swap::ArcSwap;
 use crossbeam_channel::unbounded;
@@ -137,7 +137,8 @@ const REPO_EXCLUDES_FILENAME: &str = "excludes.txt";
 pub struct Updater {
     update_check_mutex: Mutex<()>,
     new_update: ArcSwap<Option<UpdateInfo>>,
-    progress: ArcSwap<Option<UpdateProgress>>
+    progress: ArcSwap<Option<UpdateProgress>>,
+    last_progress_ms: AtomicU64
 }
 
 // const LOCALIZED_DATA_DIR: &str = "localized_data";
@@ -170,13 +171,21 @@ impl DownloadJob {
     }
 }
 
-fn store_progress(progress: &ArcSwap<Option<UpdateProgress>>, current: usize, total: usize) {
-    // only allocate + store when the half-percent bucket changes, or on the final byte
-    let prev = match **progress.load() {
-        Some(ref p) => p.current,
-        None => 0,
-    };
-    if total == 0 || current == total || (current * 200 / total) != (prev * 200 / total) {
+// 60fps time based throttle for the update progress bar
+fn store_progress(
+    progress: &ArcSwap<Option<UpdateProgress>>,
+    last_progress_ms: &AtomicU64,
+    current: usize,
+    total: usize
+) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+
+    let last = last_progress_ms.load(atomic::Ordering::Relaxed);
+    if current == total || now.saturating_sub(last) >= 16 {
+        last_progress_ms.store(now, atomic::Ordering::Relaxed);
         progress.store(Arc::new(Some(UpdateProgress::new(current, total))));
     }
 }
@@ -467,6 +476,7 @@ impl Updater {
             return Ok(());
         };
         self.new_update.store(Arc::new(None));
+        self.last_progress_ms.store(0, atomic::Ordering::Relaxed);
 
         self.progress.store(Arc::new(Some(UpdateProgress::new(0, update_info.size))));
         if let Some(mutex) = Gui::instance() {
@@ -584,7 +594,7 @@ impl Updater {
                             http::download_file_buffered(res, &mut file, &mut job.buffer, |bytes| {
                                 job.hasher.update(bytes);
                                 let prev_size = current_bytes_clone.fetch_add(bytes.len(), atomic::Ordering::Relaxed);
-                                store_progress(&updater.progress, prev_size + bytes.len(), total_size);
+                                store_progress(&updater.progress, &updater.last_progress_ms, prev_size + bytes.len(), total_size);
                             })?;
 
                             let hash = job.hasher.finalize().to_hex().to_string();
@@ -671,7 +681,7 @@ impl Updater {
             let progress_bar = Arc::new(move |bytes_read: usize| {
                 let prev_size = downloaded_clone.fetch_add(bytes_read, atomic::Ordering::Relaxed);
                 let current = prev_size + bytes_read;
-                store_progress(&self_clone.progress, current, progress_total);
+                store_progress(&self_clone.progress, &self_clone.last_progress_ms, current, progress_total);
             });
 
             http::download_file_parallel(
@@ -775,7 +785,7 @@ impl Updater {
                                         }
                                         hasher.update(data_slice);
                                         let prev_size = current_bytes_clone.fetch_add(read_bytes, atomic::Ordering::Relaxed);
-                                        store_progress(&updater.progress, prev_size + read_bytes, total_size);
+                                        store_progress(&updater.progress, &updater.last_progress_ms, prev_size + read_bytes, total_size);
                                     }
                                     Err(_) => {
                                         non_fatal_error_count_clone.fetch_add(1, atomic::Ordering::Relaxed);
