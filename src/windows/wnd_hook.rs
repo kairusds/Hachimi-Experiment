@@ -1,4 +1,4 @@
-use std::{os::raw::c_uint, ptr, sync::{atomic::{self, AtomicIsize}, Arc}};
+use std::{os::raw::c_uint, ptr, sync::{atomic::{self, AtomicIsize}}};
 
 use windows::{core::w, Win32::{
     Foundation::{HWND, LPARAM, LRESULT, WPARAM},
@@ -14,7 +14,6 @@ use windows::{core::w, Win32::{
 }};
 
 use crate::{core::{game::Region, gui, Gui, Hachimi}, il2cpp::{hook::{UnityEngine_CoreModule}, symbols::Thread}, windows::utils};
-use rust_i18n::t;
 
 use super::{gui_impl::input, discord};
 
@@ -37,7 +36,7 @@ extern "system" fn wnd_proc(hwnd: HWND, umsg: c_uint, wparam: WPARAM, lparam: LP
 
             if gui::is_keybind_capture_active() {
                 let display = utils::vk_to_display_label(current_key);
-                report_keybind_capture(current_key, display);
+                gui::report_keybind_capture(current_key, display);
                 return LRESULT(0);
             }
 
