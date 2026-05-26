@@ -2900,7 +2900,7 @@ impl Window for SetKeybindWindow {
                                     if ui.button(t!("save")).clicked() {
                                         confirm_raw = Some(raw_copy);
                                     }
-                                    if ui.button(t!("set_keybind.rebind")).clicked() {
+                                    if ui.button(t!("retry")).clicked() {
                                         rebind = true;
                                     }
                                 }
