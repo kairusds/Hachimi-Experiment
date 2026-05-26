@@ -1081,7 +1081,8 @@ dependencies = [
 [[package]]
 name = "minhook"
 version = "0.5.0"
-source = "git+https://github.com/kairusds/minhook-rs.git?rev=5c9957d68a39cc9df7339a84bddf4a892a96950c#5c9957d68a39cc9df7339a84bddf4a892a96950c"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a48ae87876aaa4622bad562f6565cc1961ab8a3394e45247211f20f110286b5e"
 dependencies = [
  "cc",
  "tracing",
