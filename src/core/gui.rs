@@ -2872,8 +2872,6 @@ impl SetKeybindWindow {
 
 impl Window for SetKeybindWindow {
     fn run(&mut self, ctx: &egui::Context) -> bool {
-        let scale = get_scale(ctx);
-
         if self.state != KeybindCapState::Waiting {
             if let Some((raw, display)) = take_keybind_capture() {
                 self.state = KeybindCapState::Captured { raw, display };
@@ -2891,10 +2889,8 @@ impl Window for SetKeybindWindow {
                 egui::TopBottomPanel::bottom(self.id.with("buttons"))
                     .show_separator_line(true)
                     .show_inside(ui, |ui| {
-                        ui.add_space(4.0 * scale);
-
                         ui.with_layout(
-                            egui::Layout::right_to_left(egui::Align::Center),
+                            egui::Layout::right_to_left(egui::Align::Min),
                             |ui| {
                                 if ui.button(t!("cancel")).clicked() {
                                     cancelled = true;
@@ -2910,7 +2906,6 @@ impl Window for SetKeybindWindow {
                                 }
                             },
                         );
-                        ui.add_space(4.0 * scale);
                     });
 
                 egui::CentralPanel::default()
