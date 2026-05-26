@@ -29,6 +29,7 @@ confirm_dialog_title: "Confirm"
 soft_restart_confirm_content: "Are you sure you want to soft restart the game?"
 in_game_browser_confirm_content: "Are you sure you want to open the in-game browser?"
 browser_dialog_title: "Browser"
+bind_key: "Bind key"
 
 menu:
   check_for_updates: "\uf0aa Check for updates"
@@ -70,8 +71,6 @@ notification:
   errors_during_update: "%{count} errors occurred during update. Check logs for more info."
   checking_for_updates: "Checking for updates..."
   no_updates: "No updates available."
-  press_to_set_menu_key: "Press a key in the game window to set the open-menu hotkey."
-  menu_open_key_set: "Open-menu hotkey set to %{key}"
   ipc_softreset_exec: "IPC remote soft-reset executed"
   atlas_workaround_reset: "Atlas files modified: workaround disabled."
   tl_repo_changed: "Translation repository changed. Localized data reloaded."
@@ -182,9 +181,9 @@ config_editor:
     This option allows a shortcut key to toggle the ingame UI.
     For Android, you need to double tap the Volume Up key, or triple tap the top right of the screen.
     For PC/Android with keyboard, it's the Insert key and can be configured in the gui or config.
+  hide_ingame_ui_hotkey_bind: "Hide ingame UI keybind"
   discord_rpc: "Discord RPC"
   menu_open_key: "Open menu hotkey"
-  menu_open_key_set: "Press to set"
   msaa: "MSAA"
   render_scale: "Render Scale"
   aniso_level: "Anisotropic Filtering"
@@ -202,6 +201,11 @@ theme_editor:
   ui_extreme_bg_color: "Input Background"
   ui_text_color: "Text Color"
   ui_window_rounding: "Rounded Corners"
+
+set_keybind:
+  title: "Set Keybind"
+  press_any_key: "Press any key…"
+  bound_key: "Bound key: %{key}"
 
 tl_update_dialog:
   title: "New update available"
@@ -231,11 +235,13 @@ steam_overlay_conflict_dialog:
     to temporarily disable the Hachimi overlay. It will close the game, and the next time the game starts up,
     the Hachimi overlay will be disabled and you will be able to make a purchase. After that, you may restart
     the game again to re-enable the Hachimi overlay.
+
 key_names:
   left: "Left arrow"
   right: "Right arrow"
   up: "Up arrow"
   down: "Down arrow"
+  back: "Back"
   insert: "Insert"
   delete: "Delete"
   home: "Home"
@@ -259,6 +265,26 @@ key_names:
   alt: "Alt"
   ctrl: "Ctrl"
   shift: "Shift"
+  dpad_up: "D-Pad Up"
+  dpad_down: "D-Pad Down"
+  dpad_left: "D-Pad Left"
+  dpad_right: "D-Pad Right"
+  volume_up: "Volume Up"
+  volume_down: "Volume Down"
+  copy: "Copy"
+  cut: "Cut"
+  paste: "Paste"
+  semicolon: ";"
+  comma: ","
+  backslash: "\\"
+  slash: "/"
+  left_bracket: "["
+  right_bracket: "]"
+  grave: "`"
+  minus: "-"
+  period: "."
+  plus: "+"
+  equals: "="
   numpad_0: "Numpad 0"
   numpad_1: "Numpad 1"
   numpad_2: "Numpad 2"
@@ -274,3 +300,4 @@ key_names:
   numpad_multiply: "Numpad *"
   numpad_divide: "Numpad /"
   numpad_decimal: "Numpad ."
+  unknown: "Key %{code}"

@@ -219,6 +219,33 @@ fn drain_plugin_notifications() -> Vec<String> {
     std::mem::take(&mut *notifications)
 }
 
+#[cfg(target_os = "windows")]
+pub type RawKeybind = u16;
+#[cfg(target_os = "android")]
+pub type RawKeybind = i32;
+
+static KEYBIND_CAPTURE_ACTIVE: AtomicBool = AtomicBool::new(false);
+static KEYBIND_CAPTURED: Lazy<Mutex<Option<(RawKeybind, String)>>> =
+    Lazy::new(|| Mutex::new(None));
+
+pub fn start_keybind_capture() {
+    *KEYBIND_CAPTURED.lock().unwrap() = None;
+    KEYBIND_CAPTURE_ACTIVE.store(true, atomic::Ordering::Relaxed);
+}
+
+pub fn is_keybind_capture_active() -> bool {
+    KEYBIND_CAPTURE_ACTIVE.load(atomic::Ordering::Relaxed)
+}
+
+pub fn report_keybind_capture(raw: RawKeybind, display: String) {
+    KEYBIND_CAPTURE_ACTIVE.store(false, atomic::Ordering::Relaxed);
+    *KEYBIND_CAPTURED.lock().unwrap() = Some((raw, display));
+}
+
+fn take_keybind_capture() -> Option<(RawKeybind, String)> {
+    KEYBIND_CAPTURED.lock().unwrap().take()
+}
+
 #[cfg(target_os = "android")]
 static PENDING_KB_TYPE: atomic::AtomicI32 = atomic::AtomicI32::new(0);
 #[cfg(target_os = "android")]
@@ -503,9 +530,11 @@ impl Gui {
                     let key_label = crate::windows::utils::vk_to_display_label(hachimi.config.load().windows.menu_open_key);
                     t!("splash_sub", open_key_str = key_label).into_owned()
                 }
-                #[cfg(not(target_os = "windows"))]
+                #[cfg(target_os = "android")]
                 {
-                    t!("splash_sub", open_key_str = t!(open_key_id)).into_owned()
+                    let key_label = crate::android::gui_impl::keymap::keycode_display_label(hachimi.config.load().android.menu_open_key);
+                    let open_key_m = format!("{} / {}", t!(open_key_id), key_label);
+                    t!("splash_sub", open_key_str = &*open_key_m).into_owned()
                 }
             },
 
@@ -1936,21 +1965,36 @@ impl ConfigEditor {
                     ui.label(t!("config_editor.discord_rpc"));
                     ui.checkbox(&mut config.windows.discord_rpc, "");
                     ui.end_row();
-
-                    ui.label(t!("config_editor.menu_open_key"));
-                    ui.horizontal(|ui| {
-                        ui.label(crate::windows::utils::vk_to_display_label(config.windows.menu_open_key));
-                        if ui.button(t!("config_editor.menu_open_key_set")).clicked() {
-                            crate::windows::wnd_hook::start_menu_key_capture();
-                            thread::spawn(|| {
-                                Gui::instance().unwrap()
-                                .lock().unwrap()
-                                .show_notification(&t!("notification.press_to_set_menu_key"));
-                            });
-                        }
-                    });
-                    ui.end_row();
                 }
+
+                ui.label(t!("config_editor.menu_open_key"));
+                ui.horizontal(|ui| {
+                    #[cfg(target_os = "windows")]
+                    ui.label(crate::windows::utils::vk_to_display_label(config.windows.menu_open_key));
+                    #[cfg(target_os = "android")]
+                    ui.label(crate::android::gui_impl::keymap::keycode_display_label(config.android.menu_open_key));
+
+                    if ui.button(t!("bind_key")).clicked() {
+                        std::thread::spawn(|| {
+                            let Some(gui_mutex) = Gui::instance() else { return };
+                            let mut gui = gui_mutex.lock().unwrap();
+                            gui.show_window(Box::new(SetKeybindWindow::new(|result| {
+                                let Some(raw) = result else { return };
+
+                                let hachimi = Hachimi::instance();
+                                let mut new_config = hachimi.config.load().as_ref().clone();
+
+                                #[cfg(target_os = "windows")]
+                                { new_config.windows.menu_open_key = raw; }
+                                #[cfg(target_os = "android")]
+                                { new_config.android.menu_open_key = raw; }
+
+                                save_and_reload_config(new_config);
+                            })));
+                        });
+                    }
+                });
+                ui.end_row();
 
                 ui.label(t!("config_editor.debug_mode"));
                 ui.checkbox(&mut config.debug_mode, "");
@@ -2205,6 +2249,35 @@ impl ConfigEditor {
                         });
                     }
                 }
+                ui.end_row();
+
+                ui.label(t!("config_editor.hide_ingame_ui_hotkey_bind"));
+                ui.horizontal(|ui| {
+                    #[cfg(target_os = "windows")]
+                    ui.label(crate::windows::utils::vk_to_display_label(config.windows.hide_ingame_ui_hotkey_bind));
+                    #[cfg(target_os = "android")]
+                    ui.label(crate::android::gui_impl::keymap::keycode_display_label(config.android.hide_ingame_ui_hotkey_bind));
+
+                    if ui.button(t!("bind_key")).clicked() {
+                        std::thread::spawn(|| {
+                            let Some(gui_mutex) = Gui::instance() else { return };
+                            let mut gui = gui_mutex.lock().unwrap();
+                            gui.show_window(Box::new(SetKeybindWindow::new(|result| {
+                                let Some(raw) = result else { return };
+
+                                let hachimi = Hachimi::instance();
+                                let mut new_config = hachimi.config.load().as_ref().clone();
+
+                                #[cfg(target_os = "windows")]
+                                { new_config.windows.hide_ingame_ui_hotkey_bind = raw; }
+                                #[cfg(target_os = "android")]
+                                { new_config.android.hide_ingame_ui_hotkey_bind = raw; }
+
+                                save_and_reload_config(new_config);
+                            })));
+                        });
+                    }
+                });
                 ui.end_row();
             }
         }
@@ -2762,6 +2835,115 @@ impl Window for ThemeEditorWindow {
 
         open &= open2;
         open
+    }
+}
+
+#[derive(PartialEq)]
+enum KeybindCapState {
+    Waiting,
+    Captured { raw: RawKeybind, display: String }
+}
+
+pub struct SetKeybindWindow {
+    id: egui::Id,
+    state: KeybindCapState,
+    callback: Option<Box<dyn FnOnce(Option<RawKeybind>) + Send + Sync>>
+}
+
+impl SetKeybindWindow {
+    pub fn new(
+        callback: impl FnOnce(Option<RawKeybind>) + Send + Sync + 'static
+    ) -> Self {
+        start_keybind_capture();
+        Self {
+            id: random_id(),
+            state: KeybindCapState::Waiting,
+            callback: Some(Box::new(callback)),
+        }
+    }
+
+    fn finish(&mut self, result: Option<RawKeybind>) -> bool {
+        if let Some(cb) = self.callback.take() {
+            cb(result);
+        }
+        false
+    }
+}
+
+impl Window for SetKeybindWindow {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let scale = get_scale(ctx);
+
+        if self.state != KeybindCapState::Waiting {
+            if let Some((raw, display)) = take_keybind_capture() {
+                self.state = KeybindCapState::Captured { raw, display };
+            }
+        }
+
+        let mut confirm_raw: Option<RawKeybind> = None;
+        let mut cancelled = false;
+        let mut rebind = false;
+        let mut open = true;
+
+        new_window(ctx, self.id, t!("set_keybind.title"))
+            .open(&mut open)
+            .show(ctx, |ui| {
+                egui::TopBottomPanel::bottom(self.id.with("buttons"))
+                    .show_separator_line(true)
+                    .show_inside(ui, |ui| {
+                        ui.add_space(4.0 * scale);
+
+                        ui.with_layout(
+                            egui::Layout::right_to_left(egui::Align::Center),
+                            |ui| {
+                                if ui.button(t!("cancel")).clicked() {
+                                    cancelled = true;
+                                }
+                                if let KeybindCapState::Captured { raw, .. } = &self.state {
+                                    let raw_copy = *raw;
+                                    if ui.button(t!("save")).clicked() {
+                                        confirm_raw = Some(raw_copy);
+                                    }
+                                    if ui.button(t!("set_keybind.rebind")).clicked() {
+                                        rebind = true;
+                                    }
+                                }
+                            },
+                        );
+                        ui.add_space(4.0 * scale);
+                    });
+
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::NONE)
+                    .show_inside(ui, |ui| {
+                        ui.centered_and_justified(|ui| match &self.state {
+                            KeybindCapState::Waiting => {
+                                ui.label(t!("set_keybind.press_any_key"));
+                            }
+                            KeybindCapState::Captured { display, .. } => {
+                                ui.label(t!(
+                                    "set_keybind.bound_key",
+                                    key = display.as_str()
+                                ));
+                            }
+                        });
+                    });
+            });
+
+        if rebind {
+            start_keybind_capture();
+            self.state = KeybindCapState::Waiting;
+        }
+
+        if !open || cancelled {
+            return self.finish(None);
+        }
+
+        if let Some(raw) = confirm_raw {
+            return self.finish(Some(raw));
+        }
+
+        true
     }
 }
 
