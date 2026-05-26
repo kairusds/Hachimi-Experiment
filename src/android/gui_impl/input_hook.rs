@@ -152,7 +152,7 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
 
             _ => {
                 if gui::is_keybind_capture_active() {
-                    if pressed {
+                    if pressed && repeat_count == 0 {
                         let display = keymap::keycode_display_label(key_code);
                         gui::report_keybind_capture(key_code, display);
                         return JNI_TRUE;

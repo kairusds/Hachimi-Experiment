@@ -2872,7 +2872,7 @@ impl SetKeybindWindow {
 
 impl Window for SetKeybindWindow {
     fn run(&mut self, ctx: &egui::Context) -> bool {
-        if self.state != KeybindCapState::Waiting {
+        if self.state == KeybindCapState::Waiting {
             if let Some((raw, display)) = take_keybind_capture() {
                 self.state = KeybindCapState::Captured { raw, display };
             }
