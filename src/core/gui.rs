@@ -2945,6 +2945,9 @@ impl Window for SetKeybindWindow {
     }
 }
 
+static EXCLUDES_PATHS_CACHE: Lazy<Mutex<Option<(String, Vec<String>)>>> =
+    Lazy::new(|| Mutex::new(None));
+
 struct ExcludesEditorWindow {
     id: egui::Id,
     excludes: Vec<String>,
@@ -2961,12 +2964,47 @@ impl ExcludesEditorWindow {
     fn new() -> ExcludesEditorWindow {
         let excludes = Self::load_excludes();
 
-        let paths_result = Arc::new(Mutex::new(None));
-        let paths_result_clone = paths_result.clone();
-        std::thread::spawn(move || {
-            let paths = Self::get_available_paths();
-            *paths_result_clone.lock().unwrap() = Some(paths);
-        });
+        let (available_paths, paths_result) = match Hachimi::instance().get_active_tl_dir() {
+            None => (Vec::new(), Arc::new(Mutex::new(None))),
+            Some(ld_dir) => {
+                let key = ld_dir.to_string_lossy().to_string();
+                let cache = EXCLUDES_PATHS_CACHE.lock().unwrap();
+
+                if let Some((cached_key, cached_paths)) = cache.as_ref() {
+                    if cached_key == &key {
+                        (cached_paths.clone(), Arc::new(Mutex::new(None)))
+                    } else {
+                        drop(cache);
+
+                        let paths_result = Arc::new(Mutex::new(None));
+                        let paths_result_clone = paths_result.clone();
+                        let key_clone = key.clone();
+
+                        std::thread::spawn(move || {
+                            let paths = Self::get_available_paths();
+                            *paths_result_clone.lock().unwrap() = Some(paths.clone());
+                            let mut cache = EXCLUDES_PATHS_CACHE.lock().unwrap();
+                            *cache = Some((key_clone, paths));
+                        });
+                        (Vec::new(), paths_result)
+                    }
+                } else {
+                    drop(cache);
+
+                    let paths_result = Arc::new(Mutex::new(None));
+                    let paths_result_clone = paths_result.clone();
+                    let key_clone = key.clone();
+
+                    std::thread::spawn(move || {
+                        let paths = Self::get_available_paths();
+                        *paths_result_clone.lock().unwrap() = Some(paths.clone());
+                        let mut cache = EXCLUDES_PATHS_CACHE.lock().unwrap();
+                        *cache = Some((key_clone, paths));
+                    });
+                    (Vec::new(), paths_result)
+                }
+            }
+        };
 
         ExcludesEditorWindow {
             id: random_id(),
@@ -2974,7 +3012,7 @@ impl ExcludesEditorWindow {
             search_term: String::new(),
             edit_index: None,
             edit_value: String::new(),
-            available_paths: Vec::new(),
+            available_paths,
             paths_result,
             add_selected: 0,
             add_search_term: String::new(),
@@ -3054,8 +3092,8 @@ impl ExcludesEditorWindow {
 impl Window for ExcludesEditorWindow {
     fn run(&mut self, ctx: &egui::Context) -> bool {
         if let Ok(mut lock) = self.paths_result.try_lock() {
-            if let Some(paths) = lock.take() {
-                self.available_paths = paths;
+            if let Some(p) = lock.take() {
+                self.available_paths = p;
             }
         }
 
@@ -3154,7 +3192,10 @@ impl Window for ExcludesEditorWindow {
 
             ui.separator();
 
-            if self.available_paths.is_empty() && self.paths_result.try_lock().map(|l| l.is_none()).unwrap_or(true) {
+            if self.available_paths.is_empty() && {
+                let guard = self.paths_result.try_lock();
+                guard.map_or(true, |l| l.is_none())
+            } {
                 ui.label(t!("excludes_editor.loading_paths"));
             } else {
                 let non_excluded = self.get_non_excluded_paths();
