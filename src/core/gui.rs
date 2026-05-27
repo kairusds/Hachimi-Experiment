@@ -2952,6 +2952,7 @@ struct ExcludesEditorWindow {
     edit_index: Option<usize>,
     edit_value: String,
     available_paths: Vec<String>,
+    paths_result: Arc<Mutex<Option<Vec<String>>>>,
     add_selected: usize,
     add_search_term: String,
 }
@@ -2959,7 +2960,13 @@ struct ExcludesEditorWindow {
 impl ExcludesEditorWindow {
     fn new() -> ExcludesEditorWindow {
         let excludes = Self::load_excludes();
-        let available_paths = Self::get_available_paths();
+
+        let paths_result = Arc::new(Mutex::new(None));
+        let paths_result_clone = paths_result.clone();
+        std::thread::spawn(move || {
+            let paths = Self::get_available_paths();
+            *paths_result_clone.lock().unwrap() = Some(paths);
+        });
 
         ExcludesEditorWindow {
             id: random_id(),
@@ -2967,7 +2974,8 @@ impl ExcludesEditorWindow {
             search_term: String::new(),
             edit_index: None,
             edit_value: String::new(),
-            available_paths,
+            available_paths: Vec::new(),
+            paths_result,
             add_selected: 0,
             add_search_term: String::new(),
         }
@@ -3045,6 +3053,12 @@ impl ExcludesEditorWindow {
 
 impl Window for ExcludesEditorWindow {
     fn run(&mut self, ctx: &egui::Context) -> bool {
+        if let Ok(mut lock) = self.paths_result.try_lock() {
+            if let Some(paths) = lock.take() {
+                self.available_paths = paths;
+            }
+        }
+
         let scale = get_scale(ctx);
         let mut open = true;
         let mut open2 = true;
@@ -3055,16 +3069,14 @@ impl Window for ExcludesEditorWindow {
         .default_width(320.0 * scale)
         .max_width(400.0 * scale)
         .max_height(400.0 * scale)
-        .resizable(true)
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
-                let search_res = ui.add(
-                    egui::TextEdit::singleline(&mut self.search_term)
-                        .hint_text(t!("search_filter"))
-                        .desired_width(ui.available_width() - 60.0 * scale)
-                );
+                let _search_res = ui.add_sized(
+                    [ui.available_width() - 30.0 * scale, 24.0 * scale],
+                    egui::TextEdit::singleline(&mut self.search_term).hint_text(t!("search_filter"))
+                );                
                 #[cfg(target_os = "android")]
-                handle_android_keyboard(&search_res, &mut self.search_term);
+                handle_android_keyboard(&_search_res, &mut self.search_term);
 
                 if ui.button("X").clicked() {
                     self.search_term.clear();
@@ -3092,35 +3104,36 @@ impl Window for ExcludesEditorWindow {
 
                     for (i, exclude_str) in &display_items {
                         let i = *i;
-                        ui.horizontal(|ui| {
-                            if self.edit_index == Some(i) {
-                                let edit_res = ui.add(
-                                    egui::TextEdit::singleline(&mut self.edit_value)
-                                        .desired_width(ui.available_width() - 120.0 * scale)
-                                );
-                                #[cfg(target_os = "android")]
-                                handle_android_keyboard(&edit_res, &mut self.edit_value);
-
+                        if self.edit_index == Some(i) {
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if ui.button(t!("cancel")).clicked() {
+                                    self.edit_index = None;
+                                }
                                 if ui.button(t!("done")).clicked() {
                                     if !self.edit_value.is_empty() {
                                         self.excludes[i] = self.edit_value.clone();
                                     }
                                     self.edit_index = None;
                                 }
-                                if ui.button(t!("cancel")).clicked() {
-                                    self.edit_index = None;
-                                }
-                            } else {
-                                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                ui.label(exclude_str.as_str());
-                                if ui.button(t!("edit")).clicked() {
-                                    to_edit = Some(i);
-                                }
+                                let _edit_res = ui.add(
+                                    egui::TextEdit::singleline(&mut self.edit_value)
+                                        .desired_width(ui.available_width())
+                                );
+                                #[cfg(target_os = "android")]
+                                handle_android_keyboard(&_edit_res, &mut self.edit_value);
+                            });
+                        } else {
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                 if ui.button(t!("remove")).clicked() {
                                     to_remove = Some(i);
                                 }
-                            }
-                        });
+                                if ui.button(t!("edit")).clicked() {
+                                    to_edit = Some(i);
+                                }
+                                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                ui.label(exclude_str.as_str());
+                            });
+                        }
                     }
 
                     if let Some(idx) = to_remove {
@@ -3141,46 +3154,50 @@ impl Window for ExcludesEditorWindow {
 
             ui.separator();
 
-            let non_excluded = self.get_non_excluded_paths();
-            if !non_excluded.is_empty() {
-                ui.horizontal(|ui| {
-                    ui.label(t!("add"));
-
-                    let combo_items: Vec<(usize, &str)> = non_excluded
-                        .iter()
-                        .map(|(orig_idx, label)| (*orig_idx, label.as_str()))
-                        .collect();
-
-                    if self.add_selected >= non_excluded.len() {
-                        self.add_selected = 0;
-                    }
-
-                    let mut selected_orig_idx = non_excluded
-                        .get(self.add_selected)
-                        .map(|(orig_idx, _)| *orig_idx)
-                        .unwrap_or(0);
-
-                    let changed = Gui::run_combo_menu(
-                        ui,
-                        self.id.with("add_combo"),
-                        &mut selected_orig_idx,
-                        &combo_items,
-                        &mut self.add_search_term,
-                    );
-
-                    if changed {
-                        if let Some(path) = self.available_paths.get(selected_orig_idx) {
-                            let path_to_add = path.trim_end_matches('/').to_string();
-                            if !path_to_add.is_empty() && !self.excludes.contains(&path_to_add) {
-                                self.excludes.push(path_to_add);
-                            }
-                        }
-                        self.add_search_term.clear();
-                        self.add_selected = 0;
-                    }
-                });
+            if self.available_paths.is_empty() && self.paths_result.try_lock().map(|l| l.is_none()).unwrap_or(true) {
+                ui.label(t!("excludes_editor.loading_paths"));
             } else {
-                ui.label(t!("excludes_editor.no_paths_available"));
+                let non_excluded = self.get_non_excluded_paths();
+                if !non_excluded.is_empty() {
+                    ui.horizontal(|ui| {
+                        ui.label(t!("add"));
+    
+                        let combo_items: Vec<(usize, &str)> = non_excluded
+                            .iter()
+                            .map(|(orig_idx, label)| (*orig_idx, label.as_str()))
+                            .collect();
+    
+                        if self.add_selected >= non_excluded.len() {
+                            self.add_selected = 0;
+                        }
+    
+                        let mut selected_orig_idx = non_excluded
+                            .get(self.add_selected)
+                            .map(|(orig_idx, _)| *orig_idx)
+                            .unwrap_or(0);
+    
+                        let changed = Gui::run_combo_menu(
+                            ui,
+                            self.id.with("add_combo"),
+                            &mut selected_orig_idx,
+                            &combo_items,
+                            &mut self.add_search_term,
+                        );
+    
+                        if changed {
+                            if let Some(path) = self.available_paths.get(selected_orig_idx) {
+                                let path_to_add = path.trim_end_matches('/').to_string();
+                                if !path_to_add.is_empty() && !self.excludes.contains(&path_to_add) {
+                                    self.excludes.push(path_to_add);
+                                }
+                            }
+                            self.add_search_term.clear();
+                            self.add_selected = 0;
+                        }
+                    });
+                } else {
+                    ui.label(t!("excludes_editor.no_paths_available"));
+                }
             }
 
             ui.separator();

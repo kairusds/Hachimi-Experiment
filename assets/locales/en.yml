@@ -60,7 +60,7 @@ menu:
   open_in_game_browser: "\uf0ac Open in-game browser"
   toggle_game_ui: "\uf06e Toggle game UI"
   discord_rpc: "Discord RPC"
-  edit_excludes: "Edit Excludes"
+  edit_excludes: "\uf040 Edit Excludes"
 
 notification:
   saved_localize_dump: "Saved to localize_dump.json"
@@ -215,6 +215,7 @@ excludes_editor:
   title: "Excludes Editor"
   no_paths_available: "No available paths to exclude"
   saved: "Excludes saved successfully"
+  loading_paths: "Loading paths..."
 
 tl_update_dialog:
   title: "New update available"
