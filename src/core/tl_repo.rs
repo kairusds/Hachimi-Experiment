@@ -131,7 +131,7 @@ struct RepoCache {
     base_url: String,
     files: FnvHashMap<String, String> // path: hash
 }
-const REPO_EXCLUDES_FILENAME: &str = "excludes.txt";
+pub const REPO_EXCLUDES_FILENAME: &str = "excludes.txt";
 
 #[derive(Default)]
 pub struct Updater {
@@ -330,7 +330,15 @@ impl Updater {
                 let path = ld_dir_path.as_ref().map(|p| p.join(&file.path));
                 let exists = path.as_ref().map(|p| p.is_file()).unwrap_or(false);
 
-                let updated = if !pedantic && exists && excludes.contains(&file.path) {
+                let excluded = excludes.iter().any(|exc| {
+                    if file.path == *exc {
+                        return true;
+                    }
+                    let exc_dir = exc.trim_end_matches('/');
+                    file.path.starts_with(&format!("{}/", exc_dir))
+                });
+
+                let updated = if !pedantic && exists && excluded {
                     // skip excluded file unless pedantic update or the file doesn't exist in the system
                     false
                 } else if let Some(hash) = repo_cache.files.get(&file.path) {

@@ -988,6 +988,9 @@ impl Gui {
                                 })
                             }
                         }
+                        if ui.button(t!("menu.edit_excludes")).clicked() {
+                            show_window = Some(Box::new(ExcludesEditorWindow::new()));
+                        }
                         ui.separator();
 
                         let plugin_items = get_plugin_menu_items();
@@ -2939,6 +2942,281 @@ impl Window for SetKeybindWindow {
         }
 
         true
+    }
+}
+
+struct ExcludesEditorWindow {
+    id: egui::Id,
+    excludes: Vec<String>,
+    search_term: String,
+    edit_index: Option<usize>,
+    edit_value: String,
+    available_paths: Vec<String>,
+    add_selected: usize,
+    add_search_term: String,
+}
+
+impl ExcludesEditorWindow {
+    fn new() -> ExcludesEditorWindow {
+        let excludes = Self::load_excludes();
+        let available_paths = Self::get_available_paths();
+
+        ExcludesEditorWindow {
+            id: random_id(),
+            excludes,
+            search_term: String::new(),
+            edit_index: None,
+            edit_value: String::new(),
+            available_paths,
+            add_selected: 0,
+            add_search_term: String::new(),
+        }
+    }
+
+    fn load_excludes() -> Vec<String> {
+        let excludes_path = Hachimi::instance().get_data_path(tl_repo::REPO_EXCLUDES_FILENAME);
+        if excludes_path.exists() {
+            std::fs::read_to_string(&excludes_path)
+                .unwrap_or_default()
+                .lines()
+                .map(|l| l.trim().replace("\\", "/"))
+                .filter(|l| !l.is_empty())
+                .collect()
+        } else {
+            Vec::new()
+        }
+    }
+
+    fn save_excludes(excludes: &[String]) -> Result<(), String> {
+        let excludes_path = Hachimi::instance().get_data_path(tl_repo::REPO_EXCLUDES_FILENAME);
+        let content = excludes.join("\n");
+        std::fs::write(&excludes_path, content).map_err(|e| e.to_string())
+    }
+
+    fn get_available_paths() -> Vec<String> {
+        let Some(ld_dir) = Hachimi::instance().get_active_tl_dir() else {
+            return Vec::new();
+        };
+
+        if !ld_dir.is_dir() {
+            return Vec::new();
+        }
+
+        let mut paths: Vec<String> = Vec::new();
+        Self::collect_relative_paths(&ld_dir, &ld_dir, &mut paths);
+        paths.sort();
+        paths
+    }
+
+    fn collect_relative_paths(root: &std::path::Path, current: &std::path::Path, paths: &mut Vec<String>) {
+        if let Ok(entries) = std::fs::read_dir(current) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                // skip hidden files/directories starting with '.'
+                if entry.file_name().to_string_lossy().starts_with('.') {
+                    continue;
+                }
+                if let Ok(rel) = path.strip_prefix(root) {
+                    let rel_str = rel.to_string_lossy().replace("\\", "/");
+                    if path.is_dir() {
+                        // include folder paths with trailing slash to distinguish
+                        paths.push(format!("{}/", rel_str));
+                        Self::collect_relative_paths(root, &path, paths);
+                    } else {
+                        paths.push(rel_str);
+                    }
+                }
+            }
+        }
+    }
+
+    fn get_non_excluded_paths(&self) -> Vec<(usize, String)> {
+        self.available_paths
+            .iter()
+            .enumerate()
+            .filter(|(_, p)| {
+                let clean = p.trim_end_matches('/');
+                !self.excludes.iter().any(|e| e == clean || e == *p)
+            })
+            .map(|(i, p)| (i, p.clone()))
+            .collect()
+    }
+}
+
+impl Window for ExcludesEditorWindow {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let scale = get_scale(ctx);
+        let mut open = true;
+        let mut open2 = true;
+        let mut save_clicked = false;
+
+        new_window(ctx, self.id, t!("excludes_editor.title"))
+        .open(&mut open)
+        .default_width(320.0 * scale)
+        .max_width(400.0 * scale)
+        .max_height(400.0 * scale)
+        .resizable(true)
+        .show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                let search_res = ui.add(
+                    egui::TextEdit::singleline(&mut self.search_term)
+                        .hint_text(t!("search_filter"))
+                        .desired_width(ui.available_width() - 60.0 * scale)
+                );
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&search_res, &mut self.search_term);
+
+                if ui.button("X").clicked() {
+                    self.search_term.clear();
+                }
+            });
+
+            ui.separator();
+
+            egui::ScrollArea::vertical()
+                .max_height(200.0 * scale)
+                .auto_shrink([false, false])
+                .show(ui, |ui| {
+                    let mut to_remove: Option<usize> = None;
+                    let mut to_edit: Option<usize> = None;
+
+                    let display_items: Vec<(usize, String)> = self.excludes
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, exclude)| {
+                            self.search_term.is_empty()
+                                || exclude.to_lowercase().contains(&self.search_term.to_lowercase())
+                        })
+                        .map(|(i, exclude)| (i, exclude.clone()))
+                        .collect();
+
+                    for (i, exclude_str) in &display_items {
+                        let i = *i;
+                        ui.horizontal(|ui| {
+                            if self.edit_index == Some(i) {
+                                let edit_res = ui.add(
+                                    egui::TextEdit::singleline(&mut self.edit_value)
+                                        .desired_width(ui.available_width() - 120.0 * scale)
+                                );
+                                #[cfg(target_os = "android")]
+                                handle_android_keyboard(&edit_res, &mut self.edit_value);
+
+                                if ui.button(t!("done")).clicked() {
+                                    if !self.edit_value.is_empty() {
+                                        self.excludes[i] = self.edit_value.clone();
+                                    }
+                                    self.edit_index = None;
+                                }
+                                if ui.button(t!("cancel")).clicked() {
+                                    self.edit_index = None;
+                                }
+                            } else {
+                                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                ui.label(exclude_str.as_str());
+                                if ui.button(t!("edit")).clicked() {
+                                    to_edit = Some(i);
+                                }
+                                if ui.button(t!("remove")).clicked() {
+                                    to_remove = Some(i);
+                                }
+                            }
+                        });
+                    }
+
+                    if let Some(idx) = to_remove {
+                        self.excludes.remove(idx);
+                        if self.edit_index == Some(idx) {
+                            self.edit_index = None;
+                        } else if let Some(edit_idx) = self.edit_index {
+                            if edit_idx > idx {
+                                self.edit_index = Some(edit_idx - 1);
+                            }
+                        }
+                    }
+                    if let Some(idx) = to_edit {
+                        self.edit_value = self.excludes[idx].clone();
+                        self.edit_index = Some(idx);
+                    }
+                });
+
+            ui.separator();
+
+            let non_excluded = self.get_non_excluded_paths();
+            if !non_excluded.is_empty() {
+                ui.horizontal(|ui| {
+                    ui.label(t!("add"));
+
+                    let combo_items: Vec<(usize, &str)> = non_excluded
+                        .iter()
+                        .map(|(orig_idx, label)| (*orig_idx, label.as_str()))
+                        .collect();
+
+                    if self.add_selected >= non_excluded.len() {
+                        self.add_selected = 0;
+                    }
+
+                    let mut selected_orig_idx = non_excluded
+                        .get(self.add_selected)
+                        .map(|(orig_idx, _)| *orig_idx)
+                        .unwrap_or(0);
+
+                    let changed = Gui::run_combo_menu(
+                        ui,
+                        self.id.with("add_combo"),
+                        &mut selected_orig_idx,
+                        &combo_items,
+                        &mut self.add_search_term,
+                    );
+
+                    if changed {
+                        if let Some(path) = self.available_paths.get(selected_orig_idx) {
+                            let path_to_add = path.trim_end_matches('/').to_string();
+                            if !path_to_add.is_empty() && !self.excludes.contains(&path_to_add) {
+                                self.excludes.push(path_to_add);
+                            }
+                        }
+                        self.add_search_term.clear();
+                        self.add_selected = 0;
+                    }
+                });
+            } else {
+                ui.label(t!("excludes_editor.no_paths_available"));
+            }
+
+            ui.separator();
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                if ui.button(t!("cancel")).clicked() {
+                    open2 = false;
+                }
+                if ui.button(t!("save")).clicked() {
+                    save_clicked = true;
+                    open2 = false;
+                }
+            });
+        });
+
+        if save_clicked {
+            match Self::save_excludes(&self.excludes) {
+                Ok(()) => {
+                    thread::spawn(|| {
+                        Gui::instance().unwrap()
+                            .lock().unwrap()
+                            .show_notification(&t!("excludes_editor.saved"));
+                    });
+                }
+                Err(e) => {
+                    let err = e.clone();
+                    thread::spawn(move || {
+                        Gui::instance().unwrap()
+                            .lock().unwrap()
+                            .show_notification(&err);
+                    });
+                }
+            }
+        }
+
+        open && open2
     }
 }
 
