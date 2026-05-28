@@ -3159,7 +3159,6 @@ impl Window for ExcludesEditorWindow {
                             });
                         } else {
                             ui.horizontal(|ui| {
-                                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                     if ui.button(t!("remove")).clicked() {
                                         to_remove = Some(i);
@@ -3167,8 +3166,9 @@ impl Window for ExcludesEditorWindow {
                                     if ui.button(t!("edit")).clicked() {
                                         to_edit = Some(i);
                                     }
+                                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                    ui.label(exclude_str.as_str());
                                 });
-                                ui.label(exclude_str.as_str());
                             });
                         }
                     }
