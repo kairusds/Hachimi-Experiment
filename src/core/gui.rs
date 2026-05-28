@@ -3104,9 +3104,6 @@ impl Window for ExcludesEditorWindow {
 
         new_window(ctx, self.id, t!("excludes_editor.title"))
         .open(&mut open)
-        .default_width(320.0 * scale)
-        .max_width(400.0 * scale)
-        .max_height(400.0 * scale)
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
                 let _search_res = ui.add_sized(
@@ -3161,15 +3158,17 @@ impl Window for ExcludesEditorWindow {
                                 handle_android_keyboard(&_edit_res, &mut self.edit_value);
                             });
                         } else {
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.button(t!("remove")).clicked() {
-                                    to_remove = Some(i);
-                                }
-                                if ui.button(t!("edit")).clicked() {
-                                    to_edit = Some(i);
-                                }
+                            ui.horizontal(|ui| {
                                 ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
                                 ui.label(exclude_str.as_str());
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui.button(t!("remove")).clicked() {
+                                        to_remove = Some(i);
+                                    }
+                                    if ui.button(t!("edit")).clicked() {
+                                        to_edit = Some(i);
+                                    }
+                                });
                             });
                         }
                     }
@@ -3202,31 +3201,26 @@ impl Window for ExcludesEditorWindow {
                 if !non_excluded.is_empty() {
                     ui.horizontal(|ui| {
                         ui.label(t!("add"));
-    
+
                         let combo_items: Vec<(usize, &str)> = non_excluded
                             .iter()
-                            .map(|(orig_idx, label)| (*orig_idx, label.as_str()))
+                            .enumerate()
+                            .map(|(i, (_, label))| (i, label.as_str()))
                             .collect();
-    
-                        if self.add_selected >= non_excluded.len() {
-                            self.add_selected = 0;
-                        }
-    
-                        let mut selected_orig_idx = non_excluded
-                            .get(self.add_selected)
-                            .map(|(orig_idx, _)| *orig_idx)
-                            .unwrap_or(0);
-    
+
+                        let mut selected = self.add_selected.min(non_excluded.len() - 1);
+
                         let changed = Gui::run_combo_menu(
                             ui,
                             self.id.with("add_combo"),
-                            &mut selected_orig_idx,
+                            &mut selected,
                             &combo_items,
                             &mut self.add_search_term,
                         );
-    
-                        if changed {
-                            if let Some(path) = self.available_paths.get(selected_orig_idx) {
+
+                        if changed && selected < non_excluded.len() {
+                            let (orig_idx, _) = non_excluded[selected];
+                            if let Some(path) = self.available_paths.get(orig_idx) {
                                 let path_to_add = path.trim_end_matches('/').to_string();
                                 if !path_to_add.is_empty() && !self.excludes.contains(&path_to_add) {
                                     self.excludes.push(path_to_add);
