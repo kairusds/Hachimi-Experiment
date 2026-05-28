@@ -3109,7 +3109,7 @@ impl Window for ExcludesEditorWindow {
                 let _search_res = ui.add_sized(
                     [ui.available_width() - 30.0 * scale, 24.0 * scale],
                     egui::TextEdit::singleline(&mut self.search_term).hint_text(t!("search_filter"))
-                );                
+                );
                 #[cfg(target_os = "android")]
                 handle_android_keyboard(&_search_res, &mut self.search_term);
 
@@ -3166,8 +3166,10 @@ impl Window for ExcludesEditorWindow {
                                     if ui.button(t!("edit")).clicked() {
                                         to_edit = Some(i);
                                     }
-                                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    ui.label(exclude_str.as_str());
+                                    ui.add_sized(
+                                        [ui.available_width(), ui.available_height()],
+                                        egui::Label::new(exclude_str.as_str()).wrap()
+                                    );
                                 });
                             });
                         }
