@@ -3174,7 +3174,7 @@ impl Window for ExcludesEditorWindow {
                     .show(ui, |ui| {
                         let mut to_remove: Option<usize> = None;
                         let mut to_edit: Option<usize> = None;
-                
+
                         let display_items: Vec<(usize, String)> = self.excludes
                             .iter()
                             .enumerate()
@@ -3184,7 +3184,7 @@ impl Window for ExcludesEditorWindow {
                             })
                             .map(|(i, exclude)| (i, exclude.clone()))
                             .collect();
-                
+
                         for (i, exclude_str) in &display_items {
                             let i = *i;
                             if self.edit_index == Some(i) {
