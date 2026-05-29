@@ -3188,7 +3188,7 @@ impl Window for ExcludesEditorWindow {
                         for (i, exclude_str) in &display_items {
                             let i = *i;
                             if self.edit_index == Some(i) {
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                                     if ui.button(t!("cancel")).clicked() {
                                         self.edit_index = None;
                                     }
@@ -3208,7 +3208,7 @@ impl Window for ExcludesEditorWindow {
                                     handle_android_keyboard(&_edit_res, &mut self.edit_value);
                                 });
                             } else {
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                                     if ui.button(t!("remove")).clicked() {
                                         to_remove = Some(i);
                                     }
