@@ -3192,6 +3192,7 @@ impl Window for ExcludesEditorWindow {
                                     if ui.button(t!("cancel")).clicked() {
                                         self.edit_index = None;
                                     }
+
                                     if ui.button(t!("done")).clicked() {
                                         if !self.edit_value.is_empty() {
                                             self.excludes[i] = self.edit_value.clone();
@@ -3199,13 +3200,15 @@ impl Window for ExcludesEditorWindow {
                                         self.edit_index = None;
                                     }
 
-                                    let _edit_res = ui.add_sized(
-                                        [ui.available_width(), 24.0 * scale],
-                                        egui::TextEdit::singleline(&mut self.edit_value)
-                                    );
+                                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                                        let _edit_res = ui.add(
+                                            egui::TextEdit::singleline(&mut self.edit_value)
+                                                .desired_width(ui.available_width())
+                                        );
 
-                                    #[cfg(target_os = "android")]
-                                    handle_android_keyboard(&_edit_res, &mut self.edit_value);
+                                        #[cfg(target_os = "android")]
+                                        handle_android_keyboard(&_edit_res, &mut self.edit_value);
+                                    });
                                 });
                             } else {
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
@@ -3215,10 +3218,11 @@ impl Window for ExcludesEditorWindow {
                                     if ui.button(t!("edit")).clicked() {
                                         to_edit = Some(i);
                                     }
-                                    ui.add_sized(
-                                        [ui.available_width(), ui.available_height()],
-                                        egui::Label::new(exclude_str.as_str()).wrap(),
-                                    );
+
+                                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                        ui.label(exclude_str.as_str());
+                                    });
                                 });
                             }
                         }
