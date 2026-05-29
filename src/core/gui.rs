@@ -2945,6 +2945,11 @@ impl Window for SetKeybindWindow {
     }
 }
 
+enum ConfirmAction {
+    Remove { index: usize },
+    ConfirmEdit { index: usize, value: String },
+}
+
 static EXCLUDES_PATHS_CACHE: Lazy<Mutex<Option<(String, Vec<String>)>>> =
     Lazy::new(|| Mutex::new(None));
 
@@ -2958,6 +2963,7 @@ struct ExcludesEditorWindow {
     paths_result: Arc<Mutex<Option<Vec<String>>>>,
     add_selected: usize,
     add_search_term: String,
+    confirm_action: Option<ConfirmAction>,
 }
 
 impl ExcludesEditorWindow {
@@ -3016,6 +3022,7 @@ impl ExcludesEditorWindow {
             paths_result,
             add_selected: 0,
             add_search_term: String::new(),
+            confirm_action: None,
         }
     }
 
@@ -3187,6 +3194,52 @@ impl Window for ExcludesEditorWindow {
 
                         for (i, exclude_str) in &display_items {
                             let i = *i;
+                            
+                            if let Some(ConfirmAction::Remove { index }) = self.confirm_action.as_ref() {
+                                if *index == i {
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                        if ui.button(t!("no")).clicked() {
+                                            self.confirm_action = None;
+                                        }
+
+                                        if ui.button(t!("yes")).clicked() {
+                                            to_remove = Some(i);
+                                            self.confirm_action = None;
+                                        }
+
+                                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                                            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                            ui.label(t!("excludes_editor.confirm_remove", path = exclude_str.as_str()));
+                                        });
+                                    });
+                                    continue;
+                                }
+                            }
+
+                            if let Some(ConfirmAction::ConfirmEdit { index, .. }) = self.confirm_action.as_ref() {
+                                if *index == i {
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                        if ui.button(t!("no")).clicked() {
+                                            self.confirm_action = None;
+                                        }
+
+                                        if ui.button(t!("yes")).clicked() {
+                                            if let Some(ConfirmAction::ConfirmEdit { value, .. }) = self.confirm_action.take() {
+                                                self.excludes[i] = value;
+                                            }
+                                            self.edit_index = None;
+                                            self.confirm_action = None;
+                                        }
+
+                                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                                            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                            ui.label(t!("save_changes"));
+                                        });
+                                    });
+                                    continue;
+                                }
+                            }
+
                             if self.edit_index == Some(i) {
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                                     if ui.button(t!("cancel")).clicked() {
@@ -3195,9 +3248,11 @@ impl Window for ExcludesEditorWindow {
 
                                     if ui.button(t!("done")).clicked() {
                                         if !self.edit_value.is_empty() {
-                                            self.excludes[i] = self.edit_value.clone();
+                                            self.confirm_action = Some(ConfirmAction::ConfirmEdit {
+                                                index: i,
+                                                value: self.edit_value.clone(),
+                                            });
                                         }
-                                        self.edit_index = None;
                                     }
 
                                     ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
@@ -3213,7 +3268,7 @@ impl Window for ExcludesEditorWindow {
                             } else {
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                                     if ui.button(t!("remove")).clicked() {
-                                        to_remove = Some(i);
+                                        self.confirm_action = Some(ConfirmAction::Remove { index: i });
                                     }
                                     if ui.button(t!("edit")).clicked() {
                                         to_edit = Some(i);

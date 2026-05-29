@@ -33,6 +33,7 @@ bind_key: "Bind key"
 edit: "Edit"
 remove: "Remove"
 add: "Add"
+save_changes: "Save changes?"
 
 menu:
   check_for_updates: "\uf0aa Check for updates"
@@ -216,6 +217,7 @@ excludes_editor:
   no_paths_available: "No available paths to exclude"
   saved: "Excludes saved successfully"
   loading_paths: "Loading paths..."
+  confirm_remove: "Are you sure you want to remove the exclude \"%{path}\"?"
 
 tl_update_dialog:
   title: "New update available"
