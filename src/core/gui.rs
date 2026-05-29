@@ -1271,7 +1271,7 @@ impl Gui {
                 #[cfg(target_os = "android")]
                 handle_android_keyboard(&_res, search_term);
 
-                if ui.button("X").clicked() {
+                if ui.button("\u{f00d}").clicked() {
                     search_term.clear();
                 }
             });
@@ -3113,83 +3113,10 @@ impl Window for ExcludesEditorWindow {
                 #[cfg(target_os = "android")]
                 handle_android_keyboard(&_search_res, &mut self.search_term);
 
-                if ui.button("X").clicked() {
+                if ui.button("\u{f00d}").clicked() {
                     self.search_term.clear();
                 }
             });
-
-            ui.separator();
-
-            egui::ScrollArea::vertical()
-                .max_height(200.0 * scale)
-                .auto_shrink([false, false])
-                .show(ui, |ui| {
-                    let mut to_remove: Option<usize> = None;
-                    let mut to_edit: Option<usize> = None;
-
-                    let display_items: Vec<(usize, String)> = self.excludes
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, exclude)| {
-                            self.search_term.is_empty()
-                                || exclude.to_lowercase().contains(&self.search_term.to_lowercase())
-                        })
-                        .map(|(i, exclude)| (i, exclude.clone()))
-                        .collect();
-
-                    for (i, exclude_str) in &display_items {
-                        let i = *i;
-                        if self.edit_index == Some(i) {
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.button(t!("cancel")).clicked() {
-                                    self.edit_index = None;
-                                }
-                                if ui.button(t!("done")).clicked() {
-                                    if !self.edit_value.is_empty() {
-                                        self.excludes[i] = self.edit_value.clone();
-                                    }
-                                    self.edit_index = None;
-                                }
-                                let _edit_res = ui.add(
-                                    egui::TextEdit::singleline(&mut self.edit_value)
-                                        .desired_width(ui.available_width())
-                                );
-                                #[cfg(target_os = "android")]
-                                handle_android_keyboard(&_edit_res, &mut self.edit_value);
-                            });
-                        } else {
-                            ui.horizontal(|ui| {
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    if ui.button(t!("remove")).clicked() {
-                                        to_remove = Some(i);
-                                    }
-                                    if ui.button(t!("edit")).clicked() {
-                                        to_edit = Some(i);
-                                    }
-                                    ui.add_sized(
-                                        [ui.available_width(), ui.available_height()],
-                                        egui::Label::new(exclude_str.as_str()).wrap()
-                                    );
-                                });
-                            });
-                        }
-                    }
-
-                    if let Some(idx) = to_remove {
-                        self.excludes.remove(idx);
-                        if self.edit_index == Some(idx) {
-                            self.edit_index = None;
-                        } else if let Some(edit_idx) = self.edit_index {
-                            if edit_idx > idx {
-                                self.edit_index = Some(edit_idx - 1);
-                            }
-                        }
-                    }
-                    if let Some(idx) = to_edit {
-                        self.edit_value = self.excludes[idx].clone();
-                        self.edit_index = Some(idx);
-                    }
-                });
 
             ui.separator();
 
@@ -3228,6 +3155,7 @@ impl Window for ExcludesEditorWindow {
                                     self.excludes.push(path_to_add);
                                 }
                             }
+
                             self.add_search_term.clear();
                             self.add_selected = 0;
                         }
@@ -3239,15 +3167,93 @@ impl Window for ExcludesEditorWindow {
 
             ui.separator();
 
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                if ui.button(t!("cancel")).clicked() {
-                    open2 = false;
+            simple_window_layout(ui, self.id,
+                |ui| {
+                    egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(8, 0))
+                    .show(ui, |ui| {
+                        let mut to_remove: Option<usize> = None;
+                        let mut to_edit: Option<usize> = None;
+                
+                        let display_items: Vec<(usize, String)> = self.excludes
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, exclude)| {
+                                self.search_term.is_empty()
+                                    || exclude.to_lowercase().contains(&self.search_term.to_lowercase())
+                            })
+                            .map(|(i, exclude)| (i, exclude.clone()))
+                            .collect();
+                
+                        for (i, exclude_str) in &display_items {
+                            let i = *i;
+                            if self.edit_index == Some(i) {
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui.button(t!("cancel")).clicked() {
+                                        self.edit_index = None;
+                                    }
+                                    if ui.button(t!("done")).clicked() {
+                                        if !self.edit_value.is_empty() {
+                                            self.excludes[i] = self.edit_value.clone();
+                                        }
+                                        self.edit_index = None;
+                                    }
+
+                                    let _edit_res = ui.add_sized(
+                                        [ui.available_width(), 24.0 * scale],
+                                        egui::TextEdit::singleline(&mut self.edit_value)
+                                    );
+
+                                    #[cfg(target_os = "android")]
+                                    handle_android_keyboard(&_edit_res, &mut self.edit_value);
+                                });
+                            } else {
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui.button(t!("remove")).clicked() {
+                                        to_remove = Some(i);
+                                    }
+                                    if ui.button(t!("edit")).clicked() {
+                                        to_edit = Some(i);
+                                    }
+                                    ui.add_sized(
+                                        [ui.available_width(), ui.available_height()],
+                                        egui::Label::new(exclude_str.as_str()).wrap(),
+                                    );
+                                });
+                            }
+                        }
+
+                        if let Some(idx) = to_remove {
+                            self.excludes.remove(idx);
+                            if self.edit_index == Some(idx) {
+                                self.edit_index = None;
+                            } else if let Some(edit_idx) = self.edit_index {
+                                if edit_idx > idx {
+                                    self.edit_index = Some(edit_idx - 1);
+                                }
+                            }
+                        }
+
+                        if let Some(idx) = to_edit {
+                            self.edit_value = self.excludes[idx].clone();
+                            self.edit_index = Some(idx);
+                        }
+                    });
+                },
+                |ui| {
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                            if ui.button(t!("cancel")).clicked() {
+                                open2 = false;
+                            }
+                            if ui.button(t!("save")).clicked() {
+                                save_clicked = true;
+                                open2 = false;
+                            }
+                        });
+                    });
                 }
-                if ui.button(t!("save")).clicked() {
-                    save_clicked = true;
-                    open2 = false;
-                }
-            });
+            );
         });
 
         if save_clicked {
@@ -3270,7 +3276,8 @@ impl Window for ExcludesEditorWindow {
             }
         }
 
-        open && open2
+        open &= open2;
+        open
     }
 }
 
