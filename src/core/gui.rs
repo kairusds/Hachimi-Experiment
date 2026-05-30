@@ -3455,7 +3455,7 @@ impl Window for ChangeTranslationRepoWindow {
                             if let Some(ref info) = info {
                                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    ui.label(&info.name);
+                                    ui.radio(true, &info.name);
                                 });
 
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -3475,7 +3475,7 @@ impl Window for ChangeTranslationRepoWindow {
                             } else {
                                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    ui.label(&repo.index);
+                                    ui.radio(true, &repo.index);
                                 });
 
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -3529,7 +3529,7 @@ impl Window for ChangeTranslationRepoWindow {
                             if let Some(ref info) = info {
                                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    if ui.selectable_label(false, &info.name).clicked() {
+                                    if ui.radio(false, &info.name).clicked() {
                                         Self::switch_to_repo(repo.id, &repo.index);
                                     }
                                 });
@@ -3552,7 +3552,7 @@ impl Window for ChangeTranslationRepoWindow {
                             } else {
                                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    if ui.selectable_label(false, &repo.index).clicked() {
+                                    if ui.radio(false, &repo.index).clicked() {
                                         Self::switch_to_repo(repo.id, &repo.index);
                                     }
                                 });
