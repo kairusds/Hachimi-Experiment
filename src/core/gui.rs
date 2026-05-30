@@ -3873,9 +3873,9 @@ impl Window for TranslationRepoInfoWindow {
         }
 
         let title = if let Some(ref info) = self.info {
-            format!("{} {}", info.name, t!("change_translation_repo.details_suffix"))
+            format!("{} {}", info.name, t!("translation_repo_info.details_suffix"))
         } else {
-            t!("change_translation_repo.details_title").into_owned()
+            t!("translation_repo_info.details_title").into_owned()
         };
 
         new_window(ctx, self.id, &title)
@@ -3914,13 +3914,14 @@ impl Window for TranslationRepoInfoWindow {
                         ui.add_space(6.0 * scale);
                         egui::Grid::new(self.id.with("info_grid"))
                             .num_columns(2)
-                            .spacing([8.0 * scale, 4.0 * scale])
+                            .min_col_width(80.0 * scale)
+                            .spacing([12.0 * scale, 6.0 * scale])
                             .show(ui, |ui| {
                                 if !info.homepage.is_empty() {
                                     ui.label(egui::RichText::new(
-                                        t!("change_translation_repo.homepage")
+                                        t!("translation_repo_info.homepage")
                                     ).strong());
-                                    if ui.button(&info.homepage).clicked() {
+                                    if ui.button(t!("open")).clicked() {
                                         Application::OpenURL(info.homepage.to_il2cpp_string());
                                     }
                                     ui.end_row();
@@ -3928,7 +3929,7 @@ impl Window for TranslationRepoInfoWindow {
 
                                 if !info.maintainer.is_empty() {
                                     ui.label(egui::RichText::new(
-                                        t!("change_translation_repo.maintainer")
+                                        t!("translation_repo_info.maintainer")
                                     ).strong());
                                     ui.label(&info.maintainer);
                                     ui.end_row();
@@ -3941,7 +3942,7 @@ impl Window for TranslationRepoInfoWindow {
                         ui.separator();
                         ui.add_space(4.0 * scale);
                         ui.label(egui::RichText::new(
-                            t!("change_translation_repo.contributors")
+                            t!("translation_repo_info.contributors")
                         ).strong());
 
                         if let Some(ref text) = self.contributors_text {
@@ -3950,7 +3951,7 @@ impl Window for TranslationRepoInfoWindow {
                             ui.label(egui::RichText::new(t!("loading_label")).italics());
                         } else if info.is_contributors_url() {
                             if let Some(url) = info.contributors.as_str() {
-                                if ui.button(url).clicked() {
+                                if ui.button(t!("translation_repo_info.view_contributors")).clicked() {
                                     Application::OpenURL(url.to_il2cpp_string());
                                 }
                             }

@@ -227,17 +227,19 @@ change_translation_repo:
   available: "Available"
   confirm_remove: "Are you sure you want to remove \"%{name}\"?"
   cannot_remove_active: "Cannot remove the currently active repo. Switch to another repo first."
+
+add_translation_repo:
+  title: "Add Translation Repository"
+  select_translation_repo: "Select a translation repo:"
+  already_downloaded: "(already downloaded)"
+
+translation_repo_info:
   details_suffix: "Details"
   details_title: "Translation Repo Details"
   homepage: "Homepage"
   maintainer: "Maintainer"
   contributors: "Contributors"
   view_contributors: "View Contributors"
-
-add_translation_repo:
-  title: "Add Translation Repository"
-  select_translation_repo: "Select a translation repo:"
-  already_downloaded: "(already downloaded)"
 
 tl_update_dialog:
   title: "New update available"
