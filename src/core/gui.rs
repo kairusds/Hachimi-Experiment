@@ -3455,7 +3455,7 @@ impl Window for ChangeTranslationRepoWindow {
                             if let Some(ref info) = info {
                                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    ui.radio(true, &info.name);
+                                    let _ = ui.radio(true, &info.name);
                                 });
 
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -3475,7 +3475,7 @@ impl Window for ChangeTranslationRepoWindow {
                             } else {
                                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    ui.radio(true, &repo.index);
+                                    let _ = ui.radio(true, &repo.index);
                                 });
 
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
