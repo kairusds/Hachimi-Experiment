@@ -39,7 +39,7 @@ use super::{
     game::Region,
     hachimi::{self, Language, REPO_PATH, WEBSITE_URL},
     http::AsyncRequest,
-    tl_repo::{self, RepoInfo},
+    tl_repo::{self, RepoInfo, LocalRepoInfo},
     utils::{self, get_localized_string, SendPtr},
     Hachimi
 };
@@ -272,7 +272,7 @@ fn get_scale_salt(ctx: &egui::Context) -> f32 {
     ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale_salt"))).unwrap_or(1.0)
 }
 
-fn get_scale(ctx: &egui::Context) -> f32 {
+pub fn get_scale(ctx: &egui::Context) -> f32 {
     ctx.data(|d| d.get_temp::<f32>(egui::Id::new("gui_scale"))).unwrap_or(1.0)
 }
 
@@ -791,13 +791,13 @@ impl Gui {
     }
 
     const ICON_IMAGE: egui::ImageSource<'static> = egui::include_image!("../../assets/icon.png");
-    fn icon<'a>(ctx: &egui::Context) -> egui::Image<'a> {
+    pub fn icon<'a>(ctx: &egui::Context) -> egui::Image<'a> {
         let scale = get_scale(ctx);
         egui::Image::new(Self::ICON_IMAGE)
             .fit_to_exact_size(egui::Vec2::new(24.0 * scale, 24.0 * scale))
     }
 
-    fn icon_2x<'a>(ctx: &egui::Context) -> egui::Image<'a> {
+    pub fn icon_2x<'a>(ctx: &egui::Context) -> egui::Image<'a> {
         let scale = get_scale(ctx);
         egui::Image::new(Self::ICON_IMAGE)
             .fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale))
@@ -963,6 +963,9 @@ impl Gui {
                         ui.separator();
 
                         ui.heading(t!("menu.translation_heading"));
+                        if ui.button(t!("menu.change_translation_repo")).clicked() {
+                            show_window = Some(Box::new(ChangeTranslationRepoWindow::new()));
+                        }
                         if ui.button(t!("menu.reload_localized_data")).clicked() {
                             hachimi.load_localized_data();
                             show_notification = Some(t!("notification.localized_data_reloaded"));
@@ -3131,7 +3134,7 @@ impl Window for ExcludesEditorWindow {
                 let guard = self.paths_result.try_lock();
                 guard.map_or(true, |l| l.is_none())
             } {
-                ui.label(t!("excludes_editor.loading_paths"));
+                ui.label(t!("loading_label"));
             } else {
                 let non_excluded = self.get_non_excluded_paths();
                 if !non_excluded.is_empty() {
@@ -3336,6 +3339,591 @@ impl Window for ExcludesEditorWindow {
         }
 
         open &= open2;
+        open
+    }
+}
+
+#[derive(Clone)]
+enum ChangeRepoConfirmAction {
+    Remove { repo_id: u32, repo_name: String },
+}
+
+struct ChangeTranslationRepoWindow {
+    id: egui::Id,
+    confirm_action: Option<ChangeRepoConfirmAction>,
+}
+
+impl ChangeTranslationRepoWindow {
+    fn new() -> ChangeTranslationRepoWindow {
+        ChangeTranslationRepoWindow {
+            id: random_id(),
+            confirm_action: None,
+        }
+    }
+}
+
+impl Window for ChangeTranslationRepoWindow {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let scale = get_scale(ctx);
+        let mut open = true;
+
+        let hachimi = Hachimi::instance();
+        let manager = hachimi.tl_repo_manager.lock().unwrap().clone();
+        let current_repo_id = hachimi.config.load().selected_tl_repo_id;
+        let has_repos = !manager.repos.is_empty();
+
+        new_window(ctx, self.id, t!("change_translation_repo.title"))
+        .open(&mut open)
+        .show(ctx, |ui| {
+            if !has_repos {
+                ui.vertical_centered(|ui| {
+                    ui.add_space(20.0 * scale);
+                    ui.label(t!("change_translation_repo.no_repos"));
+                    ui.add_space(10.0 * scale);
+                });
+
+                ui.separator();
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    if ui.button(t!("change_translation_repo.browse_repositories")).clicked() {
+                        thread::spawn(|| {
+                            Gui::instance().unwrap()
+                            .lock().unwrap()
+                            .show_window(Box::new(AddTranslationRepoWindow::new()));
+                        });
+                    }
+                });
+            } else {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.heading(t!("change_translation_repo.active"));
+                    ui.separator();
+
+                    for repo in &manager.repos {
+                        let is_active = current_repo_id == Some(repo.id);
+                        if !is_active { continue; }
+
+                        let info = match LocalRepoInfo::load(repo.id) {
+                            Ok(data) => Some(data),
+                            Err(e) => {
+                                let err = e.to_string();
+                                thread::spawn(move || {
+                                    Gui::instance().unwrap()
+                                        .lock().unwrap()
+                                        .show_notification(&err);
+                                });
+                                None
+                            }
+                        };
+
+                        if let Some(ref confirm) = self.confirm_action {
+                            let ChangeRepoConfirmAction::Remove { repo_id, .. } = confirm;
+                            let matched_id = *repo_id;
+                            if matched_id == repo.id {
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                    if ui.button(t!("ok")).clicked() {
+                                        self.confirm_action = None;
+                                    }
+                                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                        ui.label(t!("change_translation_repo.cannot_remove_active"));
+                                    });
+                                });
+                                continue;
+                            }
+                        }
+
+                        ui.horizontal(|ui| {
+                            ui.add(LocalRepoInfo::icon(ctx, repo.id));
+
+                            if let Some(ref info) = info {
+                                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                    ui.label(&info.name);
+                                });
+
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui.button(t!("remove")).clicked() {
+                                        self.confirm_action = Some(ChangeRepoConfirmAction::Remove {
+                                            repo_id: repo.id,
+                                            repo_name: info.name.clone(),
+                                        });
+                                    }
+                                    if ui.button(" \u{f05a} ").clicked() {
+                                        let repo_id = repo.id;
+                                        let index = repo.index.clone();
+                                        thread::spawn(move || {
+                                            Gui::instance().unwrap()
+                                            .lock().unwrap()
+                                            .show_window(Box::new(TranslationRepoInfoWindow::new(repo_id, index)));
+                                        });
+                                    }
+                                });
+                            } else {
+                                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                    ui.label(&repo.index);
+                                });
+
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui.button(t!("remove")).clicked() {
+                                        self.confirm_action = Some(ChangeRepoConfirmAction::Remove {
+                                            repo_id: repo.id,
+                                            repo_name: repo.index.clone(),
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+
+                    ui.add_space(8.0 * scale);
+                    ui.heading(t!("change_translation_repo.available"));
+                    ui.separator();
+
+                    for repo in &manager.repos {
+                        let is_active = current_repo_id == Some(repo.id);
+                        if is_active { continue; }
+
+                        let info = match LocalRepoInfo::load(repo.id) {
+                            Ok(data) => Some(data),
+                            Err(e) => {
+                                let err = e.to_string();
+                                thread::spawn(move || {
+                                    Gui::instance().unwrap()
+                                        .lock().unwrap()
+                                        .show_notification(&err);
+                                });
+                                None
+                            }
+                        };
+
+                        if let Some(ref confirm) = self.confirm_action {
+                            let ChangeRepoConfirmAction::Remove { repo_id, ref repo_name } = confirm;
+                            if *repo_id == repo.id {
+                                let remove_id = *repo_id;
+                                let remove_name = repo_name.clone();
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                    if ui.button(t!("no")).clicked() {
+                                        self.confirm_action = None;
+                                    }
+                                    if ui.button(t!("yes")).clicked() {
+                                        Self::remove_repo(remove_id);
+                                        self.confirm_action = None;
+                                    }
+                                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
+                                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                        ui.label(t!("change_translation_repo.confirm_remove", name = remove_name.as_str()));
+                                    });
+                                });
+                                continue;
+                            }
+                        }
+
+                        ui.horizontal(|ui| {
+                            ui.add(LocalRepoInfo::icon(ctx, repo.id));
+
+                            if let Some(ref info) = info {
+                                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                    if ui.selectable_label(false, &info.name).clicked() {
+                                        Self::switch_to_repo(repo.id, &repo.index);
+                                    }
+                                });
+
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui.button(t!("remove")).clicked() {
+                                        self.confirm_action = Some(ChangeRepoConfirmAction::Remove {
+                                            repo_id: repo.id,
+                                            repo_name: info.name.clone(),
+                                        });
+                                    }
+
+                                    if ui.button("\u{f05a}").clicked() {
+                                        let repo_id = repo.id;
+                                        let index = repo.index.clone();
+                                        thread::spawn(move || {
+                                            Gui::instance().unwrap()
+                                            .lock().unwrap()
+                                            .show_window(Box::new(TranslationRepoInfoWindow::new(repo_id, index)));
+                                        });
+                                    }
+                                });
+                            } else {
+                                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                    if ui.selectable_label(false, &repo.index).clicked() {
+                                        Self::switch_to_repo(repo.id, &repo.index);
+                                    }
+                                });
+
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui.button(t!("remove")).clicked() {
+                                        self.confirm_action = Some(ChangeRepoConfirmAction::Remove {
+                                            repo_id: repo.id,
+                                            repo_name: repo.index.clone(),
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+
+                ui.separator();
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    if ui.button(t!("change_translation_repo.browse_repositories")).clicked() {
+                        thread::spawn(|| {
+                            Gui::instance().unwrap()
+                            .lock().unwrap()
+                            .show_window(Box::new(AddTranslationRepoWindow::new()));
+                        });
+                    }
+                });
+            }
+        });
+
+        open
+    }
+}
+
+impl ChangeTranslationRepoWindow {
+    fn switch_to_repo(repo_id: u32, index: &str) {
+        let hachimi = Hachimi::instance();
+        let config = hachimi.config.load();
+        let mut new_config = (**config).clone();
+        new_config.selected_tl_repo_id = Some(repo_id);
+        new_config.translation_repo_index = Some(index.to_string());
+        drop(config);
+        save_and_reload_config(new_config);
+        hachimi.tl_updater.clone().check_for_updates(false);
+    }
+
+    fn remove_repo(repo_id: u32) {
+        let hachimi = Hachimi::instance();
+        let repos_path = hachimi.get_data_path(".tl_repos");
+        let repo_dir = hachimi.get_repo_dir(repo_id);
+
+        if repo_dir.is_dir() {
+            let _ = std::fs::remove_dir_all(&repo_dir);
+        }
+
+        let cache_path = hachimi.get_data_path(format!(".tl_repo_cache_{}", repo_id));
+        if cache_path.exists() {
+            let _ = std::fs::remove_file(&cache_path);
+        }
+
+        {
+            let mut manager = hachimi.tl_repo_manager.lock().unwrap();
+            manager.repos.retain(|r| r.id != repo_id);
+            if let Err(e) = manager.save(&repos_path) {
+                warn!("Failed to save .tl_repos after removal: {e}");
+            }
+        }
+
+        let config = hachimi.config.load();
+        if config.selected_tl_repo_id == Some(repo_id) {
+            let mut new_config = (**config).clone();
+            new_config.selected_tl_repo_id = None;
+            new_config.translation_repo_index = None;
+            drop(config);
+            save_and_reload_config(new_config);
+        }
+    }
+}
+
+struct AddTranslationRepoWindow {
+    id: egui::Id,
+    index_request: Arc<AsyncRequest<Vec<RepoInfo>>>,
+    config: hachimi::Config,
+    current_tl_repo: Option<String>,
+    has_auto_selected: bool,
+    save_clicked: bool,
+}
+
+impl AddTranslationRepoWindow {
+    fn new() -> AddTranslationRepoWindow {
+        let config = (**Hachimi::instance().config.load()).clone();
+        AddTranslationRepoWindow {
+            id: random_id(),
+            index_request: Arc::new(tl_repo::new_meta_index_request()),
+            config,
+            current_tl_repo: None,
+            has_auto_selected: false,
+            save_clicked: false,
+        }
+    }
+}
+
+impl Window for AddTranslationRepoWindow {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let mut open = true;
+        let mut open2 = true;
+
+        new_window(ctx, self.id, t!("add_translation_repo.title"))
+        .open(&mut open)
+        .show(ctx, |ui| {
+            ui.heading(t!("add_translation_repo.select_translation_repo"));
+            ui.add_space(4.0);
+
+            async_request_ui_content(ui, self.index_request.clone(), |ui, repo_list| {
+                let hachimi = Hachimi::instance();
+                let current_lang_str = self.config.language.locale_str();
+
+                let mut filtered_repos: Vec<_> = repo_list.iter()
+                    .filter(|repo| repo.region == hachimi.game.region)
+                    .collect();
+
+                if !self.has_auto_selected && self.current_tl_repo.is_none() {
+                    if let Some(matched) = filtered_repos.iter().find(|r| r.is_recommended(current_lang_str)) {
+                        self.current_tl_repo = Some(matched.index.clone());
+                    }
+                    self.has_auto_selected = true;
+                }
+
+                filtered_repos.sort_by_key(|repo| !repo.is_recommended(current_lang_str));
+
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(8, 0))
+                    .show(ui, |ui| {
+                        if filtered_repos.is_empty() {
+                            ui.label(t!("first_time_setup.no_compatible_repo"));
+                            return;
+                        }
+
+                        let mut last_section: Option<bool> = None;
+
+                        for repo in filtered_repos.iter() {
+                            let is_matched = repo.is_recommended(current_lang_str);
+                            let is_selected = self.current_tl_repo.as_ref() == Some(&repo.index);
+
+                            if let Some(prev_matched) = last_section {
+                                if prev_matched != is_matched {
+                                    ui.separator();
+                                }
+                            }
+
+                            let manager = hachimi.tl_repo_manager.lock().unwrap();
+                            let already_downloaded = manager.find_by_index(&repo.index).is_some();
+                            drop(manager);
+
+                            let repo_label = if is_matched && is_selected {
+                                format!("★ {}", repo.name)
+                            } else {
+                                repo.name.clone()
+                            };
+
+                            if already_downloaded {
+                                ui.horizontal(|ui| {
+                                    ui.radio_value(&mut self.current_tl_repo, Some(repo.index.clone()), &repo_label);
+                                    ui.label(t!("add_translation_repo.already_downloaded"));
+                                });
+                            } else {
+                                ui.radio_value(&mut self.current_tl_repo, Some(repo.index.clone()), &repo_label);
+                            }
+
+                            if let Some(short_desc) = &repo.short_desc {
+                                ui.label(egui::RichText::new(short_desc).small());
+                            }
+
+                            last_section = Some(is_matched);
+                        }
+                    });
+
+                    #[cfg(target_os = "android")]
+                    {
+                        let padding = ime_scroll_padding(ui.ctx());
+                        if padding > 0.0 {
+                            ui.add_space(padding);
+                        }
+                    }
+                });
+            });
+
+            ui.separator();
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                if ui.button(t!("cancel")).clicked() {
+                    open2 = false;
+                }
+                if ui.button(t!("save")).clicked() {
+                    self.save_clicked = true;
+                    open2 = false;
+                }
+            });
+        });
+
+        if self.save_clicked {
+            if let Some(ref index) = self.current_tl_repo {
+                let hachimi = Hachimi::instance();
+                let mut manager = hachimi.tl_repo_manager.lock().unwrap();
+                let repos_path = hachimi.get_data_path(".tl_repos");
+
+                if let Some(existing_id) = manager.find_by_index(index) {
+                    let config = hachimi.config.load();
+                    let mut new_config = (**config).clone();
+                    new_config.selected_tl_repo_id = Some(existing_id);
+                    new_config.translation_repo_index = Some(index.clone());
+                    drop(config);
+                    drop(manager);
+                    save_and_reload_config(new_config);
+                } else {
+                    let new_id = manager.add(index.clone());
+                    if let Err(e) = manager.save(&repos_path) {
+                        warn!("Failed to persist .tl_repos: {e}");
+                    }
+
+                    let config = hachimi.config.load();
+                    let mut new_config = (**config).clone();
+                    new_config.selected_tl_repo_id = Some(new_id);
+                    new_config.translation_repo_index = Some(index.clone());
+                    drop(config);
+                    drop(manager);
+                    save_and_reload_config(new_config);
+                    hachimi.tl_updater.clone().check_for_updates(false);
+                }
+            }
+        }
+
+        open &= open2;
+        open
+    }
+}
+
+struct TranslationRepoInfoWindow {
+    id: egui::Id,
+    repo_id: u32,
+    index_url: String,
+    info: Option<LocalRepoInfo>,
+    contributors_text: Option<String>,
+    contributors_fetch_result: Arc<Mutex<Option<String>>>,
+}
+
+impl TranslationRepoInfoWindow {
+    fn new(repo_id: u32, index_url: String) -> TranslationRepoInfoWindow {
+        let info = match LocalRepoInfo::load(repo_id) {
+            Ok(data) => Some(data),
+            Err(e) => {
+                let err = e.to_string();
+                thread::spawn(move || {
+                    Gui::instance().unwrap()
+                        .lock().unwrap()
+                        .show_notification(&err);
+                });
+                None
+            }
+        };
+
+        let contributors_text = info.as_ref().and_then(|i| i.format_contributors());
+
+        let contributors_fetch_result = Arc::new(Mutex::new(None));
+        if let Some(ref i) = info {
+            if i.is_contributors_txt_url() {
+                if let Some(url) = i.contributors.as_str() {
+                    let fetch_result = contributors_fetch_result.clone();
+                    let url = url.to_string();
+
+                    std::thread::spawn(move || {
+                        let agent = ureq::Agent::new_with_config(super::http::ureq_config());
+
+                        if let Ok(res) = agent.get(&url).call() {
+                            if let Ok(text) = res.into_body().read_to_string() {
+                                let names: Vec<&str> = text.lines()
+                                    .map(|l| l.trim())
+                                    .filter(|l| !l.is_empty())
+                                    .collect();
+                                let joined = names.join(", ");
+
+                                *fetch_result.lock().unwrap() = Some(joined);
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        TranslationRepoInfoWindow {
+            id: random_id(),
+            repo_id,
+            index_url,
+            info,
+            contributors_text,
+            contributors_fetch_result,
+        }
+    }
+}
+
+impl Window for TranslationRepoInfoWindow {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let mut open = true;
+
+        if self.contributors_text.is_none() {
+            if let Ok(mut lock) = self.contributors_fetch_result.try_lock() {
+                if let Some(text) = lock.take() {
+                    self.contributors_text = Some(text);
+                }
+            }
+        }
+
+        let title = if let Some(ref info) = self.info {
+            format!("{} {}", info.name, t!("change_translation_repo.details_suffix"))
+        } else {
+            t!("change_translation_repo.details_title").into_owned()
+        };
+
+        new_window(ctx, self.id, &title)
+        .open(&mut open)
+        .show(ctx, |ui| {
+            egui::ScrollArea::vertical().show(ui, |ui| {
+                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+
+                ui.vertical_centered(|ui| {
+                    ui.add(LocalRepoInfo::icon(ctx, self.repo_id));
+                });
+
+                if let Some(ref info) = self.info {
+                    ui.heading(&info.name);
+                    if !info.language.is_empty() {
+                        ui.label(egui::RichText::new(&info.language).small());
+                    }
+                    if !info.description.is_empty() {
+                        ui.label(&info.description);
+                    }
+                    ui.add_space(4.0);
+
+                    if !info.homepage.is_empty() {
+                        if ui.button(t!("change_translation_repo.homepage")).clicked() {
+                            Application::OpenURL(info.homepage.to_il2cpp_string());
+                        }
+                        ui.add_space(4.0);
+                    }
+
+                    if !info.maintainer.is_empty() {
+                        ui.heading(t!("change_translation_repo.maintainer"));
+                        ui.label(&info.maintainer);
+                        ui.add_space(4.0);
+                    }
+
+                    ui.heading(t!("change_translation_repo.contributors"));
+                    if let Some(ref text) = self.contributors_text {
+                        ui.label(text);
+                    } else if info.is_contributors_txt_url() {
+                        ui.label(t!("loading_label"));
+                    } else if info.is_contributors_url() {
+                        if let Some(url) = info.contributors.as_str() {
+                            if ui.button(t!("change_translation_repo.view_contributors")).clicked() {
+                                Application::OpenURL(url.to_il2cpp_string());
+                            }
+                        }
+                    }
+                    ui.add_space(4.0);
+                } else {
+                    ui.label(&self.index_url);
+                }
+            });
+        });
+
         open
     }
 }

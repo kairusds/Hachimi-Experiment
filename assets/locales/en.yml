@@ -62,6 +62,7 @@ menu:
   toggle_game_ui: "\uf06e Toggle game UI"
   discord_rpc: "Discord RPC"
   edit_excludes: "\uf040 Edit Excludes"
+  change_translation_repo: "\uf0c1 Change Translation Repo"
 
 notification:
   saved_localize_dump: "Saved to localize_dump.json"
@@ -216,8 +217,27 @@ excludes_editor:
   title: "Excludes Editor"
   no_paths_available: "No available paths to exclude"
   saved: "Excludes saved successfully"
-  loading_paths: "Loading paths..."
   confirm_remove: "Are you sure you want to remove the exclude \"%{path}\"?"
+
+change_translation_repo:
+  title: "Change Translation Repo"
+  no_repos: "No translation repos downloaded yet."
+  browse_repositories: "Browse Repositories"
+  active: "Active"
+  available: "Available"
+  confirm_remove: "Are you sure you want to remove \"%{name}\"?"
+  cannot_remove_active: "Cannot remove the currently active repo. Switch to another repo first."
+  details_suffix: "Details"
+  details_title: "Translation Repo Details"
+  homepage: "Homepage"
+  maintainer: "Maintainer"
+  contributors: "Contributors"
+  view_contributors: "View Contributors"
+
+add_translation_repo:
+  title: "Add Translation Repository"
+  select_translation_repo: "Select a translation repo:"
+  already_downloaded: "(already downloaded)"
 
 tl_update_dialog:
   title: "New update available"

@@ -9,7 +9,7 @@ use size::Size;
 use thread_priority::{ThreadBuilderExt, ThreadPriority};
 
 use crate::core::game::Region;
-use super::{gui::{NotificationGuard, SimpleYesNoDialog}, hachimi::LocalizedData, http::{self, ureq_config, AsyncRequest}, utils, Error, Gui, Hachimi};
+use super::{gui::{self, NotificationGuard, SimpleYesNoDialog}, hachimi::LocalizedData, http::{self, ureq_config, AsyncRequest}, utils, Error, Gui, Hachimi};
 use once_cell::sync::Lazy;
 
 #[derive(Deserialize)]
@@ -39,6 +39,85 @@ impl RepoInfo {
 
         let sys = &*SYS_LOCALE;
         repo_tag.starts_with(&*sys) || sys.starts_with(&repo_tag)
+    }
+}
+
+// localized_data/info.json
+#[derive(Deserialize, Clone, Default)]
+pub struct LocalRepoInfo {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub homepage: String,
+    #[serde(default)]
+    pub maintainer: String,
+    #[serde(default)]
+    pub contributors: serde_json::Value,
+    #[serde(default)]
+    pub language: String,
+}
+
+impl LocalRepoInfo {
+    pub fn load(repo_id: u32) -> Result<LocalRepoInfo, Error> {
+        let repo_dir = Hachimi::instance().get_repo_dir(repo_id);
+        let info_path = repo_dir.join("info.json");
+        let json = fs::read_to_string(info_path)?;
+        let info = serde_json::from_str(&json)?;
+
+        Ok(info)
+    }
+
+    pub fn load_active() -> Result<LocalRepoInfo, Error> {
+        let id = Hachimi::instance()
+            .config
+            .load()
+            .selected_tl_repo_id
+            .ok_or_else(|| Error::RuntimeError("No active translation repository selected".to_string()))?;
+
+        Self::load(id)
+    }
+
+    pub fn icon<'a>(ctx: &egui::Context, repo_id: u32) -> egui::Image<'a> {
+        let scale = gui::get_scale(ctx);
+        let icon_path = Hachimi::instance().get_repo_dir(repo_id).join("icon.png");
+
+        if icon_path.exists() {
+            let uri = format!("file://{}", icon_path.display());
+            egui::Image::new(uri).fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale))
+        } else {
+            Gui::icon_2x(ctx)
+        }
+    }
+
+    pub fn format_contributors(&self) -> Option<String> {
+        match &self.contributors {
+            serde_json::Value::Array(arr) => {
+                let names: Vec<String> = arr.iter()
+                    .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                    .collect();
+                if names.is_empty() { None } else { Some(names.join(", ")) }
+            }
+            serde_json::Value::String(_) => None,
+            _ => None,
+        }
+    }
+
+    pub fn is_contributors_txt_url(&self) -> bool {
+        if let serde_json::Value::String(s) = &self.contributors {
+            (s.starts_with("http://") || s.starts_with("https://")) && s.ends_with(".txt")
+        } else {
+            false
+        }
+    }
+
+    pub fn is_contributors_url(&self) -> bool {
+        if let serde_json::Value::String(s) = &self.contributors {
+            (s.starts_with("http://") || s.starts_with("https://")) && !s.ends_with(".txt")
+        } else {
+            false
+        }
     }
 }
 
@@ -845,7 +924,7 @@ impl Updater {
 
 // new tl repo manager
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct RepoList {
     pub repos: Vec<RepoEntry>,
 }
