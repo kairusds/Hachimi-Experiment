@@ -38,7 +38,7 @@ use crate::il2cpp::hook::UnityEngine_CoreModule::QualitySettings;
 use super::{
     game::Region,
     hachimi::{self, Language, REPO_PATH, WEBSITE_URL},
-    http::AsyncRequest,
+    http::{ureq_config, AsyncRequest},
     tl_repo::{self, RepoInfo, LocalRepoInfo},
     utils::{self, get_localized_string, SendPtr},
     Hachimi
@@ -791,13 +791,13 @@ impl Gui {
     }
 
     const ICON_IMAGE: egui::ImageSource<'static> = egui::include_image!("../../assets/icon.png");
-    pub fn icon<'a>(ctx: &egui::Context) -> egui::Image<'a> {
+    fn icon<'a>(ctx: &egui::Context) -> egui::Image<'a> {
         let scale = get_scale(ctx);
         egui::Image::new(Self::ICON_IMAGE)
             .fit_to_exact_size(egui::Vec2::new(24.0 * scale, 24.0 * scale))
     }
 
-    pub fn icon_2x<'a>(ctx: &egui::Context) -> egui::Image<'a> {
+    fn icon_2x<'a>(ctx: &egui::Context) -> egui::Image<'a> {
         let scale = get_scale(ctx);
         egui::Image::new(Self::ICON_IMAGE)
             .fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale))
@@ -3343,21 +3343,45 @@ impl Window for ExcludesEditorWindow {
     }
 }
 
-#[derive(Clone)]
-enum ChangeRepoConfirmAction {
-    Remove { repo_id: u32, repo_name: String },
-}
-
 struct ChangeTranslationRepoWindow {
     id: egui::Id,
-    confirm_action: Option<ChangeRepoConfirmAction>,
+    confirm_remove: Option<(u32, String)>,
+    repo_cache: HashMap<u32, (Option<LocalRepoInfo>, Option<String>)>,
 }
 
 impl ChangeTranslationRepoWindow {
     fn new() -> ChangeTranslationRepoWindow {
+        let hachimi = Hachimi::instance();
+        let manager = hachimi.tl_repo_manager.lock().unwrap();
+
+        let repo_cache: HashMap<u32, (Option<LocalRepoInfo>, Option<String>)> = manager.repos.iter()
+            .map(|repo| {
+                let info = match LocalRepoInfo::load(repo.id) {
+                    Ok(data) => data,
+                    Err(e) => {
+                        let err = e.to_string();
+                        thread::spawn(move || {
+                            Gui::instance().unwrap()
+                                .lock().unwrap()
+                                .show_notification(&err);
+                        });
+                        None
+                    }
+                };
+                let icon_path = Hachimi::instance().get_repo_dir(repo.id).join("icon.png");
+                let icon_uri = if icon_path.exists() {
+                    Some(format!("file://{}", icon_path.display()))
+                } else {
+                    None
+                };
+                (repo.id, (info, icon_uri))
+            })
+            .collect();
+
         ChangeTranslationRepoWindow {
             id: random_id(),
-            confirm_action: None,
+            confirm_remove: None,
+            repo_cache
         }
     }
 }
@@ -3402,26 +3426,15 @@ impl Window for ChangeTranslationRepoWindow {
                         let is_active = current_repo_id == Some(repo.id);
                         if !is_active { continue; }
 
-                        let info = match LocalRepoInfo::load(repo.id) {
-                            Ok(data) => data,
-                            Err(e) => {
-                                let err = e.to_string();
-                                thread::spawn(move || {
-                                    Gui::instance().unwrap()
-                                        .lock().unwrap()
-                                        .show_notification(&err);
-                                });
-                                None
-                            }
-                        };
+                        let cached = self.repo_cache.get(&repo.id);
+                        let info = cached.and_then(|(info, _)| info.as_ref());
 
-                        if let Some(ref confirm) = self.confirm_action {
-                            let ChangeRepoConfirmAction::Remove { repo_id, .. } = confirm;
+                        if let Some((ref repo_id, _)) = self.confirm_remove {
                             let matched_id = *repo_id;
                             if matched_id == repo.id {
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                                     if ui.button(t!("ok")).clicked() {
-                                        self.confirm_action = None;
+                                        self.confirm_remove = None;
                                     }
                                     ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
                                         ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
@@ -3433,7 +3446,11 @@ impl Window for ChangeTranslationRepoWindow {
                         }
 
                         ui.horizontal(|ui| {
-                            ui.add(LocalRepoInfo::icon(ctx, repo.id));
+                            ui.add(match cached.and_then(|(_, uri)| uri.as_ref()) {
+                                Some(uri) => egui::Image::new(uri.clone())
+                                    .fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale)),
+                                None => Gui::icon_2x(ctx),
+                            });
 
                             if let Some(ref info) = info {
                                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
@@ -3443,10 +3460,7 @@ impl Window for ChangeTranslationRepoWindow {
 
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                     if ui.button(t!("remove")).clicked() {
-                                        self.confirm_action = Some(ChangeRepoConfirmAction::Remove {
-                                            repo_id: repo.id,
-                                            repo_name: info.name.clone(),
-                                        });
+                                        self.confirm_remove = Some((repo.id, info.name.clone()));
                                     }
                                     if ui.button(" \u{f05a} ").clicked() {
                                         let repo_id = repo.id;
@@ -3466,10 +3480,7 @@ impl Window for ChangeTranslationRepoWindow {
 
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                     if ui.button(t!("remove")).clicked() {
-                                        self.confirm_action = Some(ChangeRepoConfirmAction::Remove {
-                                            repo_id: repo.id,
-                                            repo_name: repo.index.clone(),
-                                        });
+                                        self.confirm_remove = Some((repo.id, repo.index.clone()));
                                     }
                                 });
                             }
@@ -3484,31 +3495,20 @@ impl Window for ChangeTranslationRepoWindow {
                         let is_active = current_repo_id == Some(repo.id);
                         if is_active { continue; }
 
-                        let info = match LocalRepoInfo::load(repo.id) {
-                            Ok(data) => data,
-                            Err(e) => {
-                                let err = e.to_string();
-                                thread::spawn(move || {
-                                    Gui::instance().unwrap()
-                                        .lock().unwrap()
-                                        .show_notification(&err);
-                                });
-                                None
-                            }
-                        };
+                        let cached = self.repo_cache.get(&repo.id);
+                        let info = cached.and_then(|(info, _)| info.as_ref());
 
-                        if let Some(ref confirm) = self.confirm_action {
-                            let ChangeRepoConfirmAction::Remove { repo_id, ref repo_name } = confirm;
+                        if let Some((ref repo_id, ref repo_name)) = self.confirm_remove {
                             if *repo_id == repo.id {
                                 let remove_id = *repo_id;
                                 let remove_name = repo_name.clone();
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                                     if ui.button(t!("no")).clicked() {
-                                        self.confirm_action = None;
+                                        self.confirm_remove = None;
                                     }
                                     if ui.button(t!("yes")).clicked() {
                                         Self::remove_repo(remove_id);
-                                        self.confirm_action = None;
+                                        self.confirm_remove = None;
                                     }
                                     ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
                                         ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
@@ -3520,7 +3520,11 @@ impl Window for ChangeTranslationRepoWindow {
                         }
 
                         ui.horizontal(|ui| {
-                            ui.add(LocalRepoInfo::icon(ctx, repo.id));
+                            ui.add(match cached.and_then(|(_, uri)| uri.as_ref()) {
+                                Some(uri) => egui::Image::new(uri.clone())
+                                    .fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale)),
+                                None => Gui::icon_2x(ctx),
+                            });
 
                             if let Some(ref info) = info {
                                 ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
@@ -3532,10 +3536,7 @@ impl Window for ChangeTranslationRepoWindow {
 
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                     if ui.button(t!("remove")).clicked() {
-                                        self.confirm_action = Some(ChangeRepoConfirmAction::Remove {
-                                            repo_id: repo.id,
-                                            repo_name: info.name.clone(),
-                                        });
+                                        self.confirm_remove = Some((repo.id, info.name.clone()));
                                     }
 
                                     if ui.button("\u{f05a}").clicked() {
@@ -3558,10 +3559,7 @@ impl Window for ChangeTranslationRepoWindow {
 
                                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                     if ui.button(t!("remove")).clicked() {
-                                        self.confirm_action = Some(ChangeRepoConfirmAction::Remove {
-                                            repo_id: repo.id,
-                                            repo_name: repo.index.clone(),
-                                        });
+                                        self.confirm_remove = Some((repo.id, repo.index.clone()));
                                     }
                                 });
                             }
@@ -3793,9 +3791,9 @@ impl Window for AddTranslationRepoWindow {
 
 struct TranslationRepoInfoWindow {
     id: egui::Id,
-    repo_id: u32,
     index_url: String,
     info: Option<LocalRepoInfo>,
+    icon_uri: Option<String>,
     contributors_text: Option<String>,
     contributors_fetch_result: Arc<Mutex<Option<String>>>,
 }
@@ -3815,6 +3813,13 @@ impl TranslationRepoInfoWindow {
             }
         };
 
+        let icon_path = Hachimi::instance().get_repo_dir(repo_id).join("icon.png");
+        let icon_uri = if icon_path.exists() {
+            Some(format!("file://{}", icon_path.display()))
+        } else {
+            None
+        };
+
         let contributors_text = info.as_ref().and_then(|i| i.format_contributors());
 
         let contributors_fetch_result = Arc::new(Mutex::new(None));
@@ -3825,7 +3830,7 @@ impl TranslationRepoInfoWindow {
                     let url = url.to_string();
 
                     std::thread::spawn(move || {
-                        let agent = ureq::Agent::new_with_config(super::http::ureq_config());
+                        let agent = ureq::Agent::new_with_config(ureq_config());
 
                         if let Ok(res) = agent.get(&url).call() {
                             if let Ok(text) = res.into_body().read_to_string() {
@@ -3845,9 +3850,9 @@ impl TranslationRepoInfoWindow {
 
         TranslationRepoInfoWindow {
             id: random_id(),
-            repo_id,
             index_url,
             info,
+            icon_uri,
             contributors_text,
             contributors_fetch_result,
         }
@@ -3856,6 +3861,7 @@ impl TranslationRepoInfoWindow {
 
 impl Window for TranslationRepoInfoWindow {
     fn run(&mut self, ctx: &egui::Context) -> bool {
+        let scale = get_scale(ctx);
         let mut open = true;
 
         if self.contributors_text.is_none() {
@@ -3873,52 +3879,90 @@ impl Window for TranslationRepoInfoWindow {
         };
 
         new_window(ctx, self.id, &title)
+        .max_width(350.0 * scale)
+        .max_height(400.0 * scale)
         .open(&mut open)
         .show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
 
-                ui.vertical_centered(|ui| {
-                    ui.add(LocalRepoInfo::icon(ctx, self.repo_id));
-                });
-
                 if let Some(ref info) = self.info {
-                    ui.heading(&info.name);
-                    if !info.language.is_empty() {
-                        ui.label(egui::RichText::new(&info.language).small());
-                    }
+                    ui.horizontal(|ui| {
+                        ui.add(match &self.icon_uri {
+                            Some(uri) => egui::Image::new(uri.clone())
+                                .fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale)),
+                            None => Gui::icon_2x(ctx)
+                        });
+                        ui.vertical(|ui| {
+                            ui.heading(&info.name);
+                            if !info.language.is_empty() {
+                                ui.label(egui::RichText::new(&info.language).small().italics());
+                            }
+                        });
+                    });
+
                     if !info.description.is_empty() {
-                        ui.label(&info.description);
-                    }
-                    ui.add_space(4.0);
-
-                    if !info.homepage.is_empty() {
-                        if ui.button(t!("change_translation_repo.homepage")).clicked() {
-                            Application::OpenURL(info.homepage.to_il2cpp_string());
-                        }
-                        ui.add_space(4.0);
+                        ui.add_space(6.0 * scale);
+                        egui::Frame::NONE
+                            .inner_margin(egui::Margin::symmetric(8, 4))
+                            .show(ui, |ui| {
+                                ui.label(&info.description);
+                            });
                     }
 
-                    if !info.maintainer.is_empty() {
-                        ui.heading(t!("change_translation_repo.maintainer"));
-                        ui.label(&info.maintainer);
-                        ui.add_space(4.0);
+                    if !info.homepage.is_empty() || !info.maintainer.is_empty() {
+                        ui.add_space(6.0 * scale);
+                        egui::Grid::new(self.id.with("info_grid"))
+                            .num_columns(2)
+                            .spacing([8.0 * scale, 4.0 * scale])
+                            .show(ui, |ui| {
+                                if !info.homepage.is_empty() {
+                                    ui.label(egui::RichText::new(
+                                        t!("change_translation_repo.homepage")
+                                    ).strong());
+                                    if ui.button(&info.homepage).clicked() {
+                                        Application::OpenURL(info.homepage.to_il2cpp_string());
+                                    }
+                                    ui.end_row();
+                                }
+
+                                if !info.maintainer.is_empty() {
+                                    ui.label(egui::RichText::new(
+                                        t!("change_translation_repo.maintainer")
+                                    ).strong());
+                                    ui.label(&info.maintainer);
+                                    ui.end_row();
+                                }
+                            });
                     }
 
-                    ui.heading(t!("change_translation_repo.contributors"));
-                    if let Some(ref text) = self.contributors_text {
-                        ui.label(text);
-                    } else if info.is_contributors_txt_url() {
-                        ui.label(t!("loading_label"));
-                    } else if info.is_contributors_url() {
-                        if let Some(url) = info.contributors.as_str() {
-                            if ui.button(t!("change_translation_repo.view_contributors")).clicked() {
-                                Application::OpenURL(url.to_il2cpp_string());
+                    if !info.contributors.is_null() {
+                        ui.add_space(6.0 * scale);
+                        ui.separator();
+                        ui.add_space(4.0 * scale);
+                        ui.label(egui::RichText::new(
+                            t!("change_translation_repo.contributors")
+                        ).strong());
+
+                        if let Some(ref text) = self.contributors_text {
+                            ui.label(text);
+                        } else if info.is_contributors_txt_url() {
+                            ui.label(egui::RichText::new(t!("loading_label")).italics());
+                        } else if info.is_contributors_url() {
+                            if let Some(url) = info.contributors.as_str() {
+                                if ui.button(url).clicked() {
+                                    Application::OpenURL(url.to_il2cpp_string());
+                                }
                             }
                         }
                     }
-                    ui.add_space(4.0);
                 } else {
+                    ui.add(match &self.icon_uri {
+                        Some(uri) => egui::Image::new(uri.clone())
+                            .fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale)),
+                        None => Gui::icon_2x(ctx)
+                    });
+                    ui.add_space(8.0 * scale);
                     ui.label(&self.index_url);
                 }
             });

@@ -9,7 +9,7 @@ use size::Size;
 use thread_priority::{ThreadBuilderExt, ThreadPriority};
 
 use crate::core::game::Region;
-use super::{gui::{self, NotificationGuard, SimpleYesNoDialog}, hachimi::LocalizedData, http::{self, ureq_config, AsyncRequest}, utils, Error, Gui, Hachimi};
+use super::{gui::{NotificationGuard, SimpleYesNoDialog}, hachimi::LocalizedData, http::{self, ureq_config, AsyncRequest}, utils, Error, Gui, Hachimi};
 use once_cell::sync::Lazy;
 
 #[derive(Deserialize)]
@@ -82,18 +82,6 @@ impl LocalRepoInfo {
             .ok_or_else(|| Error::RuntimeError("No active translation repository selected".to_string()))?;
 
         Self::load(id)
-    }
-
-    pub fn icon<'a>(ctx: &egui::Context, repo_id: u32) -> egui::Image<'a> {
-        let scale = gui::get_scale(ctx);
-        let icon_path = Hachimi::instance().get_repo_dir(repo_id).join("icon.png");
-
-        if icon_path.exists() {
-            let uri = format!("file://{}", icon_path.display());
-            egui::Image::new(uri).fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale))
-        } else {
-            Gui::icon_2x(ctx)
-        }
     }
 
     pub fn format_contributors(&self) -> Option<String> {
