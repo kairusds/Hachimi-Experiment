@@ -3403,7 +3403,7 @@ impl Window for ChangeTranslationRepoWindow {
                         if !is_active { continue; }
 
                         let info = match LocalRepoInfo::load(repo.id) {
-                            Ok(data) => Some(data),
+                            Ok(data) => data,
                             Err(e) => {
                                 let err = e.to_string();
                                 thread::spawn(move || {
@@ -3485,7 +3485,7 @@ impl Window for ChangeTranslationRepoWindow {
                         if is_active { continue; }
 
                         let info = match LocalRepoInfo::load(repo.id) {
-                            Ok(data) => Some(data),
+                            Ok(data) => data,
                             Err(e) => {
                                 let err = e.to_string();
                                 thread::spawn(move || {
@@ -3803,7 +3803,7 @@ struct TranslationRepoInfoWindow {
 impl TranslationRepoInfoWindow {
     fn new(repo_id: u32, index_url: String) -> TranslationRepoInfoWindow {
         let info = match LocalRepoInfo::load(repo_id) {
-            Ok(data) => Some(data),
+            Ok(data) => data,
             Err(e) => {
                 let err = e.to_string();
                 thread::spawn(move || {

@@ -60,16 +60,21 @@ pub struct LocalRepoInfo {
 }
 
 impl LocalRepoInfo {
-    pub fn load(repo_id: u32) -> Result<LocalRepoInfo, Error> {
+    pub fn load(repo_id: u32) -> Result<Option<Self>, Error> {
         let repo_dir = Hachimi::instance().get_repo_dir(repo_id);
         let info_path = repo_dir.join("info.json");
+
+        if !info_path.exists() {
+            return Ok(None);
+        }
+
         let json = fs::read_to_string(info_path)?;
         let info = serde_json::from_str(&json)?;
 
         Ok(info)
     }
 
-    pub fn load_active() -> Result<LocalRepoInfo, Error> {
+    pub fn load_active() -> Result<Option<Self>, Error> {
         let id = Hachimi::instance()
             .config
             .load()
