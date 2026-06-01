@@ -3459,7 +3459,7 @@ impl Window for ChangeTranslationRepoWindow {
                                         .show_window(Box::new(TranslationRepoInfoWindow::new(repo_id, index)));
                                     });
                                 }
-                                let name_width = ui.available_width() - 48.0 * scale;
+                                let name_width = ui.available_width() - 48.0 * scale - ui.style().spacing.item_spacing.x;
                                 ui.allocate_ui_with_layout(egui::vec2(name_width, 0.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
                                     ui.add(egui::RadioButton::new(true, ""));
@@ -3469,7 +3469,7 @@ impl Window for ChangeTranslationRepoWindow {
                                 if ui.button(t!("remove")).clicked() {
                                     self.confirm_remove = Some((repo.id, repo.index.clone()));
                                 }
-                                let name_width = ui.available_width() - 48.0 * scale;
+                                let name_width = ui.available_width() - 48.0 * scale - ui.style().spacing.item_spacing.x;
                                 ui.allocate_ui_with_layout(egui::vec2(name_width, 0.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
                                     ui.add(egui::RadioButton::new(true, ""));
@@ -3530,7 +3530,7 @@ impl Window for ChangeTranslationRepoWindow {
                                         .show_window(Box::new(TranslationRepoInfoWindow::new(repo_id, index)));
                                     });
                                 }
-                                let name_width = ui.available_width() - 48.0 * scale;
+                                let name_width = ui.available_width() - 48.0 * scale - ui.style().spacing.item_spacing.x;
                                 let name_resp = ui.allocate_ui_with_layout(egui::vec2(name_width, 0.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
                                     let radio = ui.add(egui::RadioButton::new(false, ""));
@@ -3549,7 +3549,7 @@ impl Window for ChangeTranslationRepoWindow {
                                 if ui.button(t!("remove")).clicked() {
                                     self.confirm_remove = Some((repo.id, repo.index.clone()));
                                 }
-                                let name_width = ui.available_width() - 48.0 * scale;
+                                let name_width = ui.available_width() - 48.0 * scale - ui.style().spacing.item_spacing.x;
                                 let name_resp = ui.allocate_ui_with_layout(egui::vec2(name_width, 0.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
                                     let radio = ui.add(egui::RadioButton::new(false, ""));
