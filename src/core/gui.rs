@@ -3846,7 +3846,7 @@ impl Window for TranslationRepoInfoWindow {
 
         new_window(ctx, self.id, &title)
         .max_width(350.0 * scale)
-        .max_height(400.0 * scale)
+        .max_height(440.0 * scale)
         .open(&mut open)
         .show(ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| {
@@ -3907,9 +3907,7 @@ impl Window for TranslationRepoInfoWindow {
                         ui.add_space(6.0 * scale);
                         ui.separator();
                         ui.add_space(4.0 * scale);
-                        ui.label(egui::RichText::new(
-                            t!("translation_repo_info.contributors")
-                        ).strong());
+                        ui.label(egui::RichText::new(t!("translation_repo_info.contributors")).strong());
 
                         if let Some(ref text) = self.contributors_text {
                             ui.label(text);
@@ -3922,6 +3920,21 @@ impl Window for TranslationRepoInfoWindow {
                                 }
                             }
                         }
+                    }
+
+                    if !info.links.is_empty() {
+                        ui.add_space(6.0 * scale);
+                        ui.separator();
+                        ui.add_space(4.0 * scale);
+                        ui.label(egui::RichText::new(t!("translation_repo_info.links")).strong());
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spacing_mut().item_spacing.x = 6.0 * scale;
+                            for link in &info.links {
+                                if ui.button(&link[0]).clicked() {
+                                    Application::OpenURL(link[1].to_il2cpp_string());
+                                }
+                            }
+                        });
                     }
                 } else {
                     ui.add(match &self.icon_uri {
@@ -3936,6 +3949,198 @@ impl Window for TranslationRepoInfoWindow {
         });
 
         open
+    }
+}
+
+pub struct TranslationRepoUpdateWindow {
+    title: String,
+    content: String,
+    changelog_url: String,
+    callback: fn(bool),
+    id: egui::Id,
+    changelog_fetch_result: Arc<Mutex<Option<Result<String, String>>>>,
+    changelog_fetch_started: bool,
+}
+
+impl TranslationRepoUpdateWindow {
+    pub fn new(title: &str, content: &str, changelog_url: &str, callback: fn(bool)) -> TranslationRepoUpdateWindow {
+        TranslationRepoUpdateWindow {
+            title: title.to_owned(),
+            content: content.to_owned(),
+            changelog_url: changelog_url.to_owned(),
+            callback,
+            id: random_id(),
+            changelog_fetch_result: Arc::new(Mutex::new(None)),
+            changelog_fetch_started: false,
+        }
+    }
+}
+
+impl Window for TranslationRepoUpdateWindow {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let mut open = true;
+        let mut open2 = true;
+        let mut result = false;
+
+        // check if changelog fetch completed
+        if self.changelog_fetch_started {
+            let fetch_result = {
+                let mut lock = self.changelog_fetch_result.lock().unwrap();
+                lock.take()
+            };
+
+            if let Some(fetch_result) = fetch_result {
+                match fetch_result {
+                    Ok(content) => {
+                        let lower = self.changelog_url.to_lowercase();
+                        if lower.ends_with(".txt") {
+                            // sanitize plaintext: strip control chars except newline/tab
+                            let sanitized: String = content.chars()
+                                .filter(|c| !c.is_control() || *c == '\n' || *c == '\t' || *c == '\r')
+                                .collect();
+                            thread::spawn(move || {
+                                Gui::instance().unwrap()
+                                .lock().unwrap()
+                                .show_window(Box::new(SimpleOkDialog::new(
+                                    &t!("tl_update_dialog.changelog_title"),
+                                    &sanitized,
+                                    || {}
+                                )));
+                            });
+                        } else {
+                            // .md / .markdown
+                            thread::spawn(move || {
+                                Gui::instance().unwrap()
+                                .lock().unwrap()
+                                .show_window(Box::new(SimpleMarkdownDialog::new(
+                                    &t!("tl_update_dialog.changelog_title"),
+                                    &content,
+                                )));
+                            });
+                        }
+                    }
+                    Err(msg) => {
+                        let err_msg = msg.clone();
+                        thread::spawn(move || {
+                            Gui::instance().unwrap()
+                            .lock().unwrap()
+                            .show_notification(&err_msg);
+                        });
+                    }
+                }
+            }
+        }
+
+        new_window(ctx, self.id, &self.title)
+        .open(&mut open)
+        .show(ctx, |ui| {
+            egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
+            .show_inside(ui, |ui| {
+                ui.horizontal(|ui| {
+                    if ui.button(t!("tl_update_dialog.show_changelog")).clicked() {
+                        if !self.changelog_fetch_started {
+                            self.changelog_fetch_started = true;
+                            let url = self.changelog_url.clone();
+                            let fetch_result = self.changelog_fetch_result.clone();
+
+                            thread::spawn(move || {
+                                let agent = ureq::Agent::new_with_config(ureq_config());
+                                let result = match agent.get(&url).call() {
+                                    Ok(res) => {
+                                        match res.into_body().read_to_string() {
+                                            Ok(text) => {
+                                                // validate content is plaintext by checking for null bytes
+                                                if text.contains('\0') {
+                                                    Err(t!("tl_update_dialog.changelog_invalid").into_owned())
+                                                } else {
+                                                    Ok(text)
+                                                }
+                                            }
+                                            Err(e) => Err(format!("{}: {}", t!("tl_update_dialog.changelog_fetch_failed"), e))
+                                        }
+                                    }
+                                    Err(e) => Err(format!("{}: {}", t!("tl_update_dialog.changelog_fetch_failed"), e))
+                                };
+                                *fetch_result.lock().unwrap() = Some(result);
+                            });
+                        }
+                    }
+
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                        if ui.button(t!("no")).clicked() {
+                            open2 = false;
+                        }
+                        if ui.button(t!("yes")).clicked() {
+                            result = true;
+                            open2 = false;
+                        }
+                    });
+                });
+            });
+
+            egui::CentralPanel::default()
+                .frame(egui::Frame::NONE)
+                .show_inside(ui, |ui| {
+                centered_and_wrapped_text(ui, &self.content);
+            });
+        });
+
+        if open && open2 {
+            true
+        }
+        else {
+            (self.callback)(result);
+            false
+        }
+    }
+}
+
+pub struct SimpleMarkdownDialog {
+    title: String,
+    content: String,
+    id: egui::Id,
+    cache: egui_commonmark::CommonMarkCache,
+}
+
+impl SimpleMarkdownDialog {
+    pub fn new(title: &str, content: &str) -> SimpleMarkdownDialog {
+        SimpleMarkdownDialog {
+            title: title.to_owned(),
+            content: content.to_owned(),
+            id: random_id(),
+            cache: egui_commonmark::CommonMarkCache::default(),
+        }
+    }
+}
+
+impl Window for SimpleMarkdownDialog {
+    fn run(&mut self, ctx: &egui::Context) -> bool {
+        let mut open = true;
+        let mut open2 = true;
+
+        new_window(ctx, self.id, &self.title)        
+        .open(&mut open)
+        .show(ctx, |ui| {
+            egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
+            .show_inside(ui, |ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                    if ui.button(t!("ok")).clicked() {
+                        open2 = false;
+                    }
+                })
+            });
+
+            egui::CentralPanel::default()
+                .frame(egui::Frame::NONE)
+                .show_inside(ui, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    egui_commonmark::CommonMarkViewer::new()
+                        .show(ui, &mut self.cache, &self.content);
+                });
+            });
+        });
+
+        open && open2
     }
 }
 

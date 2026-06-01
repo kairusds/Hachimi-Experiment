@@ -9,7 +9,7 @@ use size::Size;
 use thread_priority::{ThreadBuilderExt, ThreadPriority};
 
 use crate::core::game::Region;
-use super::{gui::{NotificationGuard, SimpleYesNoDialog}, hachimi::LocalizedData, http::{self, ureq_config, AsyncRequest}, utils, Error, Gui, Hachimi};
+use super::{gui::{NotificationGuard, SimpleYesNoDialog, TranslationRepoUpdateWindow}, hachimi::LocalizedData, http::{self, ureq_config, AsyncRequest}, utils, Error, Gui, Hachimi};
 use once_cell::sync::Lazy;
 
 #[derive(Deserialize)]
@@ -50,7 +50,11 @@ pub struct LocalRepoInfo {
     #[serde(default)]
     pub description: String,
     #[serde(default)]
+    pub changelog_url: Option<String>,
+    #[serde(default)]
     pub homepage: String,
+    #[serde(default)]
+    pub links: Vec<[String; 2]>,
     #[serde(default)]
     pub maintainer: String,
     #[serde(default)]
@@ -111,6 +115,26 @@ impl LocalRepoInfo {
         } else {
             false
         }
+    }
+
+    pub fn is_valid_changelog_url(&self) -> bool {
+        if let Some(url) = &self.changelog_url {
+            let lower = url.to_lowercase();
+            lower.ends_with(".txt") || lower.ends_with(".md") || lower.ends_with(".markdown")
+        } else {
+            false
+        }
+    }
+
+    pub fn is_txt_changelog(&self) -> bool {
+        self.changelog_url.as_ref().map_or(false, |u| u.to_lowercase().ends_with(".txt"))
+    }
+
+    pub fn is_markdown_changelog(&self) -> bool {
+        self.changelog_url.as_ref().map_or(false, |u| {
+            let lower = u.to_lowercase();
+            lower.ends_with(".md") || lower.ends_with(".markdown")
+        })
     }
 }
 
@@ -503,14 +527,33 @@ impl Updater {
                     t!("tl_update_dialog.content", size = Size::from_bytes(actual_download_size))
                 };
 
-                mutex.lock().unwrap().show_window(Box::new(SimpleYesNoDialog::new(
-                    &t!("tl_update_dialog.title"),
-                    &dialog_message,
-                    |ok| {
-                        if !ok { return; }
-                        Hachimi::instance().tl_updater.clone().run();
-                    }
-                )));
+                // Check if the active repo has a valid changelog URL
+                let changelog_url = LocalRepoInfo::load(repo_id)
+                    .ok()
+                    .flatten()
+                    .filter(|info| info.is_valid_changelog_url())
+                    .and_then(|info| info.changelog_url);
+
+                if let Some(url) = changelog_url {
+                    mutex.lock().unwrap().show_window(Box::new(TranslationRepoUpdateWindow::new(
+                        &t!("tl_update_dialog.title"),
+                        &dialog_message,
+                        &url,
+                        |ok| {
+                            if !ok { return; }
+                            Hachimi::instance().tl_updater.clone().run();
+                        }
+                    )));
+                } else {
+                    mutex.lock().unwrap().show_window(Box::new(SimpleYesNoDialog::new(
+                        &t!("tl_update_dialog.title"),
+                        &dialog_message,
+                        |ok| {
+                            if !ok { return; }
+                            Hachimi::instance().tl_updater.clone().run();
+                        }
+                    )));
+                }
             }
         }
         else if let Some(mutex) = Gui::instance() {
