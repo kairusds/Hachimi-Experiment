@@ -3445,45 +3445,42 @@ impl Window for ChangeTranslationRepoWindow {
                             }
                         }
 
-                        ui.horizontal(|ui| {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if let Some(ref info) = info {
+                                if ui.button(t!("remove")).clicked() {
+                                    self.confirm_remove = Some((repo.id, info.name.clone()));
+                                }
+                                if ui.button(" \u{f05a} ").clicked() {
+                                    let repo_id = repo.id;
+                                    let index = repo.index.clone();
+                                    thread::spawn(move || {
+                                        Gui::instance().unwrap()
+                                        .lock().unwrap()
+                                        .show_window(Box::new(TranslationRepoInfoWindow::new(repo_id, index)));
+                                    });
+                                }
+                                let name_width = ui.available_width() - 48.0 * scale;
+                                ui.allocate_ui(egui::vec2(name_width, 0.0), |ui| {
+                                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                    ui.add(egui::RadioButton::new(true, ""));
+                                    ui.label(&info.name);
+                                });
+                            } else {
+                                if ui.button(t!("remove")).clicked() {
+                                    self.confirm_remove = Some((repo.id, repo.index.clone()));
+                                }
+                                let name_width = ui.available_width() - 48.0 * scale;
+                                ui.allocate_ui(egui::vec2(name_width, 0.0), |ui| {
+                                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                                    ui.add(egui::RadioButton::new(true, ""));
+                                    ui.label(&repo.index);
+                                });
+                            }
                             ui.add(match cached.and_then(|(_, uri)| uri.as_ref()) {
                                 Some(uri) => egui::Image::new(uri.clone())
                                     .fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale)),
                                 None => Gui::icon_2x(ctx),
                             });
-
-                            if let Some(ref info) = info {
-                                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    let _ = ui.radio(true, &info.name);
-                                });
-
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    if ui.button(t!("remove")).clicked() {
-                                        self.confirm_remove = Some((repo.id, info.name.clone()));
-                                    }
-                                    if ui.button(" \u{f05a} ").clicked() {
-                                        let repo_id = repo.id;
-                                        let index = repo.index.clone();
-                                        thread::spawn(move || {
-                                            Gui::instance().unwrap()
-                                            .lock().unwrap()
-                                            .show_window(Box::new(TranslationRepoInfoWindow::new(repo_id, index)));
-                                        });
-                                    }
-                                });
-                            } else {
-                                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    let _ = ui.radio(true, &repo.index);
-                                });
-
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    if ui.button(t!("remove")).clicked() {
-                                        self.confirm_remove = Some((repo.id, repo.index.clone()));
-                                    }
-                                });
-                            }
                         });
                     }
 
@@ -3519,49 +3516,54 @@ impl Window for ChangeTranslationRepoWindow {
                             }
                         }
 
-                        ui.horizontal(|ui| {
-                            ui.add(match cached.and_then(|(_, uri)| uri.as_ref()) {
-                                Some(uri) => egui::Image::new(uri.clone())
-                                    .fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale)),
-                                None => Gui::icon_2x(ctx),
-                            });
-
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if let Some(ref info) = info {
-                                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                                if ui.button(t!("remove")).clicked() {
+                                    self.confirm_remove = Some((repo.id, info.name.clone()));
+                                }
+                                if ui.button("\u{f05a}").clicked() {
+                                    let repo_id = repo.id;
+                                    let index = repo.index.clone();
+                                    thread::spawn(move || {
+                                        Gui::instance().unwrap()
+                                        .lock().unwrap()
+                                        .show_window(Box::new(TranslationRepoInfoWindow::new(repo_id, index)));
+                                    });
+                                }
+                                let name_width = ui.available_width() - 48.0 * scale;
+                                let name_resp = ui.allocate_ui(egui::vec2(name_width, 0.0), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    if ui.radio(false, &info.name).clicked() {
-                                        Self::switch_to_repo(repo.id, &repo.index);
-                                    }
+                                    let radio = ui.add(egui::RadioButton::new(false, ""));
+                                    ui.label(&info.name);
+                                    radio.clicked()
                                 });
-
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    if ui.button(t!("remove")).clicked() {
-                                        self.confirm_remove = Some((repo.id, info.name.clone()));
-                                    }
-
-                                    if ui.button("\u{f05a}").clicked() {
-                                        let repo_id = repo.id;
-                                        let index = repo.index.clone();
-                                        thread::spawn(move || {
-                                            Gui::instance().unwrap()
-                                            .lock().unwrap()
-                                            .show_window(Box::new(TranslationRepoInfoWindow::new(repo_id, index)));
-                                        });
-                                    }
+                                ui.add(match cached.and_then(|(_, uri)| uri.as_ref()) {
+                                    Some(uri) => egui::Image::new(uri.clone())
+                                        .fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale)),
+                                    None => Gui::icon_2x(ctx),
                                 });
+                                if name_resp.inner {
+                                    Self::switch_to_repo(repo.id, &repo.index);
+                                }
                             } else {
-                                ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                                if ui.button(t!("remove")).clicked() {
+                                    self.confirm_remove = Some((repo.id, repo.index.clone()));
+                                }
+                                let name_width = ui.available_width() - 48.0 * scale;
+                                let name_resp = ui.allocate_ui(egui::vec2(name_width, 0.0), |ui| {
                                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                    if ui.radio(false, &repo.index).clicked() {
-                                        Self::switch_to_repo(repo.id, &repo.index);
-                                    }
+                                    let radio = ui.add(egui::RadioButton::new(false, ""));
+                                    ui.label(&repo.index);
+                                    radio.clicked()
                                 });
-
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    if ui.button(t!("remove")).clicked() {
-                                        self.confirm_remove = Some((repo.id, repo.index.clone()));
-                                    }
+                                ui.add(match cached.and_then(|(_, uri)| uri.as_ref()) {
+                                    Some(uri) => egui::Image::new(uri.clone())
+                                        .fit_to_exact_size(egui::Vec2::new(48.0 * scale, 48.0 * scale)),
+                                    None => Gui::icon_2x(ctx),
                                 });
+                                if name_resp.inner {
+                                    Self::switch_to_repo(repo.id, &repo.index);
+                                }
                             }
                         });
                     }
