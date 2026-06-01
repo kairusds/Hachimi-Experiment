@@ -3955,23 +3955,48 @@ impl Window for TranslationRepoInfoWindow {
 pub struct TranslationRepoUpdateWindow {
     title: String,
     content: String,
-    changelog_url: String,
+    changelog_is_markdown: bool,
     callback: fn(bool),
     id: egui::Id,
     changelog_fetch_result: Arc<Mutex<Option<Result<String, String>>>>,
-    changelog_fetch_started: bool,
+    changelog_cached: Option<Result<String, String>>,
 }
 
 impl TranslationRepoUpdateWindow {
-    pub fn new(title: &str, content: &str, changelog_url: &str, callback: fn(bool)) -> TranslationRepoUpdateWindow {
+    pub fn new(title: &str, content: &str, changelog_url: &str, changelog_is_markdown: bool, callback: fn(bool)) -> TranslationRepoUpdateWindow {
+        let fetch_result = Arc::new(Mutex::new(None));
+        let fetch_result_clone = fetch_result.clone();
+        let url = changelog_url.to_owned();
+        let url_cloned = url.clone();
+
+        std::thread::spawn(move || {
+            let agent = ureq::Agent::new_with_config(ureq_config());
+            let result = match agent.get(&url_cloned).call() {
+                Ok(res) => {
+                    match res.into_body().read_to_string() {
+                        Ok(text) => {
+                            if text.contains('\0') {
+                                Err(t!("tl_update_dialog.changelog_invalid").into_owned())
+                            } else {
+                                Ok(text)
+                            }
+                        }
+                        Err(e) => Err(format!("{}: {}", t!("tl_update_dialog.changelog_fetch_failed"), e))
+                    }
+                }
+                Err(e) => Err(format!("{}: {}", t!("tl_update_dialog.changelog_fetch_failed"), e))
+            };
+            *fetch_result_clone.lock().unwrap() = Some(result);
+        });
+
         TranslationRepoUpdateWindow {
             title: title.to_owned(),
             content: content.to_owned(),
-            changelog_url: changelog_url.to_owned(),
+            changelog_is_markdown,
             callback,
             id: random_id(),
-            changelog_fetch_result: Arc::new(Mutex::new(None)),
-            changelog_fetch_started: false,
+            changelog_fetch_result: fetch_result,
+            changelog_cached: None,
         }
     }
 }
@@ -3982,51 +4007,24 @@ impl Window for TranslationRepoUpdateWindow {
         let mut open2 = true;
         let mut result = false;
 
-        // check if changelog fetch completed
-        if self.changelog_fetch_started {
-            let fetch_result = {
-                let mut lock = self.changelog_fetch_result.lock().unwrap();
-                lock.take()
-            };
-
-            if let Some(fetch_result) = fetch_result {
-                match fetch_result {
-                    Ok(content) => {
-                        let lower = self.changelog_url.to_lowercase();
-                        if lower.ends_with(".txt") {
-                            // sanitize plaintext: strip control chars except newline/tab
-                            let sanitized: String = content.chars()
-                                .filter(|c| !c.is_control() || *c == '\n' || *c == '\t' || *c == '\r')
-                                .collect();
-                            thread::spawn(move || {
-                                Gui::instance().unwrap()
-                                .lock().unwrap()
-                                .show_window(Box::new(SimpleOkDialog::new(
-                                    &t!("tl_update_dialog.changelog_title"),
-                                    &sanitized,
-                                    || {}
-                                )));
-                            });
-                        } else {
-                            // .md / .markdown
-                            thread::spawn(move || {
-                                Gui::instance().unwrap()
-                                .lock().unwrap()
-                                .show_window(Box::new(SimpleMarkdownDialog::new(
-                                    &t!("tl_update_dialog.changelog_title"),
-                                    &content,
-                                )));
-                            });
+        // check if changelog fetch completed, cache the result
+        if self.changelog_cached.is_none() {
+            if let Ok(mut lock) = self.changelog_fetch_result.try_lock() {
+                if let Some(fetch_result) = lock.take() {
+                    // sanitize plaintext: strip control chars except newline/tab
+                    let processed = match fetch_result {
+                        Ok(content) => {
+                            if !self.changelog_is_markdown {
+                                Ok(content.chars()
+                                    .filter(|c| !c.is_control() || *c == '\n' || *c == '\t' || *c == '\r')
+                                    .collect())
+                            } else {
+                                Ok(content)
+                            }
                         }
-                    }
-                    Err(msg) => {
-                        let err_msg = msg.clone();
-                        thread::spawn(move || {
-                            Gui::instance().unwrap()
-                            .lock().unwrap()
-                            .show_notification(&err_msg);
-                        });
-                    }
+                        Err(e) => Err(e),
+                    };
+                    self.changelog_cached = Some(processed);
                 }
             }
         }
@@ -4037,33 +4035,37 @@ impl Window for TranslationRepoUpdateWindow {
             egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
             .show_inside(ui, |ui| {
                 ui.horizontal(|ui| {
-                    if ui.button(t!("tl_update_dialog.show_changelog")).clicked() {
-                        if !self.changelog_fetch_started {
-                            self.changelog_fetch_started = true;
-                            let url = self.changelog_url.clone();
-                            let fetch_result = self.changelog_fetch_result.clone();
-
-                            thread::spawn(move || {
-                                let agent = ureq::Agent::new_with_config(ureq_config());
-                                let result = match agent.get(&url).call() {
-                                    Ok(res) => {
-                                        match res.into_body().read_to_string() {
-                                            Ok(text) => {
-                                                // validate content is plaintext by checking for null bytes
-                                                if text.contains('\0') {
-                                                    Err(t!("tl_update_dialog.changelog_invalid").into_owned())
-                                                } else {
-                                                    Ok(text)
-                                                }
-                                            }
-                                            Err(e) => Err(format!("{}: {}", t!("tl_update_dialog.changelog_fetch_failed"), e))
-                                        }
-                                    }
-                                    Err(e) => Err(format!("{}: {}", t!("tl_update_dialog.changelog_fetch_failed"), e))
-                                };
-                                *fetch_result.lock().unwrap() = Some(result);
-                            });
+                    // changelog button: loading > show changelog > error
+                    if self.changelog_cached.is_none() {
+                        ui.label(egui::RichText::new(t!("loading_label")).italics());
+                    } else if let Some(Ok(_)) = &self.changelog_cached {
+                        if ui.button(t!("tl_update_dialog.show_changelog")).clicked() {
+                            let content = self.changelog_cached.as_ref().unwrap().as_ref().unwrap().clone();
+                            // .md / .markdown
+                            if self.changelog_is_markdown {
+                                thread::spawn(move || {
+                                    Gui::instance().unwrap()
+                                    .lock().unwrap()
+                                    .show_window(Box::new(SimpleMarkdownDialog::new(
+                                        &t!("tl_update_dialog.changelog_title"),
+                                        &content,
+                                    )));
+                                });
+                            } else {
+                                // plaintext
+                                thread::spawn(move || {
+                                    Gui::instance().unwrap()
+                                    .lock().unwrap()
+                                    .show_window(Box::new(SimpleOkDialog::new(
+                                        &t!("tl_update_dialog.changelog_title"),
+                                        &content,
+                                        || {}
+                                    )));
+                                });
+                            }
                         }
+                    } else if let Some(Err(msg)) = &self.changelog_cached {
+                        ui.label(egui::RichText::new(msg).color(ui.visuals().error_fg_color));
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {

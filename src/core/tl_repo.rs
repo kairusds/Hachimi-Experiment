@@ -50,7 +50,7 @@ pub struct LocalRepoInfo {
     #[serde(default)]
     pub description: String,
     #[serde(default)]
-    pub changelog_url: Option<String>,
+    pub changelog_url: String,
     #[serde(default)]
     pub homepage: String,
     #[serde(default)]
@@ -118,23 +118,23 @@ impl LocalRepoInfo {
     }
 
     pub fn is_valid_changelog_url(&self) -> bool {
-        if let Some(url) = &self.changelog_url {
-            let lower = url.to_lowercase();
-            lower.ends_with(".txt") || lower.ends_with(".md") || lower.ends_with(".markdown")
-        } else {
-            false
+        if self.changelog_url.is_empty() {
+            return false;
         }
+        let lower = self.changelog_url.to_lowercase();
+        lower.ends_with(".txt") || lower.ends_with(".md") || lower.ends_with(".markdown")
     }
 
     pub fn is_txt_changelog(&self) -> bool {
-        self.changelog_url.as_ref().map_or(false, |u| u.to_lowercase().ends_with(".txt"))
+        !self.changelog_url.is_empty() && self.changelog_url.to_lowercase().ends_with(".txt")
     }
 
     pub fn is_markdown_changelog(&self) -> bool {
-        self.changelog_url.as_ref().map_or(false, |u| {
-            let lower = u.to_lowercase();
-            lower.ends_with(".md") || lower.ends_with(".markdown")
-        })
+        if self.changelog_url.is_empty() {
+            return false;
+        }
+        let lower = self.changelog_url.to_lowercase();
+        lower.ends_with(".md") || lower.ends_with(".markdown")
     }
 }
 
@@ -528,17 +528,17 @@ impl Updater {
                 };
 
                 // Check if the active repo has a valid changelog URL
-                let changelog_url = LocalRepoInfo::load(repo_id)
+                let repo_info = LocalRepoInfo::load(repo_id)
                     .ok()
                     .flatten()
-                    .filter(|info| info.is_valid_changelog_url())
-                    .and_then(|info| info.changelog_url);
+                    .filter(|info| info.is_valid_changelog_url());
 
-                if let Some(url) = changelog_url {
+                if let Some(info) = repo_info {
                     mutex.lock().unwrap().show_window(Box::new(TranslationRepoUpdateWindow::new(
                         &t!("tl_update_dialog.title"),
                         &dialog_message,
-                        &url,
+                        info.changelog_url.as_str(),
+                        info.is_markdown_changelog(),
                         |ok| {
                             if !ok { return; }
                             Hachimi::instance().tl_updater.clone().run();
