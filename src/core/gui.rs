@@ -3708,20 +3708,22 @@ impl Window for AddTranslationRepoWindow {
                             let already_downloaded = manager.find_by_index(&repo.index).is_some();
                             drop(manager);
 
-                            let repo_label = if is_matched && is_selected {
+                            let repo_label = if already_downloaded {
+                                format!("{} {}", 
+                                    if is_matched && is_selected {
+                                        format!("★ {}", repo.name)
+                                    } else {
+                                        repo.name.clone()
+                                    },
+                                    t!("add_translation_repo.already_downloaded")
+                                )
+                            } else if is_matched && is_selected {
                                 format!("★ {}", repo.name)
                             } else {
                                 repo.name.clone()
                             };
 
-                            if already_downloaded {
-                                ui.horizontal(|ui| {
-                                    ui.radio_value(&mut self.current_tl_repo, Some(repo.index.clone()), &repo_label);
-                                    ui.label(t!("add_translation_repo.already_downloaded"));
-                                });
-                            } else {
-                                ui.radio_value(&mut self.current_tl_repo, Some(repo.index.clone()), &repo_label);
-                            }
+                            ui.radio_value(&mut self.current_tl_repo, Some(repo.index.clone()), &repo_label);
 
                             if let Some(short_desc) = &repo.short_desc {
                                 ui.label(egui::RichText::new(short_desc).small());
