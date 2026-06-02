@@ -1902,7 +1902,9 @@ impl Window for SimpleOkDialog {
             egui::CentralPanel::default()
                 .frame(egui::Frame::NONE)
                 .show_inside(ui, |ui| {
-                centered_and_wrapped_text(ui, &self.content);
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    centered_and_wrapped_text(ui, &self.content);
+                });
             });
         });
 
