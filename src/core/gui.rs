@@ -2525,13 +2525,19 @@ impl Window for ConfigEditor {
         .show(ctx, |ui| {
             simple_window_layout(ui, self.id,
                 |ui| {
-                    // search bar
-                    let search_response = ui.add(
-                        egui::TextEdit::singleline(&mut self.search_term)
-                            .hint_text(t!("search_filter"))
-                    );
-                    #[cfg(target_os = "android")]
-                    handle_android_keyboard(&search_response, &mut self.search_term);
+                    ui.horizontal(|ui| {
+                        // search bar
+                        let search_res = ui.add_sized(
+                            [ui.available_width() - 30.0 * scale, 24.0 * scale],
+                            egui::TextEdit::singleline(&mut self.search_term).hint_text(t!("search_filter"))
+                        );
+                        #[cfg(target_os = "android")]
+                        handle_android_keyboard(&search_res, &mut self.search_term);
+
+                        if ui.button("\u{f00d}").clicked() {
+                            self.search_term.clear();
+                        }
+                    });
                     ui.add_space(4.0);
 
                     if self.search_term.is_empty() {
