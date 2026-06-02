@@ -1903,7 +1903,7 @@ impl Window for SimpleOkDialog {
                 .frame(egui::Frame::NONE)
                 .show_inside(ui, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {
-                    centered_and_wrapped_text(ui, &self.content);
+                    ui.label(&self.content);
                 });
             });
         });
