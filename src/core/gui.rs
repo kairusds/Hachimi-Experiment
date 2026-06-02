@@ -1902,10 +1902,11 @@ impl Window for SimpleOkDialog {
             egui::CentralPanel::default()
                 .frame(egui::Frame::NONE)
                 .show_inside(ui, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.label(&self.content);
+                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.label(egui::RichText::new(&self.content));
+                    });
                 });
-            });
         });
 
         if open && open2 {
