@@ -1892,27 +1892,27 @@ impl Window for SimpleOkDialog {
         new_window(ctx, self.id, &self.title)
         .open(&mut open)
         .show(ctx, |ui| {
-            simple_window_layout(ui, self.id,
-                |ui| {
-                    if self.scrollable {
-                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                        egui::ScrollArea::vertical().show(ui, |ui| {
-                            ui.label(&self.content);
-                        });
-                    } else {
-                        egui::CentralPanel::default()
-                            .frame(egui::Frame::NONE)
-                            .show_inside(ui, |ui| {
-                                centered_and_wrapped_text(ui, &self.content);
-                            });
-                    }
-                },
-                |ui| {
+            egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
+            .show_inside(ui, |ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                     if ui.button(t!("ok")).clicked() {
                         open2 = false;
                     }
-                }
-            );
+                })
+            });
+ 
+            if self.scrollable {
+                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.label(&self.content);
+                });
+            } else {
+                egui::CentralPanel::default()
+                    .frame(egui::Frame::NONE)
+                    .show_inside(ui, |ui| {
+                        centered_and_wrapped_text(ui, &self.content);
+                    });
+            }
         });
 
         if open && open2 {
@@ -4143,23 +4143,23 @@ impl Window for SimpleMarkdownDialog {
         new_window(ctx, self.id, &self.title)
         .open(&mut open)
         .show(ctx, |ui| {
-            simple_window_layout(ui, self.id,
-                |ui| {
-                    egui::CentralPanel::default()
-                        .frame(egui::Frame::NONE)
-                        .show_inside(ui, |ui| {
-                        egui::ScrollArea::vertical().show(ui, |ui| {
-                            egui_commonmark::CommonMarkViewer::new()
-                                .show(ui, &mut self.cache, &self.content);
-                        });
-                    });
-                },
-                |ui| {
+            egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
+            .show_inside(ui, |ui| {
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
                     if ui.button(t!("ok")).clicked() {
                         open2 = false;
                     }
-                }
-            );
+                })
+            });
+
+            egui::CentralPanel::default()
+                .frame(egui::Frame::NONE)
+                .show_inside(ui, |ui| {
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        egui_commonmark::CommonMarkViewer::new()
+                            .show(ui, &mut self.cache, &self.content);
+                    });
+                });
         });
 
         open && open2
