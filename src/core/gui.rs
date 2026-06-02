@@ -2680,7 +2680,7 @@ impl Window for FirstTimeSetupWindow {
                 _ => true
             };
 
-            page_open = paginated_window_layout(ui, self.id, &mut self.current_page, 3, allow_next, |ui, i| {
+            page_open = paginated_window_layout(ui, self.id, &mut self.current_page, 4, allow_next, |ui, i| {
                 match i {
                     0 => {
                         ui.heading(t!("first_time_setup.welcome_heading"));
@@ -2742,6 +2742,65 @@ impl Window for FirstTimeSetupWindow {
                         );
                     }
                     2 => {
+                        ui.heading(t!("first_time_setup.common_settings_heading"));
+                        ui.separator();
+                        ui.label(t!("first_time_setup.common_settings_content"));
+                        ui.add_space(4.0);
+
+                        ui.horizontal(|ui| {
+                            ui.label(t!("config_editor.target_fps"));
+                            let mut enabled = self.config.target_fps.is_some();
+                            if ui.checkbox(&mut enabled, t!("enable")).changed() {
+                                if enabled {
+                                    self.config.target_fps = Some(60);
+                                } else {
+                                    self.config.target_fps = None;
+                                }
+                            }
+                        });
+                        if let Some(ref mut fps) = self.config.target_fps {
+                            ui.horizontal(|ui| {
+                                ui.label("");
+                                let _ = ui.add(egui::Slider::new(fps, 30..=1000));
+                            });
+                        }
+                        ui.horizontal(|ui| {
+                            ui.label(t!("config_editor.disable_skill_name_translation"));
+                            let _ = ui.checkbox(&mut self.config.disable_skill_name_translation, "");
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label(t!("config_editor.menu_open_key"));
+                            #[cfg(target_os = "windows")]
+                            ui.label(crate::windows::utils::vk_to_display_label(self.config.windows.menu_open_key));
+                            #[cfg(target_os = "android")]
+                            ui.label(crate::android::gui_impl::keymap::keycode_display_label(self.config.android.menu_open_key));
+
+                            if ui.button(t!("bind_key")).clicked() {
+                                let config_clone = self.config.clone();
+                                std::thread::spawn(move || {
+                                    let Some(gui_mutex) = Gui::instance() else { return };
+                                    let mut gui = gui_mutex.lock().unwrap();
+                                    gui.show_window(Box::new(SetKeybindWindow::new(move |result| {
+                                        let Some(raw) = result else { return };
+
+                                        let mut new_config = config_clone.clone();
+
+                                        #[cfg(target_os = "windows")]
+                                        { new_config.windows.menu_open_key = raw; }
+                                        #[cfg(target_os = "android")]
+                                        { new_config.android.menu_open_key = raw; }
+
+                                        save_and_reload_config(new_config);
+                                    })));
+                                });
+                            }
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label(t!("config_editor.ui_animation_scale"));
+                            let _ = ui.add(egui::Slider::new(&mut self.config.ui_animation_scale, 0.1..=10.0).step_by(0.1));
+                        });
+                    }
+                    3 => {
                         ui.heading(t!("first_time_setup.complete_heading"));
                         ui.separator();
                         ui.label(t!("first_time_setup.complete_content"));
