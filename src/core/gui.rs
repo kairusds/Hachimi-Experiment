@@ -1867,15 +1867,17 @@ impl Window for SimpleYesNoDialog {
 pub struct SimpleOkDialog {
     title: String,
     content: String,
+    scrollable: bool,
     callback: fn(),
     id: egui::Id
 }
 
 impl SimpleOkDialog {
-    pub fn new(title: &str, content: &str, callback: fn()) -> SimpleOkDialog {
+    pub fn new(title: &str, content: &str, scrollable: bool, callback: fn()) -> SimpleOkDialog {
         SimpleOkDialog {
             title: title.to_owned(),
             content: content.to_owned(),
+            scrollable: scrollable.to_owned(),
             callback,
             id: random_id()
         }
@@ -1890,23 +1892,27 @@ impl Window for SimpleOkDialog {
         new_window(ctx, self.id, &self.title)
         .open(&mut open)
         .show(ctx, |ui| {
-            egui::TopBottomPanel::bottom(self.id.with("bottom_panel"))
-            .show_inside(ui, |ui| {
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+            simple_window_layout(ui, self.id,
+                |ui| {
+                    if self.scrollable {
+                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            ui.label(&self.content);
+                        });
+                    } else {
+                        egui::CentralPanel::default()
+                            .frame(egui::Frame::NONE)
+                            .show_inside(ui, |ui| {
+                                centered_and_wrapped_text(ui, &self.content);
+                            });
+                    }
+                },
+                |ui| {
                     if ui.button(t!("ok")).clicked() {
                         open2 = false;
                     }
-                })
-            });
-
-            egui::CentralPanel::default()
-                .frame(egui::Frame::NONE)
-                .show_inside(ui, |ui| {
-                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                    egui::ScrollArea::vertical().show(ui, |ui| {
-                        ui.label(egui::RichText::new(&self.content));
-                    });
-                });
+                }
+            );
         });
 
         if open && open2 {
@@ -2002,6 +2008,7 @@ impl ConfigEditor {
                             .show_window(Box::new(SimpleOkDialog::new(
                                 &t!("warning"),
                                 &t!("config_editor.disable_overlay_warning"),
+                                false,
                                 || {}
                             )));
                         });
@@ -2140,6 +2147,7 @@ impl ConfigEditor {
                             .show_window(Box::new(SimpleOkDialog::new(
                                 &t!("warning"),
                                 &t!("config_editor.auto_tl_warning"),
+                                false,
                                 || {}
                             )));
                         });
@@ -2156,6 +2164,7 @@ impl ConfigEditor {
                             .show_window(Box::new(SimpleOkDialog::new(
                                 &t!("warning"),
                                 &t!("config_editor.auto_tl_warning"),
+                                false,
                                 || {}
                             )));
                         });
@@ -2339,6 +2348,7 @@ impl ConfigEditor {
                             .show_window(Box::new(SimpleOkDialog::new(
                                 &t!("info"),
                                 &t!("config_editor.hide_ingame_ui_hotkey_info"),
+                                false,
                                 || {}
                             )));
                         });
@@ -4062,6 +4072,7 @@ impl Window for TranslationRepoUpdateWindow {
                                     .show_window(Box::new(SimpleOkDialog::new(
                                         &t!("tl_update_dialog.changelog_title"),
                                         &content,
+                                        true,
                                         || {}
                                     )));
                                 });
