@@ -89,8 +89,16 @@ impl_addr_wrapper_fn!(get_IsSplitWindow, GET_ISSPLITWINDOW_ADDR, bool,);
 static mut GET_ISVERTICAL_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_IsVertical, GET_ISVERTICAL_ADDR, bool,);
 
+type set_OrientationFn = extern "C" fn(this: *mut Il2CppObject, _value: i32);
+extern "C" fn set_Orientation(this: *mut Il2CppObject, _value: i32) {
+    // UnityEngine ScreenOrientation
+    let orientation = ScreenOrientation_LandscapeLeft;
+    get_orig_fn!(set_Orientation, set_OrientationFn)(this, orientation);
+}
+
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, Screen);
+    find_nested_class_or_return!(Screen, ScreenOrientationClassWrapper);
 
     #[cfg(target_os = "android")]
     {
@@ -109,6 +117,9 @@ pub fn init(umamusume: *const Il2CppImage) {
         new_hook!(get_Width_addr, get_Width);
         new_hook!(get_Height_addr, get_Height);
     }
+
+    let set_Orientation_addr = get_method_addr(ScreenOrientationClassWrapper, c"set_Orientation", 1);
+    new_hook!(set_Orientation_addr, set_Orientation);
 
     unsafe {
         GET_ISSPLITWINDOW_ADDR = get_method_addr(Screen, c"get_IsSplitWindow", 0);
