@@ -17,6 +17,9 @@ impl_addr_wrapper_fn!(ResumeLive, RESUMELIVE_ADDR, (), this: *mut Il2CppObject);
 static mut SKIPLIVE_ADDR: usize = 0;
 impl_addr_wrapper_fn!(SkipLive, SKIPLIVE_ADDR, *mut Il2CppObject, this: *mut Il2CppObject);
 
+static mut SETORIENTATIONLANDSCAPE_ADDR: usize = 0;
+impl_addr_wrapper_fn!(SetOrientationLandscape, SETORIENTATIONLANDSCAPE_ADDR, (), this: *mut Il2CppObject);
+
 static mut GETVIEWBASE_ADDR: usize = 0;
 impl_addr_wrapper_fn!(GetViewBase, GETVIEWBASE_ADDR, *mut Il2CppObject, this: *mut Il2CppObject);
 
@@ -30,6 +33,7 @@ pub fn init(umamusume: *const Il2CppImage) {
         PAUSELIVE_ADDR = get_method_addr(LiveViewController, c"PauseLive", 0);
         RESUMELIVE_ADDR = get_method_addr(LiveViewController, c"ResumeLive", 0);
         SKIPLIVE_ADDR = get_method_addr(LiveViewController, c"SkipLive", 0);
+        SETORIENTATIONLANDSCAPE_ADDR = get_method_addr(LiveViewController, c"SetOrientationLandscape", 0);
         GETVIEWBASE_ADDR = get_method_addr(LiveViewController, c"GetViewBase", 0);
         _STATE_FIELD = get_field_from_name(LiveViewController, c"_state");
     }
