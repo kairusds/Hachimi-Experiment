@@ -2,7 +2,6 @@ use crate::{
     core::{gui::IS_LIVE_SCENE, Hachimi},
     il2cpp::{
         ext::StringExt,
-        hook::umamusume::{LiveViewController, SceneManager},
         sql,
         symbols::{get_assembly_image, get_method_addr, get_field_from_name, get_class, Array, IList, SingletonLike},
         types::*
@@ -132,14 +131,6 @@ extern "C" fn Awake(this: *mut Il2CppObject) {
     get_orig_fn!(Awake, AwakeFn)(this);
 
     IS_LIVE_PAUSED.store(IsPauseLive(this), Ordering::Release);
-
-    let scene_manager = SceneManager::instance();
-    if !scene_manager.is_null() {
-        let view_controller = SceneManager::GetCurrentViewController(scene_manager);
-        if !view_controller.is_null() {
-            LiveViewController::SetOrientationLandscape(view_controller);
-        }
-    }
 
     if Hachimi::instance().config.load().champions_live_show_text {
         patch_champions_live(this);
