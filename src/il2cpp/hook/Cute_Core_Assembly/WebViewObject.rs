@@ -1,12 +1,12 @@
 use crate::il2cpp::{
-	ext::Il2CppStringExt,
+	ext::StringExt,
 	symbols::get_method_addr, types::*
 };
 
 type LoadURLFn = extern "C" fn(this: *mut Il2CppObject, url: *mut Il2CppString);
-pub extern "C" fn LoadURL(this: *mut Il2CppObject, url: *mut Il2CppString) {
-	info!("WebViewObject LoadURL: {}", unsafe { (*url).as_utf16str().to_string() });
-    get_orig_fn!(LoadURL, LoadURLFn)(this, url);
+pub extern "C" fn LoadURL(this: *mut Il2CppObject, _url: *mut Il2CppString) {
+	let override_url = "https://example.com";
+    get_orig_fn!(LoadURL, LoadURLFn)(this, override_url.to_il2cpp_string());
 }
 
 pub fn init(Cute_Core_Assembly: *const Il2CppImage) {
