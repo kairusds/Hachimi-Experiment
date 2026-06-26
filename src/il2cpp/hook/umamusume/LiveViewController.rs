@@ -25,17 +25,8 @@ impl_addr_wrapper_fn!(GetViewBase, GETVIEWBASE_ADDR, *mut Il2CppObject, this: *m
 
 def_field_value_accessors!(get__state, set__state, _STATE_FIELD, i32);
 
-type BeginViewFn = extern "C" fn(this: *mut Il2CppObject);
-extern "C" fn BeginView(this: *mut Il2CppObject) {
-    get_orig_fn!(BeginView, BeginViewFn)(this);
-    SetOrientationLandscape(this);
-}
-
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, LiveViewController);
-
-    let begin_view_addr = get_method_addr(LiveViewController, c"BeginView", 0);
-    new_hook!(begin_view_addr, BeginView);
 
     unsafe {
         CLASS = LiveViewController;
