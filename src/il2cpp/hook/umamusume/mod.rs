@@ -108,6 +108,7 @@ pub mod MasterJukeboxSetlistMusicData;
 pub mod HubViewControllerBase;
 mod LiveTheaterInfo;
 pub mod DownloadPathRegister;
+pub mod SceneDefine;
 
 pub fn init() {
     get_assembly_image_or_return!(image, "umamusume.dll");
@@ -219,4 +220,5 @@ pub fn init() {
     HubViewControllerBase::init(image);
     LiveTheaterInfo::init(image);
     DownloadPathRegister::init(image);
+    SceneDefine::init(image);
 }
