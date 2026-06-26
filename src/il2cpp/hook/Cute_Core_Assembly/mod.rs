@@ -12,5 +12,4 @@ pub fn init() {
         SafetyNet::init(image);
     }
     Device::init(image);
-    WebViewObject::init(image);
 }
