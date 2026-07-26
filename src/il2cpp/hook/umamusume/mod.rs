@@ -70,7 +70,7 @@ pub mod AudioManager;
 pub mod MasterCharacterSystemText;
 pub mod ImageCommon;
 pub mod Notification;
-pub mod TimeUtil;
+mod TimeUtil;
 pub mod CameraData;
 pub mod DialogManager;
 pub mod PartsCharaMessageBase;
@@ -153,6 +153,7 @@ pub mod HubViewControllerBase;
 mod LiveTheaterInfo;
 pub mod DownloadPathRegister;
 pub mod SceneDefine;
+pub mod GameDefine;
 
 pub fn init() {
     get_assembly_image_or_return!(image, "umamusume.dll");
@@ -293,4 +294,5 @@ pub fn init() {
     LiveTheaterInfo::init(image);
     DownloadPathRegister::init(image);
     SceneDefine::init(image);
+    GameDefine::init(image);
 }
