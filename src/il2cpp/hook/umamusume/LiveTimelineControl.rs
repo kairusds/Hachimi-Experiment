@@ -18,11 +18,19 @@ fn clear_live_screen_effects(sheet: *mut Il2CppObject) {
     }    
 
     let post_film_keys = LiveTimelineWorkSheet::get_postFilmKeys(sheet);
-    LiveTimelineKeyPostFilmDataList::Clear(post_film_keys);
+    if !post_film_keys.is_null() {
+        LiveTimelineKeyPostFilmDataList::Clear(post_film_keys);
+    }
+
     let post_film2_keys = LiveTimelineWorkSheet::get_postFilm2Keys(sheet);
-    LiveTimelineKeyPostFilmDataList::Clear(post_film2_keys);
+    if !post_film2_keys.is_null() {
+        LiveTimelineKeyPostFilmDataList::Clear(post_film2_keys);
+    }
+
     let post_film3_keys = LiveTimelineWorkSheet::get_postFilm3Keys(sheet);
-    LiveTimelineKeyPostFilmDataList::Clear(post_film3_keys);
+    if !post_film3_keys.is_null() {
+        LiveTimelineKeyPostFilmDataList::Clear(post_film3_keys);
+    }
 }
 
 pub fn set_current(this: *mut Il2CppObject) {
