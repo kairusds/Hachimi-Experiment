@@ -34,6 +34,8 @@ mod GallopInput;
 #[cfg(target_os = "windows")]
 mod InputSystemManager;
 #[cfg(target_os = "windows")]
+mod BackKeyInputManager;
+#[cfg(target_os = "windows")]
 pub mod WindowsGamepadControl;
 #[cfg(target_os = "windows")]
 pub mod TapEffectController;
@@ -81,6 +83,10 @@ mod LowResolutionCamera;
 mod PaymentUtility;
 #[cfg(target_os = "windows")]
 mod LiveTimelineControl;
+#[cfg(target_os = "windows")]
+pub mod LiveTimelineWorkSheet;
+#[cfg(target_os = "windows")]
+pub mod LiveTimelineKeyPostFilmDataList;
 #[cfg(target_os = "windows")]
 mod PostEffectUpdateInfo_DOF;
 #[cfg(target_os = "windows")]
@@ -136,6 +142,8 @@ mod DownloadView;
 #[cfg(target_os = "windows")]
 mod DownloadErrorProcessor;
 mod TitleViewController;
+#[cfg(target_os = "windows")]
+pub mod MainGameInitializer;
 pub mod Director;
 mod CySpringNative;
 pub mod LiveViewController;
@@ -185,14 +193,6 @@ pub fn init() {
     StoryViewTextControllerSingleMode::init(image);
     JikkyoDisplay::init(image);
     Screen::init(image);
-    #[cfg(target_os = "windows")]
-    {
-        StandaloneWindowResize::init(image);
-        GallopInput::init(image);
-        InputSystemManager::init(image);
-        WindowsGamepadControl::init(image);
-        TapEffectController::init(image);
-    }
     TrainingParamChangePlate::init(image);
     SingleModeUtils::init(image);
     MasterSingleModeTurn::init(image);
@@ -234,12 +234,21 @@ pub fn init() {
 
     #[cfg(target_os = "windows")]
     {
+        StandaloneWindowResize::init(image);
+        GallopInput::init(image);
+        InputSystemManager::init(image);
+        BackKeyInputManager::init(image);
+        WindowsGamepadControl::init(image);
+        TapEffectController::init(image);
         PaymentUtility::init(image);
         Connecting::init(image);
         DownloadManager::init(image);
         DownloadView::init(image);
         DownloadErrorProcessor::init(image);
+        MainGameInitializer::init(image);
         LiveTimelineControl::init(image);
+        LiveTimelineWorkSheet::init(image);
+        LiveTimelineKeyPostFilmDataList::init(image);
         PostEffectUpdateInfo_DOF::init(image);
         DOFUpdateInfoDelegate::init(image);
         PostFilmUpdateInfoDelegate::init(image);

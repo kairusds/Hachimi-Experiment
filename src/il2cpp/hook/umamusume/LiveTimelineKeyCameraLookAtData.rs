@@ -91,13 +91,8 @@ extern "C" fn GetCharacterWorldPos(
 }
 
 pub fn init(umamusume: *const Il2CppImage) {
-    if let Ok(camera_lookat_data) = get_class(
-        umamusume,
-        c"Gallop.Live.Cutt",
-        c"LiveTimelineKeyCameraLookAtData",
-    ) {
-        let GetCharacterWorldPos_addr =
-            get_method_addr(camera_lookat_data, c"GetCharacterWorldPos", 8);
-        new_hook!(GetCharacterWorldPos_addr, GetCharacterWorldPos);
-    }
+    get_class_or_return!(umamusume, "Gallop.Live.Cutt", LiveTimelineKeyCameraLookAtData);
+
+    let GetCharacterWorldPos_addr = get_method_addr(LiveTimelineKeyCameraLookAtData, c"GetCharacterWorldPos", 8);
+    new_hook!(GetCharacterWorldPos_addr, GetCharacterWorldPos);
 }
