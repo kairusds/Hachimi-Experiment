@@ -27,10 +27,12 @@ fn is_multi_camera_position_data(this: *mut Il2CppObject) -> bool {
 }
 
 type GetValueFn = extern "C" fn(
+    ret: *mut Vector3_t,
     this: *mut Il2CppObject,
     timeline_control: *mut Il2CppObject,
 ) -> *mut Vector3_t;
 extern "C" fn GetValue(
+    ret: *mut Vector3_t,
     this: *mut Il2CppObject,
     timeline_control: *mut Il2CppObject,
 ) -> *mut Vector3_t {
@@ -39,14 +41,14 @@ extern "C" fn GetValue(
     if free_camera::is_live_secondary_camera_update() ||
         is_multi_camera_position_data(this)
     {
-        return get_orig_fn!(GetValue, GetValueFn)(this, timeline_control);
+        return get_orig_fn!(GetValue, GetValueFn)(ret, this, timeline_control);
     }
 
     if free_camera::is_scene_enabled(CameraScene::Live) && free_camera::mode() == FreeCameraMode::SelfieStick {
         set_setType(this, LiveCameraPositionType::Character);
     }
 
-    let result = get_orig_fn!(GetValue, GetValueFn)(this, timeline_control);
+    let result = get_orig_fn!(GetValue, GetValueFn)(ret, this, timeline_control);
     if free_camera::is_scene_enabled(CameraScene::Live) && !result.is_null() {
         unsafe {
             *result = free_camera::camera_pos();
@@ -56,11 +58,13 @@ extern "C" fn GetValue(
 }
 
 type GetValue2Fn = extern "C" fn(
+    ret: *mut Vector3_t,
     this: *mut Il2CppObject,
     timeline_control: *mut Il2CppObject,
     set_type: LiveCameraPositionType,
 ) -> *mut Vector3_t;
 extern "C" fn GetValue2(
+    ret: *mut Vector3_t,
     this: *mut Il2CppObject,
     timeline_control: *mut Il2CppObject,
     set_type: LiveCameraPositionType,
@@ -71,13 +75,14 @@ extern "C" fn GetValue2(
         is_multi_camera_position_data(this)
     {
         return get_orig_fn!(GetValue2, GetValue2Fn)(
+            ret,
             this,
             timeline_control,
             set_type,
         );
     }
 
-    let result = get_orig_fn!(GetValue2, GetValue2Fn)(this, timeline_control, set_type);
+    let result = get_orig_fn!(GetValue2, GetValue2Fn)(ret, this, timeline_control, set_type);
     if free_camera::is_scene_enabled(CameraScene::Live) && !result.is_null() {
         unsafe {
             *result = free_camera::camera_pos();
