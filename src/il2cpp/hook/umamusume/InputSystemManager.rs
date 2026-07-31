@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 use crate::{
     windows::free_camera,
     il2cpp::{
-        symbols::{get_class, get_method_addr},
+        symbols::get_method_addr,
         types::*,
     },
 };
@@ -22,16 +22,12 @@ fn preserve_hook_identity(identity: &AtomicU8) {
     std::hint::black_box(identity.load(Ordering::Relaxed));
 }
 
-fn should_block_game_input() -> bool {
-    free_camera::is_game_input_capture_active()
-}
-
 type InputButtonFn = extern "C" fn(this: *mut Il2CppObject, action_name: *mut Il2CppString) -> bool;
 macro_rules! block_input_button {
     ($hook:ident, $identity:ident) => {
         extern "C" fn $hook(this: *mut Il2CppObject, action_name: *mut Il2CppString) -> bool {
             preserve_hook_identity(&$identity);
-            if should_block_game_input() {
+            if free_camera::is_game_input_capture_active() {
                 false
             } else {
                 get_orig_fn!($hook, InputButtonFn)(this, action_name)
@@ -47,7 +43,7 @@ block_input_button!(GetButtonUp, GET_BUTTON_UP_HOOK_ID);
 type GetAxisFn = extern "C" fn(this: *mut Il2CppObject, action_name: *mut Il2CppString) -> f32;
 extern "C" fn GetAxis(this: *mut Il2CppObject, action_name: *mut Il2CppString) -> f32 {
     preserve_hook_identity(&GET_AXIS_HOOK_ID);
-    if should_block_game_input() {
+    if free_camera::is_game_input_capture_active() {
         0.0
     } else {
         get_orig_fn!(GetAxis, GetAxisFn)(this, action_name)
@@ -57,7 +53,7 @@ extern "C" fn GetAxis(this: *mut Il2CppObject, action_name: *mut Il2CppString) -
 type GetVector2Fn = extern "C" fn(this: *mut Il2CppObject, action_name: *mut Il2CppString) -> Vector2_t;
 extern "C" fn GetVector2(this: *mut Il2CppObject, action_name: *mut Il2CppString) -> Vector2_t {
     preserve_hook_identity(&GET_VECTOR2_HOOK_ID);
-    if should_block_game_input() {
+    if free_camera::is_game_input_capture_active() {
         Vector2_t::default()
     } else {
         get_orig_fn!(GetVector2, GetVector2Fn)(this, action_name)
@@ -67,7 +63,7 @@ extern "C" fn GetVector2(this: *mut Il2CppObject, action_name: *mut Il2CppString
 type IsActionKeyTriggeredInKeyboardFn = extern "C" fn(this: *mut Il2CppObject) -> bool;
 extern "C" fn IsActionKeyTriggeredInKeyboard(this: *mut Il2CppObject) -> bool {
     preserve_hook_identity(&KEYBOARD_TRIGGER_HOOK_ID);
-    if should_block_game_input() {
+    if free_camera::is_game_input_capture_active() {
         false
     } else {
         get_orig_fn!(IsActionKeyTriggeredInKeyboard, IsActionKeyTriggeredInKeyboardFn)(this)
@@ -77,7 +73,7 @@ extern "C" fn IsActionKeyTriggeredInKeyboard(this: *mut Il2CppObject) -> bool {
 type IsActionButtonTriggeredInGamepadFn = extern "C" fn(this: *mut Il2CppObject) -> bool;
 extern "C" fn IsActionButtonTriggeredInGamepad(this: *mut Il2CppObject) -> bool {
     preserve_hook_identity(&GAMEPAD_TRIGGER_HOOK_ID);
-    if should_block_game_input() {
+    if free_camera::is_game_input_capture_active() {
         false
     } else {
         get_orig_fn!(IsActionButtonTriggeredInGamepad, IsActionButtonTriggeredInGamepadFn)(this)
@@ -87,7 +83,7 @@ extern "C" fn IsActionButtonTriggeredInGamepad(this: *mut Il2CppObject) -> bool 
 type get_IsAnyKeyTriggeredInKeyboardFn = extern "C" fn() -> bool;
 extern "C" fn get_IsAnyKeyTriggeredInKeyboard() -> bool {
     preserve_hook_identity(&ANY_KEY_TRIGGER_HOOK_ID);
-    if should_block_game_input() {
+    if free_camera::is_game_input_capture_active() {
         false
     } else {
         get_orig_fn!(get_IsAnyKeyTriggeredInKeyboard, get_IsAnyKeyTriggeredInKeyboardFn)()

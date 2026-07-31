@@ -3,7 +3,9 @@ use crate::{
         symbols::get_method_addr,
         types::*,
     },
+    windows::free_camera
 };
+use std::sync::atomic::{AtomicU8, Ordering};
 
 static BACK_KEY_TRIGGER_HOOK_ID: AtomicU8 = AtomicU8::new(1);
 static BACK_MOUSE_TRIGGER_HOOK_ID: AtomicU8 = AtomicU8::new(2);
@@ -16,7 +18,7 @@ fn preserve_hook_identity(identity: &AtomicU8) {
 type IsTriggeredBackKeyFn = extern "C" fn() -> bool;
 extern "C" fn IsTriggeredBackKey() -> bool {
     preserve_hook_identity(&BACK_KEY_TRIGGER_HOOK_ID);
-    if should_block_game_input() {
+    if free_camera::is_game_input_capture_active() {
         false
     } else {
         get_orig_fn!(IsTriggeredBackKey, IsTriggeredBackKeyFn)()
@@ -26,7 +28,7 @@ extern "C" fn IsTriggeredBackKey() -> bool {
 type BackMouseTriggeredFn = extern "C" fn(this: *mut Il2CppObject) -> bool;
 extern "C" fn get_IsRightMouseButtonPressedForBack(this: *mut Il2CppObject) -> bool {
     preserve_hook_identity(&BACK_MOUSE_TRIGGER_HOOK_ID);
-    if should_block_game_input() {
+    if free_camera::is_game_input_capture_active() {
         false
     } else {
         get_orig_fn!(get_IsRightMouseButtonPressedForBack, BackMouseTriggeredFn)(this)

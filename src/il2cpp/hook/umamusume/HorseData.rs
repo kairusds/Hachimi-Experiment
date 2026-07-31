@@ -1,5 +1,5 @@
 use crate::il2cpp::{
-    symbols::{get_class, get_method_addr},
+    symbols::get_method_addr,
     types::*,
 };
 

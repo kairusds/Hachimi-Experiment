@@ -3,7 +3,6 @@ use std::{ptr::null_mut, sync::atomic::{AtomicU8, Ordering}};
 use crate::{
     core::Hachimi,
     il2cpp::{
-        api::il2cpp_field_static_set_value,
         symbols::{get_field_from_name, get_method_addr, set_static_field_value},
         types::*,
     },
@@ -18,7 +17,7 @@ static mut IS_WINDOW_SIZE_CHANGING_FIELD: *mut FieldInfo = null_mut();
 static mut IS_WINDOW_DRAGGING_FIELD: *mut FieldInfo = null_mut();
 
 static mut SAVE_CHANGED_WIDTH_ADDR: usize = 0;
-impl_addr_wrapper_fn!(SaveChangedWidth, SAVE_CHANGED_WIDTH_ADDR, (), width: i32, height: i32);
+impl_addr_wrapper_fn!(SaveChangedWidth, SAVE_CHANGED_WIDTH_ADDR, (), width: f32, height: f32);
 
 static mut ENABLE_WINDOW_HIT_TEST_ADDR: usize = 0;
 impl_addr_wrapper_fn!(EnableWindowHitTest, ENABLE_WINDOW_HIT_TEST_ADDR, (),);

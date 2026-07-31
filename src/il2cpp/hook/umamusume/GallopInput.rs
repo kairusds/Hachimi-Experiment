@@ -15,7 +15,7 @@ extern "C" fn mousePosition() -> Vector3_t {
         return get_orig_fn!(mousePosition, MousePositionFn)();
     }
 
-    WindowsGamepadControl::UpdateInputControls();
+    WindowsGamepadControl::UpdateInputControls(WindowsGamepadControl::instance());
     Input::get_mousePosition()
 }
 

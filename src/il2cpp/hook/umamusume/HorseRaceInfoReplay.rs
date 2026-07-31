@@ -8,7 +8,7 @@ use once_cell::sync::Lazy;
 use crate::{
     core::Hachimi,
     il2cpp::{
-        symbols::{get_class, get_method_addr},
+        symbols::get_method_addr,
         types::*,
     },
     windows::free_camera,

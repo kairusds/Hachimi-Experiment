@@ -1,11 +1,9 @@
-use std::ptr::null_mut;
-
 use crate::{
     windows::free_camera::{self, CameraScene},
     il2cpp::{
         ext::StringExt,
         hook::UnityEngine_CoreModule::Transform,
-        symbols::{get_class, get_method_addr},
+        symbols::get_method_addr,
         types::*,
     },
 };

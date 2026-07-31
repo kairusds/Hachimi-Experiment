@@ -5,19 +5,18 @@ use super::MainGameInitializer;
 type UpdateViewFn = extern "C" fn(this: *mut Il2CppObject);
 extern "C" fn UpdateView(this: *mut Il2CppObject) {
     get_orig_fn!(UpdateView, UpdateViewFn)(this);
-    unsafe {
-        if MainGameInitializer::GetBootProgress() != 0 {
-            let progress = MainGameInitializer::GetBootProgress();
-            if progress >= 0.0 {
-                if progress >= 1.0 {
-                    taskbar::update_download_state(TBPF_NOPROGRESS);
-                } else {
-                    taskbar::update_download_value((progress * 100.0) as u64, 100);
-                }
+    if MainGameInitializer::GetBootProgress() != 0.0 {
+        let progress = MainGameInitializer::GetBootProgress();
+        if progress >= 0.0 {
+            if progress >= 1.0 {
+                taskbar::update_download_state(TBPF_NOPROGRESS);
+            } else {
+                taskbar::update_download_value((progress * 100.0) as u64, 100);
             }
         }
     }
 }
+
 
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, TitleViewController);

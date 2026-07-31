@@ -2,7 +2,7 @@ use crate::{
     windows::free_camera::{self, CameraScene},
     il2cpp::{
         hook::UnityEngine_CoreModule::Transform,
-        symbols::{get_class, get_method_addr},
+        symbols::get_method_addr,
         types::*,
     },
 };

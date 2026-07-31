@@ -94,9 +94,11 @@ mod DOFUpdateInfoDelegate;
 #[cfg(target_os = "windows")]
 mod PostFilmUpdateInfoDelegate;
 #[cfg(target_os = "windows")]
-mod LiveTimelineKeyCameraPositionData;
+pub mod LiveTimelineKeyCameraPositionData;
 #[cfg(target_os = "windows")]
 mod LiveTimelineKeyCameraLookAtData;
+#[cfg(target_os = "windows")]
+mod LiveTimelineKeyMultiCameraPositionData;
 #[cfg(target_os = "windows")]
 mod CharacterObject;
 #[cfg(target_os = "windows")]
@@ -116,7 +118,7 @@ mod RaceEffectManager;
 #[cfg(target_os = "windows")]
 mod HorseData;
 #[cfg(target_os = "windows")]
-mod HorseRaceInfo;
+pub mod HorseRaceInfo;
 #[cfg(target_os = "windows")]
 mod HorseRaceInfoReplay;
 pub mod TweenAnimationTimelineComponent;
@@ -254,6 +256,7 @@ pub fn init() {
         PostFilmUpdateInfoDelegate::init(image);
         LiveTimelineKeyCameraPositionData::init(image);
         LiveTimelineKeyCameraLookAtData::init(image);
+        LiveTimelineKeyMultiCameraPositionData::init(image);
         CharacterObject::init(image);
         LiveModelController::init(image);
         ModelController::init(image);

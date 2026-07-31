@@ -1,9 +1,12 @@
-use std::ptr::null_mut;
-
 use crate::il2cpp::{
     symbols::{get_method_addr, SingletonLike},
     types::*,
 };
+
+static mut CLASS: *mut Il2CppClass = 0 as _;
+pub fn class() -> *mut Il2CppClass {
+    unsafe { CLASS }
+}
 
 pub fn instance() -> *mut Il2CppObject {
     let Some(singleton) = SingletonLike::new(class()) else {
@@ -19,6 +22,7 @@ pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, TapEffectController);
 
     unsafe {
+        CLASS = TapEffectController;
         REFRESH_ALL_ADDR = get_method_addr(TapEffectController, c"RefreshAll", 0);
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
     windows::free_camera,
     il2cpp::{
-        symbols::{get_class, get_method_addr},
+        symbols::get_method_addr,
         types::*,
     },
 };
@@ -108,6 +108,6 @@ extern "C" fn Invoke(this: *mut Il2CppObject, update_info: *mut PostFilmUpdateIn
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, "Gallop.Live.Cutt", PostFilmUpdateInfoDelegate);
 
-    let Invoke_addr = get_method_addr(post_film_update_info_delegate, c"Invoke", 1);
+    let Invoke_addr = get_method_addr(PostFilmUpdateInfoDelegate, c"Invoke", 1);
     new_hook!(Invoke_addr, Invoke);
 }

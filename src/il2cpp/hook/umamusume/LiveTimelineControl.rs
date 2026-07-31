@@ -3,12 +3,12 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::{
     windows::free_camera::{self, CameraScene},
     il2cpp::{
-        symbols::{get_class, get_field_from_name, get_field_object_value, get_method_addr},
+        symbols::get_method_addr,
         types::*,
     },
 };
 
-use super::{Director, LiveTimelineWorkSheet, PostEffectUpdateInfo_DOF};
+use super::{Director, LiveTimelineWorkSheet, LiveTimelineKeyPostFilmDataList, PostEffectUpdateInfo_DOF};
 
 static LIVE_TIMELINE_CONTROL: AtomicUsize = AtomicUsize::new(0);
 

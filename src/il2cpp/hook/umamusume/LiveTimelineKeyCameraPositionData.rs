@@ -2,10 +2,12 @@ use crate::{
     windows::free_camera::{self, CameraScene, FreeCameraMode},
     il2cpp::{
         ext::Il2CppObjectExt,
-        symbols::{get_class, get_field_from_name, get_method_overload_addr, set_field_value},
+        symbols::{get_field_from_name, get_method_addr},
         types::*,
     },
 };
+use super::LiveTimelineKeyMultiCameraPositionData;
+
 
 #[repr(i32)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -14,13 +16,13 @@ pub enum LiveCameraPositionType {
     Character = 1
 }
 
-def_field_object_accessors!(get_setType, set_setType, SETTYPE_FIELD, LiveCameraPositionType);
+def_field_value_accessors!(get_setType, set_setType, SETTYPE_FIELD, LiveCameraPositionType);
 
 fn is_multi_camera_position_data(this: *mut Il2CppObject) -> bool {
     if this.is_null() {
         return false;
     }
-    let class = LiveTimelineKeyCameraPositionData::class();
+    let class = LiveTimelineKeyMultiCameraPositionData::class();
     !class.is_null() && unsafe { (*this).klass() == class }
 }
 
@@ -56,7 +58,7 @@ extern "C" fn GetValue(
 type GetValue2Fn = extern "C" fn(
     this: *mut Il2CppObject,
     timeline_control: *mut Il2CppObject,
-    set_type: i32,
+    set_type: LiveCameraPositionType,
 ) -> *mut Vector3_t;
 extern "C" fn GetValue2(
     this: *mut Il2CppObject,
@@ -87,23 +89,10 @@ extern "C" fn GetValue2(
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, "Gallop.Live.Cutt", LiveTimelineKeyCameraPositionData);
 
-    let GetValue_addr = get_method_overload_addr(
-        LiveTimelineKeyCameraPositionData, 
-        "GetValue", 
-        &[
-            Il2CppTypeEnum_IL2CPP_TYPE_CLASS // LiveTimelineControl timelineControl
-        ]
-    );
+    let GetValue_addr = get_method_addr(LiveTimelineKeyCameraPositionData, c"GetValue", 1);
     new_hook!(GetValue_addr, GetValue);
 
-    let GetValue2_addr = get_method_overload_addr(
-        LiveTimelineKeyCameraPositionData, 
-        "GetValue", 
-        &[
-            Il2CppTypeEnum_IL2CPP_TYPE_CLASS, // LiveTimelineControl timelineControl
-            Il2CppTypeEnum_IL2CPP_TYPE_ENUM // LiveCameraPositionType type
-        ]
-    );
+    let GetValue2_addr = get_method_addr(LiveTimelineKeyCameraPositionData, c"GetValue", 2);
     new_hook!(GetValue2_addr, GetValue2);
     
     unsafe {

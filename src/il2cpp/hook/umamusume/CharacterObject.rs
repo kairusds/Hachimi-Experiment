@@ -1,5 +1,3 @@
-use std::ptr::null_mut;
-
 use crate::il2cpp::{
     symbols::get_method_addr,
     types::*,
