@@ -7,7 +7,19 @@ on:
 
 jobs:
   clippy:
-    runs-on: ubuntu-latest
+    name: Clippy (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - name: Android
+            os: ubuntu-latest
+            target: aarch64-linux-android
+
     steps:
       - uses: actions/checkout@v7
 
@@ -21,17 +33,13 @@ jobs:
               - 'Cargo.toml'
               - 'Cargo.lock'
 
-      - name: Setup Rust
+      - name: Install Rust
         if: steps.filter.outputs.code_changed == 'true'
         uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-          targets: x86_64-pc-windows-msvc, aarch64-linux-android
+          targets: ${{ matrix.target }}
 
-      - name: Run Clippy (Windows)
+      - name: Run Clippy
         if: steps.filter.outputs.code_changed == 'true'
-        run: cargo clippy --target x86_64-pc-windows-msvc -- -D warnings
-
-      - name: Run Clippy (Android)
-        if: steps.filter.outputs.code_changed == 'true'
-        run: cargo clippy --target aarch64-linux-android -- -D warnings
+        run: cargo clippy --target ${{ matrix.target }} -- -D warnings
