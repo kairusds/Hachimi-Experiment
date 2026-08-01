@@ -5,6 +5,8 @@ use crate::{
     }
 };
 
+// testing
+
 static mut GET_CHARAID_ADDR: usize = 0;
 impl_addr_wrapper_fn!(get_CharaId, GET_CHARAID_ADDR, i32, this: *mut Il2CppObject);
 
