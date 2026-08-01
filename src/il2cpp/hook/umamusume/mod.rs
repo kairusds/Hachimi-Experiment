@@ -164,7 +164,6 @@ mod LiveTheaterInfo;
 pub mod DownloadPathRegister;
 pub mod SceneDefine;
 pub mod GameDefine;
-mod WorkSingleModeScenarioLive;
 
 pub fn init() {
     get_assembly_image_or_return!(image, "umamusume.dll");
@@ -270,6 +269,7 @@ pub fn init() {
         HorseData::init(image);
         HorseRaceInfo::init(image);
         HorseRaceInfoReplay::init(image);
+        TitleViewController::init(image);
     }
     CameraData::init(image);
     TweenAnimationTimelineComponent::init(image);
@@ -286,7 +286,6 @@ pub fn init() {
     DialogMissionListItem::init(image);
     PartsNamePlateBase::init(image);
     PartsSupportCardImproveDetail::init(image);
-    TitleViewController::init(image);
     Director::init(image);
     CySpringNative::init(image);
     LiveViewController::init(image);
