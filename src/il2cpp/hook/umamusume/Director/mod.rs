@@ -487,9 +487,8 @@ extern "C" fn ApplyTrainerCameraFov(this: *mut Il2CppObject) {
         }
         #[cfg(target_os = "windows")]
         {
-            let base_fov = 150.0;
+            let base_fov = 40.0;
             let fov_rate = get__trainerCameraFovRate(this);
-            set__trainerCameraFovRate(this, fov_rate);
             Camera::set_fieldOfView(trainer_camera, base_fov * fov_rate);
         }
     }

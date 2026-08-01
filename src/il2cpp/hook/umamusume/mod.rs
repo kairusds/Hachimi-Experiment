@@ -143,6 +143,7 @@ mod DownloadManager;
 mod DownloadView;
 #[cfg(target_os = "windows")]
 mod DownloadErrorProcessor;
+#[cfg(target_os = "windows")]
 mod TitleViewController;
 #[cfg(target_os = "windows")]
 pub mod MainGameInitializer;
@@ -163,6 +164,7 @@ mod LiveTheaterInfo;
 pub mod DownloadPathRegister;
 pub mod SceneDefine;
 pub mod GameDefine;
+mod WorkSingleModeScenarioLive;
 
 pub fn init() {
     get_assembly_image_or_return!(image, "umamusume.dll");
