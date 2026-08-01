@@ -476,12 +476,22 @@ extern "C" fn ApplyTrainerCameraFov(this: *mut Il2CppObject) {
         if trainer_camera.is_null() {
             return;
         }
-    
-        let base_fov = 150.0;
-        let fov_rate = get__trainerCameraFovRate(this);
-        let fov_rate: f32 = if fov_rate == 0.0 { 1.0 } else { fov_rate.clamp(0.1, 1.0) };
-        set__trainerCameraFovRate(this, fov_rate);
-        Camera::set_fieldOfView(trainer_camera, base_fov * fov_rate);
+
+        #[cfg(target_os = "android")]
+        {
+            let base_fov = 150.0;
+            let fov_rate = get__trainerCameraFovRate(this);
+            let fov_rate: f32 = if fov_rate == 0.0 { 1.0 } else { fov_rate.clamp(0.1, 1.0) };
+            set__trainerCameraFovRate(this, fov_rate);
+            Camera::set_fieldOfView(trainer_camera, base_fov * fov_rate);
+        }
+        #[cfg(target_os = "windows")]
+        {
+            let base_fov = 150.0;
+            let fov_rate = get__trainerCameraFovRate(this);
+            set__trainerCameraFovRate(this, fov_rate);
+            Camera::set_fieldOfView(trainer_camera, base_fov * fov_rate);
+        }
     }
 }
 
