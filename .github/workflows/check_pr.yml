@@ -1,0 +1,32 @@
+name: Check Pull Request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check path changes
+        uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            code_changed:
+              - src/**
+              - Cargo.toml
+              - Cargo.lock
+
+      - name: Install Rust
+        if: steps.filter.outputs.code_changed == 'true'
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Run Clippy
+        if: steps.filter.outputs.code_changed == 'true'
+        run: cargo clippy
