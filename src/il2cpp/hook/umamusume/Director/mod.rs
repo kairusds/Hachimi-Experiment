@@ -472,7 +472,12 @@ extern "C" fn ApplyTrainerCameraFov(this: *mut Il2CppObject) {
         || config.android.force_orientation_mode == ScreenOrientation_LandscapeLeft;
 
     if force_landscape {
+        // Trainer camera isn't used in PC
+        #[cfg(target_os = "android")]
         let trainer_camera = get__trainerCameraTargetCamera(this);
+        #[cfg(target_os = "windows")]
+        let trainer_camera = get_MainCameraObject(this);
+
         if trainer_camera.is_null() {
             return;
         }
@@ -487,7 +492,7 @@ extern "C" fn ApplyTrainerCameraFov(this: *mut Il2CppObject) {
         }
         #[cfg(target_os = "windows")]
         {
-            let base_fov = 40.0;
+            let base_fov = 150.0;
             let fov_rate = get__trainerCameraFovRate(this);
             Camera::set_fieldOfView(trainer_camera, base_fov * fov_rate);
         }
