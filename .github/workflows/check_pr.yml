@@ -71,8 +71,8 @@ jobs:
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
         uses: actions/cache@v6
         with:
-          path: ~/.cache/cargo-xwin-v1
-          key: ${{ runner.os }}-xwin-cache
+          path: ~/.cache/cargo-xwin
+          key: ${{ runner.os }}-xwin-cache-v1
 
       - name: Run Clippy (Windows)
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'

@@ -103,8 +103,8 @@ jobs:
         if: matrix.target == 'x86_64-pc-windows-msvc'
         uses: actions/cache@v6
         with:
-          path: ~/.cache/cargo-xwin-v1
-          key: ${{ runner.os }}-xwin-cache
+          path: ~/.cache/cargo-xwin
+          key: ${{ runner.os }}-xwin-cache-v1
 
       - name: Build Hachimi for Windows
         if: matrix.target == 'x86_64-pc-windows-msvc'
@@ -188,15 +188,13 @@ jobs:
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, '[ci skip]')"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - name: Get release version
         id: get_info
         run: |
-          VERSION=$(curl -sL "https://raw.githubusercontent.com/${{ github.repository }}/main/Cargo.toml" | \
-            awk '/^\[package\]/{flag=1} flag && /^version/{print $3; exit}' | \
-            tr -d '"')
+          VERSION=$(awk '/^\[package\]/{flag=1} flag && /^version/{print $3; exit}' Cargo.toml | tr -d '"')
           echo "RELEASE_VERSION=v$VERSION" >> $GITHUB_ENV
 
       - name: Download all build artifacts
@@ -210,7 +208,7 @@ jobs:
             git tag $LATEST_TAG
           fi
 
-          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${LATEST_TAG}^")
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 "${LATEST_TAG}^" 2>/dev/null || true)
           if [ -z "$PREVIOUS_TAG" ]; then
             PREVIOUS_TAG=$(git rev-list --max-parents=0 HEAD)
           fi
