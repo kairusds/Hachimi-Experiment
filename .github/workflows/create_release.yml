@@ -87,11 +87,17 @@ jobs:
           egui_extras = { path = '../egui/crates/egui_extras' }
           EOF
 
-      - name: Install cargo-xwin
+      - name: Setup Windows MSVC Cross-Compile Tools
         if: matrix.target == 'x86_64-pc-windows-msvc'
         run: |
-          sudo ln -sf $(which llvm-ar) /usr/local/bin/llvm-lib
-          cargo install cargo-xwin --locked
+          sudo apt install -y llvm lld
+          sudo ln -sf /usr/bin/llvm-ar /usr/local/bin/llvm-lib
+
+      - name: Install cargo-xwin
+        if: matrix.target == 'x86_64-pc-windows-msvc'
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-xwin@0.23.1
 
       - name: Install LLVM tools (for llvm-rc resource embedding)
         if: matrix.target == 'x86_64-pc-windows-msvc'

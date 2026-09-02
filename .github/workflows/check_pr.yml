@@ -58,7 +58,9 @@ jobs:
 
       - name: Install cargo-xwin
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
-        run: cargo install cargo-xwin --locked
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-xwin@0.23.1
 
       - name: Run Clippy (Windows)
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
