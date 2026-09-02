@@ -50,13 +50,18 @@ jobs:
           components: clippy
           targets: ${{ matrix.target }}
 
+      - name: Setup Windows MSVC Cross-Compile Tools
+        if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
+        run: |
+          sudo ln -sf "$(which llvm-ar)" /usr/local/bin/llvm-lib
+
       - name: Install cargo-xwin
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
         run: cargo install cargo-xwin --locked
 
       - name: Run Clippy (Windows)
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
-        run: cargo xwin clippy --release --target ${{ matrix.target }} -- -D warnings
+        run: cargo xwin clippy --target ${{ matrix.target }} -- -D warnings
 
       - name: Run Clippy (Android)
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'aarch64-linux-android'
