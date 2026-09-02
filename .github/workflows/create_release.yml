@@ -25,12 +25,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Cache Rust dependencies
-        uses: swatinem/rust-cache@v2
-
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+
+      - name: Cache Rust dependencies
+        uses: swatinem/rust-cache@v2
 
 ############### ANDROID ##################
 
@@ -87,7 +87,9 @@ jobs:
 
       - name: Install cargo-xwin
         if: matrix.target == 'x86_64-pc-windows-msvc'
-        run: cargo install cargo-xwin --locked
+        run: |
+          sudo ln -sf $(which llvm-ar) /usr/local/bin/llvm-lib
+          cargo install cargo-xwin --locked
 
       - name: Build Hachimi for Windows
         if: matrix.target == 'x86_64-pc-windows-msvc'
