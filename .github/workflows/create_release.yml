@@ -29,10 +29,10 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - uses: swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
         with:
           workspaces: . -> build
-          prefix-key: ${{ matrix.name }}
+          prefix-key: ${{ matrix.target }}
 
 ############### ANDROID ##################
 
@@ -99,9 +99,12 @@ jobs:
         with:
           tool: cargo-xwin@0.23.1
 
-      - name: Install LLVM tools (for llvm-rc resource embedding)
+      - name: Cache cargo-xwin MSVC CRT & Windows SDK
         if: matrix.target == 'x86_64-pc-windows-msvc'
-        run: apt install -y llvm lld
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/cargo-xwin-v1
+          key: ${{ runner.os }}-xwin-cache
 
       - name: Build Hachimi for Windows
         if: matrix.target == 'x86_64-pc-windows-msvc'

@@ -50,6 +50,11 @@ jobs:
           components: clippy
           targets: ${{ matrix.target }}
 
+      - uses: Swatinem/rust-cache@v2
+        if: steps.filter.outputs.code_changed == 'true'
+        with:
+          prefix-key: ${{ matrix.target }}
+
       - name: Setup Windows MSVC Cross-Compile Tools
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
         run: |
@@ -61,6 +66,13 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cargo-xwin@0.23.1
+
+      - name: Cache cargo-xwin MSVC CRT & Windows SDK
+        if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/cargo-xwin-v1
+          key: ${{ runner.os }}-xwin-cache
 
       - name: Run Clippy (Windows)
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
