@@ -53,7 +53,8 @@ jobs:
       - name: Setup Windows MSVC Cross-Compile Tools
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
         run: |
-          sudo ln -sf "$(which llvm-ar)" /usr/local/bin/llvm-lib
+          sudo apt install -y llvm lld
+          sudo ln -sf /usr/bin/llvm-ar /usr/local/bin/llvm-lib
 
       - name: Install cargo-xwin
         if: steps.filter.outputs.code_changed == 'true' && matrix.target == 'x86_64-pc-windows-msvc'
