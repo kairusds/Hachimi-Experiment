@@ -9,7 +9,7 @@ fn setup_windows_build() {
         // I have to remove the '/DEF:' every time I cross compile on linux, so might as well do this
         println!("cargo:rustc-cdylib-link-arg={}", absolute_path.display());
     }
-
+// sjaj
     // Generate and link version information
     let res = tauri_winres::WindowsResource::new();
     res.compile().unwrap();
