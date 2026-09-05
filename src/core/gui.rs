@@ -27,9 +27,11 @@ use crate::il2cpp::{
             GraphicSettings::{GraphicsQuality, MsaaQuality},
             Localize,
             GameDefine::BgSeason,
+            RaceManager,
+            RaceManagerReplayBase,
             RaceDefine::{HorsePhase, LaneType},
-            TemptationMode,
             SimulateEventType,
+            TemptationMode,
             SceneManager as UmaSceneManager
         },
         UnityEngine_CoreModule::{Application, Texture::AnisoLevel}
@@ -148,6 +150,7 @@ pub struct Gui {
     pub update_progress_visible: bool,
 
     live_slider_text: String,
+    race_slider_text: String,
 
     notifications: Vec<Notification>,
     next_notification_id: u32,
@@ -162,6 +165,45 @@ pub static GUI_INPUT_ACTIVE: AtomicBool = AtomicBool::new(false);
 pub static WANTS_INPUT: AtomicBool = AtomicBool::new(false);
 pub static IS_LIVE_SCENE: AtomicBool = AtomicBool::new(false);
 pub static IS_LIVE_SLIDER_ACTIVE: AtomicBool = AtomicBool::new(false);
+
+static RACE_SLIDER_DRAG_WAS_PAUSED: AtomicBool = AtomicBool::new(false);
+
+pub fn begin_race_slider_drag() {
+    let race_manager = RaceManager::instance();
+    let was_paused = if race_manager.is_null() {
+        true
+    } else {
+        RaceManagerReplayBase::IsPaused(race_manager)
+    };
+
+    RACE_SLIDER_DRAG_WAS_PAUSED.store(was_paused, atomic::Ordering::Release);
+
+    if !race_manager.is_null() && !was_paused {
+        RaceManagerReplayBase::PauseRace(race_manager);
+    }
+}
+
+pub fn move_race_playback(target_time: f32) {
+    let race_manager = RaceManager::instance();
+    if race_manager.is_null() { return; }
+
+    RaceManagerReplayBase::ForceSetRaceTime(race_manager, target_time, true);
+}
+
+pub fn end_race_slider_drag() {
+    let race_manager = RaceManager::instance();
+    let was_paused = !RACE_SLIDER_DRAG_WAS_PAUSED.load(atomic::Ordering::Acquire);
+
+    if !race_manager.is_null() && was_paused {
+        RaceManagerReplayBase::ResumeRace(race_manager);
+    }
+
+    RACE_SLIDER_DRAG_WAS_PAUSED.store(false, atomic::Ordering::Release);
+}
+
+pub fn reset_race_slider_drag_state() {
+    RACE_SLIDER_DRAG_WAS_PAUSED.store(false, atomic::Ordering::Release);
+}
 
 static TOGGLE_RACE_STAT_HUD_REQUESTED: AtomicBool = AtomicBool::new(false);
 static RACE_STAT_HUD: Lazy<Mutex<RaceStatHud>> = Lazy::new(|| Mutex::new(RaceStatHud::new()));
@@ -2365,6 +2407,7 @@ impl Gui {
             update_progress_visible: false,
 
             live_slider_text: String::new(),
+            race_slider_text: String::new(),
 
             notifications: Vec::new(),
             next_notification_id: 0,
@@ -2609,6 +2652,116 @@ impl Gui {
             });
     }
 
+    fn race_slider_showing() -> bool {
+        use crate::il2cpp::hook::umamusume::RaceHorseManagerBase;
+
+        Hachimi::instance().config.load().race_playback_slider &&
+            RaceHorseManagerBase::is_race_active()
+    }
+
+    fn run_race_slider(&mut self, ctx: &egui::Context) {
+        use crate::il2cpp::{
+            hook::umamusume::{
+                HorseRaceInfo, RaceHorseManagerBase, RaceHorseManagerReplay, RaceManager, RaceSimulateReader
+            },
+            symbols::Array
+        };
+
+        if !Hachimi::instance().config.load().race_playback_slider {
+            return;
+        }
+
+        if !RaceHorseManagerBase::is_race_active() {
+            reset_race_slider_drag_state();
+            return;
+        }
+
+        let race_manager = RaceManager::instance();
+        if race_manager.is_null() { return; }
+
+        let horse_manager = RaceManager::get__horseManager(race_manager);
+        if horse_manager.is_null() { return; }
+
+        if !RaceHorseManagerReplay::is_replay_manager(horse_manager) { return; }
+
+        let reader = RaceHorseManagerReplay::get__reader(horse_manager);
+        if reader.is_null() { return; }
+
+        let total = RaceSimulateReader::GetLastFrameTime(reader);
+        if total <= 0.0 { return; }
+
+        let horse_infos = RaceHorseManagerBase::GetHorseRaceInfos(horse_manager);
+        if horse_infos.is_null() { return; }
+        let arr: Array<*mut Il2CppObject> = Array::from(horse_infos);
+        if arr.len() == 0 { return; }
+        let player_idx = RaceHorseManagerBase::GetPlayerHorseIndex(horse_manager);
+        let player_idx = if player_idx >= 0 && (player_idx as usize) < arr.len() {
+            player_idx as usize
+        } else {
+            0
+        };
+        let player_info = unsafe { arr.as_slice()[player_idx] };
+        if player_info.is_null() { return; }
+        if HorseRaceInfo::get__phase(player_info) == HorsePhase::Finished {
+            reset_race_slider_drag_state();
+            return;
+        }
+
+        let mut current = RaceSimulateReader::get__curTime(reader);
+        if !current.is_finite() || current < 0.0 {
+            current = 0.0;
+        }
+        if current > total {
+            current = total;
+        }
+
+        let scale = get_scale(ctx);
+        egui::Area::new(egui::Id::new("race_slider_area"))
+            .anchor(egui::Align2::CENTER_BOTTOM, egui::vec2(0.0, -40.0 * scale))
+            .show(ctx, |ui| {
+                egui::Frame::window(&ctx.style())
+                    .fill(egui::Color32::from_black_alpha(150))
+                    .inner_margin(egui::Margin::symmetric((16.0 * scale) as i8, (8.0 * scale) as i8))
+                    .corner_radius(10.0 * scale)
+                    .show(ui, |ui| {
+                        ui.set_width(ctx.content_rect().width() * 0.7);
+                        ui.horizontal(|ui| {
+                            let curr_m = (current / 60.0).floor() as i32;
+                            let curr_s = (current % 60.0).floor() as i32;
+                            let tot_m = (total / 60.0).floor() as i32;
+                            let tot_s = (total % 60.0).floor() as i32;
+                            self.race_slider_text.clear();
+                            let _ = write!(self.race_slider_text, "{:02}:{:02} / {:02}:{:02}", curr_m, curr_s, tot_m, tot_s);
+                            ui.label(&self.race_slider_text);
+
+                            let available_w = ui.available_width();
+
+                            ui.scope(|ui| {
+                                ui.spacing_mut().slider_width = available_w - (16.0 * scale);
+
+                                let res = ui.add(
+                                    egui::Slider::new(&mut current, 0.0..=total)
+                                        .show_value(false)
+                                        .trailing_fill(true)
+                                );
+
+                                if res.drag_started() {
+                                    begin_race_slider_drag();
+                                }
+
+                                if res.changed() {
+                                    move_race_playback(current);
+                                }
+
+                                if res.drag_stopped() {
+                                    end_race_slider_drag();
+                                }
+                            });
+                        });
+                    });
+            });
+    }
+
     pub fn run(&mut self) -> egui::FullOutput {
         if let Ok(mut lock) = PENDING_THEME.lock() {
             if let Some(config) = lock.take() {
@@ -2749,9 +2902,11 @@ impl Gui {
 
         let ctx = self.context.clone();
         self.run_live_slider(&ctx);
+        self.run_race_slider(&ctx);
         RaceStatHud::run(&ctx);
 
         let has_interactive_widgets = IS_LIVE_SCENE.load(atomic::Ordering::Relaxed);
+        let race_slider_input = Self::race_slider_showing();
         let race_stat_hud_input = RaceStatHud::is_active();
         #[cfg(target_os = "windows")]
         let free_camera_input_capture = free_camera::wants_windows_input_capture();
@@ -2759,14 +2914,14 @@ impl Gui {
         // Store these as atomic values so the input thread can check them without locking the gui
         #[cfg(target_os = "android")]
         IS_CONSUMING_INPUT.store(
-            self.is_consuming_input() || has_interactive_widgets || race_stat_hud_input,
+            self.is_consuming_input() || has_interactive_widgets || race_slider_input || race_stat_hud_input,
             atomic::Ordering::Release
         );
         #[cfg(target_os = "windows")]
         {
             GUI_INPUT_ACTIVE.store(self.menu_visible || !self.windows.is_empty(), atomic::Ordering::Release);
             IS_CONSUMING_INPUT.store(
-                self.is_consuming_input() || has_interactive_widgets || race_stat_hud_input || free_camera_input_capture,
+                self.is_consuming_input() || has_interactive_widgets || race_slider_input || race_stat_hud_input || free_camera_input_capture,
                 atomic::Ordering::Release
             );
         }
@@ -3479,6 +3634,7 @@ impl Gui {
             !self.splash_visible && !self.menu_visible && !self.update_progress_visible &&
             self.notifications.is_empty() && self.windows.is_empty() &&
             !IS_LIVE_SCENE.load(atomic::Ordering::Acquire) &&
+            !Self::race_slider_showing() &&
             !free_camera::has_overlay_message() &&
             !RaceStatHud::elements_showing() && !RaceStatHud::is_active()
         }
@@ -3487,6 +3643,7 @@ impl Gui {
             !self.splash_visible && !self.menu_visible && !self.update_progress_visible &&
             self.notifications.is_empty() && self.windows.is_empty() &&
             !IS_LIVE_SCENE.load(atomic::Ordering::Acquire) &&
+            !Self::race_slider_showing() &&
             !RaceStatHud::elements_showing() && !RaceStatHud::is_active()
         }
     }
@@ -4914,6 +5071,12 @@ impl ConfigEditor {
                 ui.add(egui::Slider::new(&mut config.race_stat_hud_height_scale,
                     RACE_STAT_HUD_HEIGHT_SCALE_MIN..=RACE_STAT_HUD_HEIGHT_SCALE_MAX
                 ).step_by(0.05).fixed_decimals(2));
+                ui.end_row();
+            }
+
+            if should_show_option(search, &t!("config_editor.race_playback_slider")) {
+                ui.label(t!("config_editor.race_playback_slider"));
+                ui.checkbox(&mut config.race_playback_slider, "");
                 ui.end_row();
             }
 

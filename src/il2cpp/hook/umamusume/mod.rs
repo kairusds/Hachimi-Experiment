@@ -114,6 +114,7 @@ mod RaceEffectManager;
 pub mod HorseData;
 pub mod HorseRaceInfo;
 pub mod RaceManager;
+pub mod RaceManagerReplayBase;
 pub mod RaceHorseManagerBase;
 pub mod RaceSimulateData;
 pub mod RaceSimulateEventData;
@@ -285,6 +286,7 @@ pub fn init() {
     HorseData::init(image);
     HorseRaceInfo::init(image);
     RaceManager::init(image);
+    RaceManagerReplayBase::init(image);
     RaceHorseManagerBase::init(image);
     RaceSimulateData::init(image);
     RaceSimulateEventData::init(image);
