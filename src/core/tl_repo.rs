@@ -18,9 +18,11 @@ pub struct RepoInfo {
     pub short_desc: Option<String>,
     #[serde(default)]
     pub language: Option<String>,
-    #[serde(default)]
+    #[serde(default = "default_region")]
     pub region: String
 }
+
+fn default_region() -> String { "Japan".to_owned() }
 
 static SYS_LOCALE: Lazy<String> = Lazy::new(|| {
     sys_locale::get_locale().as_deref().unwrap_or("en").to_lowercase()
