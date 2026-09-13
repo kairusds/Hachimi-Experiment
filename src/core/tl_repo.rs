@@ -8,7 +8,6 @@ use serde::{Deserialize, Serialize};
 use size::Size;
 use thread_priority::{ThreadBuilderExt, ThreadPriority};
 
-use crate::core::game::Region;
 use super::{gui::{NotificationGuard, SimpleYesNoDialog, TranslationRepoUpdateWindow}, hachimi::LocalizedData, http::{self, ureq_config, AsyncRequest}, utils, Error, Gui, Hachimi};
 use once_cell::sync::Lazy;
 
@@ -20,7 +19,7 @@ pub struct RepoInfo {
     #[serde(default)]
     pub language: Option<String>,
     #[serde(default)]
-    pub region: Region
+    pub region: String
 }
 
 static SYS_LOCALE: Lazy<String> = Lazy::new(|| {

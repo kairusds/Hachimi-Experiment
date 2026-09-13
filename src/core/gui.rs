@@ -4122,9 +4122,8 @@ fn tl_repo_list_ui(
     };
 
     let hachimi = Hachimi::instance();
-
     let mut filtered_repos: Vec<_> = repo_list.iter()
-        .filter(|repo| repo.region == hachimi.game.region)
+        .filter(|repo| repo.region == "All" || repo.region == hachimi.game.region.as_str())
         .collect();
 
     if !*has_auto_selected && current_tl_repo.is_none() {
