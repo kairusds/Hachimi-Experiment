@@ -2338,6 +2338,17 @@ pub fn handle_android_keyboard<T: 'static>(res: &egui::Response, val: &mut T) {
 }
 
 impl Gui {
+    fn base_style() -> egui::Style {
+        let mut style = egui::Style::default();
+        style.spacing.button_padding = egui::Vec2::new(8.0, 5.0);
+        style.spacing.interact_size = egui::Vec2::new(40.0, 26.0);
+        style.spacing.icon_width = 20.0;
+        style.spacing.icon_width_inner = 10.0;
+        style.spacing.icon_spacing = 6.0;
+        style.interaction.selectable_labels = false;
+        style
+    }
+
     pub fn apply_theme(ctx: &egui::Context, style: &mut egui::Style, config: &hachimi::Config) {
         let mut visuals = egui::Visuals::dark(); // Base theme
 
@@ -2374,9 +2385,7 @@ impl Gui {
 
         context.set_fonts(Self::get_font_definitions());
 
-        let mut style = egui::Style::default();
-        style.spacing.button_padding = egui::Vec2::new(8.0, 5.0);
-        style.interaction.selectable_labels = false;
+        let mut style = Self::base_style();
 
         Self::apply_theme(&context, &mut style, &config);
 
@@ -5377,6 +5386,27 @@ impl ConfigEditor {
     }
 }
 
+const CONFIG_EDITOR_CLEARANCE: f32 = 16.0;
+
+impl ConfigEditor {
+    fn window_rect(screen: egui::Rect, scale: f32) -> egui::Rect {
+        let clearance = CONFIG_EDITOR_CLEARANCE * scale;
+        let min = screen.min + egui::Vec2::splat(clearance);
+        let max = (screen.max - egui::Vec2::splat(clearance)).max(min);
+        egui::Rect::from_min_max(min, max)
+    }
+
+    fn content_rect(ctx: &egui::Context, window_rect: egui::Rect) -> egui::Rect {
+        let style = ctx.style();
+        let window_frame = egui::Frame::window(&style);
+        let frame_margin = window_frame.inner_margin.sum();
+        let frame_stroke = window_frame.stroke.width;
+        let chrome = frame_margin + egui::Vec2::splat(2.0 * frame_stroke);
+        let content_size = (window_rect.size() - chrome).max(egui::Vec2::ZERO);
+        egui::Rect::from_min_size(window_rect.min, content_size)
+    }
+}
+
 impl Window for ConfigEditor {
     fn run(&mut self, ctx: &egui::Context) -> bool {
         let scale = get_scale(ctx);
@@ -5399,29 +5429,61 @@ impl Window for ConfigEditor {
         let mut reset_clicked = false;
         let mut save_clicked = false;
 
+        let window_rect = Self::window_rect(ctx.viewport_rect(), scale);
+        let content_rect = Self::content_rect(ctx, window_rect);
+
         new_window(ctx, self.id, t!("config_editor.title"))
-        .max_height(270.0 * scale + {
-            #[cfg(target_os = "android")]
-            { ime_scroll_padding(ctx) }
-            #[cfg(target_os = "windows")]
-            { 0.0 }
-        })
+        .title_bar(false)
+        .pivot(egui::Align2::LEFT_TOP)
+        .fixed_rect(content_rect)
+        .constrain_to(window_rect)
         .open(&mut open)
         .show(ctx, |ui| {
-            simple_window_layout(ui, self.id,
-                |ui| {
+            let builder = egui::UiBuilder::new()
+                .id(self.id)
+                .layout(egui::Layout::top_down(egui::Align::Center).with_cross_justify(true));
+
+            ui.scope_builder(builder, |ui| {
+                egui::TopBottomPanel::bottom(self.id.with("config_editor_footer"))
+                    .frame(egui::Frame::NONE)
+                    .show_inside(ui, |ui| {
+                        ui.separator();
+                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Min).with_main_wrap(true), |ui| {
+                            if ui.button(t!("config_editor.restore_defaults")).clicked() {
+                                reset_clicked = true;
+                            }
+
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                if ui.button(t!("cancel")).clicked() {
+                                    open2 = false;
+                                }
+                                if ui.button(t!("save")).clicked() {
+                                    save_clicked = true;
+                                    open2 = false;
+                                }
+                            });
+                        });
+                    });
+
+                ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                    ui.heading(t!("config_editor.title"));
+                    ui.add_space(4.0);
+
                     ui.horizontal(|ui| {
                         // search bar
-                        let _search_res = ui.add_sized(
-                            [ui.available_width() - 30.0 * scale, 24.0 * scale],
-                            egui::TextEdit::singleline(&mut self.search_term).hint_text(t!("search_filter"))
-                        );
-                        #[cfg(target_os = "android")]
-                        handle_android_keyboard(&_search_res, &mut self.search_term);
-
-                        if ui.button("\u{f00d}").clicked() {
-                            self.search_term.clear();
-                        }
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                            if ui.button("\u{f00d}").clicked() {
+                                self.search_term.clear();
+                            }
+                            let _search_res = ui.add_sized(
+                                [ui.available_width(), 24.0 * scale],
+                                egui::TextEdit::singleline(&mut self.search_term).hint_text(t!("search_filter"))
+                            );
+                            #[cfg(target_os = "android")]
+                            handle_android_keyboard(&_search_res, &mut self.search_term);
+                        });
                     });
                     ui.add_space(4.0);
 
@@ -5437,7 +5499,7 @@ impl Window for ConfigEditor {
                                 widgets.inactive.corner_radius = egui::CornerRadius::ZERO;
                                 widgets.hovered.corner_radius = egui::CornerRadius::ZERO;
                                 widgets.active.corner_radius = egui::CornerRadius::ZERO;
-    
+
                                 for (tab, label) in ConfigEditorTab::display_list() {
                                     if ui.selectable_label(self.current_tab == tab, label.as_ref()).clicked() {
                                         self.current_tab = tab;
@@ -5476,25 +5538,8 @@ impl Window for ConfigEditor {
                             }
                         });
                     });
-                },
-                |ui| {
-                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
-                        if ui.button(t!("config_editor.restore_defaults")).clicked() {
-                            reset_clicked = true;
-                        }
-
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                            if ui.button(t!("cancel")).clicked() {
-                                open2 = false;
-                            }
-                            if ui.button(t!("save")).clicked() {
-                                save_clicked = true;
-                                open2 = false;
-                            }
-                        });
-                    });
-                }
-            );
+                });
+            });
         });
 
         self.config = config;
