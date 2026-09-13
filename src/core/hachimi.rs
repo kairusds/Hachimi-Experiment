@@ -774,6 +774,8 @@ pub struct Config {
     #[serde(default)]
     pub skill_data_desc: bool,
     #[serde(default)]
+    pub old_config_editor: bool,
+    #[serde(default)]
     pub homescreen_bgseason: crate::il2cpp::hook::umamusume::GameDefine::BgSeason,
     pub sugoi_url: Option<String>,
     #[serde(default)]

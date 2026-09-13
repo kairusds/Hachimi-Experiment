@@ -4484,6 +4484,12 @@ impl ConfigEditor {
                 ui.end_row();
             }
 
+            if should_show_option(search, &t!("config_editor.old_config_editor")) {
+                ui.label(t!("config_editor.old_config_editor"));
+                ui.checkbox(&mut config.old_config_editor, "");
+                ui.end_row();
+            }
+
             #[cfg(target_os = "windows")]
             {
                 if should_show_option(search, &t!("config_editor.gui_landscape_ratio")) {
@@ -5386,7 +5392,8 @@ impl ConfigEditor {
     }
 }
 
-const CONFIG_EDITOR_CLEARANCE: f32 = 26.0;
+const CONFIG_EDITOR_CLEARANCE: f32 = 30.0;
+const CONFIG_EDITOR_MAX_WIDTH: f32 = 520.0;
 
 impl ConfigEditor {
     fn window_rect(screen: egui::Rect, scale: f32) -> egui::Rect {
@@ -5394,6 +5401,19 @@ impl ConfigEditor {
         let min = screen.min + egui::Vec2::splat(clearance);
         let max = (screen.max - egui::Vec2::splat(clearance)).max(min);
         egui::Rect::from_min_max(min, max)
+    }
+
+    fn dialog_rect(screen: egui::Rect, scale: f32) -> egui::Rect {
+        let avail = Self::window_rect(screen, scale);
+        let size = egui::vec2(
+            avail.width().min(CONFIG_EDITOR_MAX_WIDTH * scale),
+            avail.height()
+        );
+        egui::Rect::from_center_size(avail.center(), size)
+    }
+
+    fn is_portrait(screen: egui::Rect) -> bool {
+        screen.height() > screen.width()
     }
 
     fn content_rect(ctx: &egui::Context, window_rect: egui::Rect) -> egui::Rect {
@@ -5404,6 +5424,76 @@ impl ConfigEditor {
         let chrome = frame_margin + egui::Vec2::splat(2.0 * frame_stroke);
         let content_size = (window_rect.size() - chrome).max(egui::Vec2::ZERO);
         egui::Rect::from_min_size(window_rect.min, content_size)
+    }
+
+    fn editor_body(&mut self, ui: &mut egui::Ui, config: &mut hachimi::Config, scale: f32, column_spacing: f32) {
+        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+        ui.horizontal(|ui| {
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                if ui.button("\u{f00d}").clicked() {
+                    self.search_term.clear();
+                }
+                let _search_res = ui.add_sized(
+                    [ui.available_width(), 24.0 * scale],
+                    egui::TextEdit::singleline(&mut self.search_term).hint_text(t!("search_filter"))
+                );
+                #[cfg(target_os = "android")]
+                handle_android_keyboard(&_search_res, &mut self.search_term);
+            });
+        });
+        ui.add_space(4.0);
+
+        if self.search_term.is_empty() {
+            egui::ScrollArea::horizontal()
+            .id_salt("tabs_scroll")
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    let style = ui.style_mut();
+                    style.spacing.button_padding = egui::vec2(8.0, 5.0);
+                    style.spacing.item_spacing = egui::Vec2::ZERO;
+                    let widgets = &mut style.visuals.widgets;
+                    widgets.inactive.corner_radius = egui::CornerRadius::ZERO;
+                    widgets.hovered.corner_radius = egui::CornerRadius::ZERO;
+                    widgets.active.corner_radius = egui::CornerRadius::ZERO;
+
+                    for (tab, label) in ConfigEditorTab::display_list() {
+                        if ui.selectable_label(self.current_tab == tab, label.as_ref()).clicked() {
+                            self.current_tab = tab;
+                        }
+                    }
+                });
+            });
+        }
+
+        ui.add_space(4.0);
+
+        ui.scope(|ui| {
+            ui.set_width(ui.available_width());
+            egui::ScrollArea::vertical()
+            .id_salt("body_scroll")
+            .auto_shrink([false, false])
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                egui::Frame::NONE
+                .inner_margin(egui::Margin::symmetric(8, 0))
+                .show(ui, |ui| {
+                    egui::Grid::new(self.id.with("options_grid"))
+                    .striped(true)
+                    .num_columns(2)
+                    .spacing([column_spacing, 4.0 * scale])
+                    .show(ui, |ui| {
+                        self.run_options_grid(config, ui, self.current_tab, &self.search_term);
+                    });
+                });
+                #[cfg(target_os = "android")]
+                {
+                    let padding = ime_scroll_padding(ui.ctx());
+                    if padding > 0.0 {
+                        ui.add_space(padding);
+                    }
+                }
+            });
+        });
     }
 }
 
@@ -5429,27 +5519,26 @@ impl Window for ConfigEditor {
         let mut reset_clicked = false;
         let mut save_clicked = false;
 
-        let window_rect = Self::window_rect(ctx.viewport_rect(), scale);
-        let content_rect = Self::content_rect(ctx, window_rect);
+        let classic = config.old_config_editor;
 
-        new_window(ctx, self.id, t!("config_editor.title"))
-        .title_bar(false)
-        .pivot(egui::Align2::LEFT_TOP)
-        .fixed_rect(content_rect)
-        .constrain_to(window_rect)
-        .open(&mut open)
-        .show(ctx, |ui| {
-            let builder = egui::UiBuilder::new()
-                .id(self.id)
-                .layout(egui::Layout::top_down(egui::Align::Center).with_cross_justify(true));
-
-            ui.scope_builder(builder, |ui| {
-                egui::TopBottomPanel::bottom(self.id.with("config_editor_footer"))
-                    .frame(egui::Frame::NONE)
-                    .show_inside(ui, |ui| {
-                        ui.separator();
-                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Min).with_main_wrap(true), |ui| {
+        if classic {
+            new_window(ctx, self.id, t!("config_editor.title"))
+            .max_height(270.0 * scale + {
+                #[cfg(target_os = "android")]
+                { ime_scroll_padding(ctx) }
+                #[cfg(target_os = "windows")]
+                { 0.0 }
+                #[cfg(not(any(target_os = "android", target_os = "windows")))]
+                { 0.0 }
+            })
+            .open(&mut open)
+            .show(ctx, |ui| {
+                simple_window_layout(ui, self.id,
+                    |ui| {
+                        self.editor_body(ui, &mut config, scale, 40.0 * scale);
+                    },
+                    |ui| {
+                        ui.with_layout(egui::Layout::left_to_right(egui::Align::Min), |ui| {
                             if ui.button(t!("config_editor.restore_defaults")).clicked() {
                                 reset_clicked = true;
                             }
@@ -5464,85 +5553,71 @@ impl Window for ConfigEditor {
                                 }
                             });
                         });
-                    });
-
-                ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
-                    ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                    ui.vertical_centered(|ui| {
-                        ui.heading(t!("config_editor.title"));
-                    });
-                    ui.add_space(4.0);
-
-                    ui.horizontal(|ui| {
-                        // search bar
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                            if ui.button("\u{f00d}").clicked() {
-                                self.search_term.clear();
-                            }
-                            let _search_res = ui.add_sized(
-                                [ui.available_width(), 24.0 * scale],
-                                egui::TextEdit::singleline(&mut self.search_term).hint_text(t!("search_filter"))
-                            );
-                            #[cfg(target_os = "android")]
-                            handle_android_keyboard(&_search_res, &mut self.search_term);
-                        });
-                    });
-                    ui.add_space(4.0);
-
-                    if self.search_term.is_empty() {
-                        egui::ScrollArea::horizontal()
-                        .id_salt("tabs_scroll")
-                        .show(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                let style = ui.style_mut();
-                                style.spacing.button_padding = egui::vec2(8.0, 5.0);
-                                style.spacing.item_spacing = egui::Vec2::ZERO;
-                                let widgets = &mut style.visuals.widgets;
-                                widgets.inactive.corner_radius = egui::CornerRadius::ZERO;
-                                widgets.hovered.corner_radius = egui::CornerRadius::ZERO;
-                                widgets.active.corner_radius = egui::CornerRadius::ZERO;
-
-                                for (tab, label) in ConfigEditorTab::display_list() {
-                                    if ui.selectable_label(self.current_tab == tab, label.as_ref()).clicked() {
-                                        self.current_tab = tab;
-                                    }
-                                }
-                            });
-                        });
                     }
+                );
+            });
+        } else {
+            let screen = ctx.viewport_rect();
+            let portrait = Self::is_portrait(screen);
+            let window_rect = if portrait {
+                Self::window_rect(screen, scale)
+            } else {
+                Self::dialog_rect(screen, scale)
+            };
+            let content_rect = Self::content_rect(ctx, window_rect);
+            let column_spacing = if portrait { 16.0 * scale } else { 40.0 * scale };
 
-                    ui.add_space(4.0);
+            new_window(ctx, self.id, t!("config_editor.title"))
+            .title_bar(false)
+            .pivot(egui::Align2::LEFT_TOP)
+            .fixed_rect(content_rect)
+            .constrain_to(window_rect)
+            .open(&mut open)
+            .show(ctx, |ui| {
+                let builder = egui::UiBuilder::new()
+                    .id(self.id)
+                    .layout(egui::Layout::top_down(egui::Align::Center).with_cross_justify(true));
 
-                    ui.scope(|ui| {
-                        ui.set_width(ui.available_width());
-                        egui::ScrollArea::vertical()
-                        .id_salt("body_scroll")
-                        .auto_shrink([false, false])
-                        .show(ui, |ui| {
-                            ui.set_width(ui.available_width());
-                            egui::Frame::NONE
-                            .inner_margin(egui::Margin::symmetric(8, 0))
-                            .show(ui, |ui| {
-                                egui::Grid::new(self.id.with("options_grid"))
-                                .striped(true)
-                                .num_columns(2)
-                                .spacing([40.0 * scale, 4.0 * scale])
-                                .show(ui, |ui| {
-                                    self.run_options_grid(&mut config, ui, self.current_tab, &self.search_term);
+                ui.scope_builder(builder, |ui| {
+                    egui::TopBottomPanel::bottom(self.id.with("config_editor_footer"))
+                        .frame(egui::Frame::NONE)
+                        .show_inside(ui, |ui| {
+                            ui.separator();
+                            ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                            ui.with_layout(egui::Layout::left_to_right(egui::Align::Min).with_main_wrap(true), |ui| {
+                                if ui.button(t!("config_editor.restore_defaults")).clicked() {
+                                    reset_clicked = true;
+                                }
+
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                    if ui.button(t!("cancel")).clicked() {
+                                        open2 = false;
+                                    }
+                                    if ui.button(t!("save")).clicked() {
+                                        save_clicked = true;
+                                        open2 = false;
+                                    }
                                 });
                             });
-                            #[cfg(target_os = "android")]
-                            {
-                                let padding = ime_scroll_padding(ui.ctx());
-                                if padding > 0.0 {
-                                    ui.add_space(padding);
-                                }
-                            }
                         });
+
+                    ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                        ui.horizontal(|ui| {
+                            ui.heading(t!("config_editor.title"));
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                if ui.button("\u{f00d}").clicked() {
+                                    open2 = false;
+                                }
+                            });
+                        });
+                        ui.add_space(4.0);
+
+                        self.editor_body(ui, &mut config, scale, column_spacing);
                     });
                 });
             });
-        });
+        }
 
         self.config = config;
 
