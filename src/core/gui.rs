@@ -5386,7 +5386,7 @@ impl ConfigEditor {
     }
 }
 
-const CONFIG_EDITOR_CLEARANCE: f32 = 16.0;
+const CONFIG_EDITOR_CLEARANCE: f32 = 26.0;
 
 impl ConfigEditor {
     fn window_rect(screen: egui::Rect, scale: f32) -> egui::Rect {
@@ -5468,7 +5468,9 @@ impl Window for ConfigEditor {
 
                 ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
                     ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                    ui.heading(t!("config_editor.title"));
+                    ui.vertical_centered(|ui| {
+                        ui.heading(t!("config_editor.title"));
+                    });
                     ui.add_space(4.0);
 
                     ui.horizontal(|ui| {
