@@ -874,12 +874,11 @@ impl RaceStatHud {
         };
         let btn_pos = egui::Pos2::new(x, game_view.center().y - btn_size / 2.0);
 
-        let icon = "\u{f0d9}";
         egui::Area::new(egui::Id::new("race_stat_hud_toggle_btn"))
             .fixed_pos(btn_pos)
             .show(ctx, |ui| {
                 let btn = egui::Button::new(
-                    egui::RichText::new(icon).size(14.0 * scale)
+                    egui::RichText::new("\u{f0d9}").size(14.0 * scale)
                 ).min_size(egui::Vec2::new(btn_size, btn_size));
 
                 if ui.add(btn).clicked() {
