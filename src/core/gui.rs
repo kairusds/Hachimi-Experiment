@@ -5392,7 +5392,7 @@ impl ConfigEditor {
     }
 }
 
-const CONFIG_EDITOR_CLEARANCE: f32 = 30.0;
+const CONFIG_EDITOR_CLEARANCE: f32 = 32.0;
 const CONFIG_EDITOR_MAX_WIDTH: f32 = 520.0;
 
 impl ConfigEditor {
