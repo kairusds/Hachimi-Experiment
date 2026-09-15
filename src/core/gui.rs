@@ -487,10 +487,12 @@ struct RaceStatHud {
     visible: bool,
     elements_showing: bool,
     selected_character: usize,
+    selected_character_dirty: bool,
     select_player_on_race_start: bool,
     current_tab: RaceStatHudTab,
     drag_pos: Option<(f32, f32)>,
     drag_travel: f32,
+    drag_save_pending: bool,
     config: hachimi::Config,
     last_used_skills: Vec<i32>,
     last_unused_skills: Vec<i32>,
@@ -511,10 +513,12 @@ impl RaceStatHud {
             visible: false,
             elements_showing: false,
             selected_character: 0,
+            selected_character_dirty: false,
             select_player_on_race_start: false,
             current_tab: RaceStatHudTab::Stats,
             drag_pos: None,
             drag_travel: 0.0,
+            drag_save_pending: false,
             config: (**Hachimi::instance().config.load()).clone(),
             last_used_skills: Vec::new(),
             last_unused_skills: Vec::new(),
@@ -539,10 +543,12 @@ impl RaceStatHud {
             visible: true,
             elements_showing: true,
             selected_character: selected,
+            selected_character_dirty: false,
             select_player_on_race_start: false,
             current_tab: tab,
             drag_pos,
             drag_travel: 0.0,
+            drag_save_pending: false,
             config: (**Hachimi::instance().config.load()).clone(),
             last_used_skills: Vec::new(),
             last_unused_skills: Vec::new(),
@@ -594,6 +600,32 @@ impl RaceStatHud {
         save_and_reload_config(new_config);
     }
 
+    fn save_hud_state_config(&mut self) {
+        let live = (**Hachimi::instance().config.load()).clone();
+        let drag_save = live.race_stat_hud_draggable_save;
+        let entries: Vec<hachimi::RaceStatHudCloneConfig> = self.clones.iter().map(|c| {
+            let (drag_x, drag_y) = if drag_save { c.drag_pos.unwrap_or((-1.0, -1.0)) } else { (-1.0, -1.0) };
+            hachimi::RaceStatHudCloneConfig {
+                drag_x,
+                drag_y,
+                selected_character: c.selected_character
+            }
+        }).collect();
+        let selected_character = if self.selected_character_dirty {
+            Some(self.selected_character)
+        } else {
+            live.race_stat_hud_selected_character
+        };
+        self.selected_character_dirty = false;
+        if live.race_stat_hud_clones == entries && live.race_stat_hud_selected_character == selected_character {
+            return;
+        }
+        let mut new_config = live;
+        new_config.race_stat_hud_clones = entries;
+        new_config.race_stat_hud_selected_character = selected_character;
+        save_and_reload_config(new_config);
+    }
+
     fn elements_showing() -> bool {
         if TOGGLE_RACE_STAT_HUD_REQUESTED.load(atomic::Ordering::Acquire) {
             return true;
@@ -635,6 +667,7 @@ impl RaceStatHud {
         hud.elements_showing = Self::elements_showing_locked(&hud);
         if was_showing && !hud.elements_showing {
             hud.save_autoscroll_config();
+            hud.save_hud_state_config();
             hud.clones.clear();
         } else if !was_showing && hud.elements_showing {
             hud.config = (**Hachimi::instance().config.load()).clone();
@@ -659,6 +692,16 @@ impl RaceStatHud {
         let panel = Self::panel_size(game_view, is_vertical, hud_scale, width_scale, height_scale);
         Self::log_game_view(split, game_view, source, panel, hud_scale);
 
+        if !was_showing && hud.clones.is_empty() {
+            let current_tab = hud.current_tab;
+            for i in 0..hud.config.race_stat_hud_clones.len().min(16) {
+                let entry = hud.config.race_stat_hud_clones[i];
+                let pos = entry.drag_pos().or_else(|| Self::clamped_spawn_pos(game_view, panel, is_vertical, None, hud_scale, i));
+                let seq = RACE_STAT_HUD_CLONE_SEQ.fetch_add(1, atomic::Ordering::Relaxed);
+                hud.clones.push(RaceStatHud::new_clone(seq, entry.selected_character, current_tab, pos));
+            }
+        }
+
         let need_stats = hud.visible || !hud.clones.is_empty();
         let (all_stats, course_info) = if need_stats {
             hud.collect_stats()
@@ -670,12 +713,19 @@ impl RaceStatHud {
             hud.run_hud(ctx, screen, game_view, panel, hud_scale, toggle_button, &all_stats, course_info.as_ref());
             for clone in hud.clones.iter_mut() {
                 if clone.selected_character >= all_stats.len() {
-                    clone.selected_character = 0;
+                    clone.selected_character = all_stats.len() - 1;
                 }
                 clone.run_hud(ctx, screen, game_view, panel, hud_scale, toggle_button, &all_stats, course_info.as_ref());
             }
         }
         hud.stats_buf = all_stats;
+
+        if hud.clones.iter().any(|c| c.drag_save_pending) {
+            for c in hud.clones.iter_mut() {
+                c.drag_save_pending = false;
+            }
+            hud.save_hud_state_config();
+        }
 
         let clone_requested = hud.spawn_clone || hud.clones.iter().any(|c| c.spawn_clone);
         if clone_requested {
@@ -695,8 +745,13 @@ impl RaceStatHud {
                 let seq = RACE_STAT_HUD_CLONE_SEQ.fetch_add(1, atomic::Ordering::Relaxed);
                 hud.clones.push(RaceStatHud::new_clone(seq, parent_selected, parent_tab, pos));
             }
+            hud.save_hud_state_config();
         }
+        let clones_closed = hud.clones.iter().any(|c| !c.visible);
         hud.clones.retain(|c| c.visible);
+        if clones_closed {
+            hud.save_hud_state_config();
+        }
 
         if toggle_button && !hud.visible {
             hud.run_button(ctx, game_view, hud_scale);
@@ -939,12 +994,16 @@ impl RaceStatHud {
                         drag_active = true;
                         // a click (press + release without movement) is not a drag:
                         // egui marks drag-only widgets as dragged from the press on, so gate the save on real travel
-                        if drag_save && !self.is_clone() && drag_travel >= RACE_STAT_HUD_DRAG_SAVE_THRESHOLD * scale {
-                            let pos = Self::drag_pos_from_offset(game_view, panel, is_vertical, drag_offset);
-                            let mut new_config = (**Hachimi::instance().config.load()).clone();
-                            new_config.race_stat_hud_drag_x = pos.0;
-                            new_config.race_stat_hud_drag_y = pos.1;
-                            save_and_reload_config(new_config);
+                        if drag_save && drag_travel >= RACE_STAT_HUD_DRAG_SAVE_THRESHOLD * scale {
+                            if self.is_clone() {
+                                self.drag_save_pending = true;
+                            } else {
+                                let pos = Self::drag_pos_from_offset(game_view, panel, is_vertical, drag_offset);
+                                let mut new_config = (**Hachimi::instance().config.load()).clone();
+                                new_config.race_stat_hud_drag_x = pos.0;
+                                new_config.race_stat_hud_drag_y = pos.1;
+                                save_and_reload_config(new_config);
+                            }
                         }
                         drag_travel = 0.0;
                     }
@@ -1065,6 +1124,9 @@ impl RaceStatHud {
                 });
             });
         });
+        if selected != self.selected_character {
+            self.selected_character_dirty = true;
+        }
         self.selected_character = selected;
         self.set_visible(visible);
 
@@ -1723,7 +1785,10 @@ impl RaceStatHud {
 
             if self.select_player_on_race_start {
                 self.select_player_on_race_start = false;
-                self.selected_character = player_idx.min(all_stats.len() - 1);
+                self.selected_character = match self.config.race_stat_hud_selected_character {
+                    Some(i) => i.min(all_stats.len() - 1),
+                    None => player_idx.min(all_stats.len() - 1)
+                };
             } else if self.selected_character >= all_stats.len() {
                 self.selected_character = player_idx.min(all_stats.len() - 1);
             }

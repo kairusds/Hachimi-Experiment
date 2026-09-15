@@ -700,6 +700,26 @@ impl CaptionConfig {
     fn default_pos_y() -> f32 { -3.0 }
 }
 
+#[derive(Deserialize, Serialize, Clone, Copy, PartialEq)]
+pub struct RaceStatHudCloneConfig {
+    #[serde(default = "Config::default_race_stat_hud_drag_x")]
+    pub drag_x: f32,
+    #[serde(default = "Config::default_race_stat_hud_drag_y")]
+    pub drag_y: f32,
+    #[serde(default)]
+    pub selected_character: usize
+}
+
+impl RaceStatHudCloneConfig {
+    pub fn drag_pos(&self) -> Option<(f32, f32)> {
+        if (0.0..=1.0).contains(&self.drag_x) && (0.0..=1.0).contains(&self.drag_y) {
+            Some((self.drag_x, self.drag_y))
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Deserialize, Serialize, Clone)]
 pub struct Config {
     #[serde(default)]
@@ -802,6 +822,10 @@ pub struct Config {
     pub race_stat_hud_drag_x: f32,
     #[serde(default = "Config::default_race_stat_hud_drag_y")]
     pub race_stat_hud_drag_y: f32,
+    #[serde(default)]
+    pub race_stat_hud_clones: Vec<RaceStatHudCloneConfig>,
+    #[serde(default)]
+    pub race_stat_hud_selected_character: Option<usize>,
     #[serde(default = "Config::default_race_stat_hud_width_scale")]
     pub race_stat_hud_width_scale: f32,
     #[serde(default = "Config::default_race_stat_hud_height_scale")]
