@@ -4461,6 +4461,7 @@ struct ConfigEditor {
     swipe_scroll_state_id: Option<egui::Id>,
     swipe_locked_scroll_y: Option<f32>,
     swipe_prewarm: u8,
+    swipe_slider_rects: Vec<egui::Rect>,
     champions_resources: Vec<String>,
     champions_live_max_year: i32,
     font_color_options: Vec<String>,
@@ -4522,6 +4523,7 @@ struct SwipeGesture {
     origin: egui::Pos2,
     last_pos: egui::Pos2,
     base_offset: f32,
+    slop: f32,
     locked: bool,
     dead: bool,
 }
@@ -4537,7 +4539,6 @@ struct SwipeAnim {
 }
 
 const CONFIG_EDITOR_SWIPE_SLOP: f32 = 18.0;
-const CONFIG_EDITOR_SWIPE_FLING: f32 = 800.0;
 
 fn swipe_anim_duration(from: f32, to: f32, width: f32) -> f32 {
     if width <= 0.0 {
@@ -4546,11 +4547,11 @@ fn swipe_anim_duration(from: f32, to: f32, width: f32) -> f32 {
     (((to - from).abs() / width) * 0.42).clamp(0.08, 0.24)
 }
 
-fn swipe_fresh_offset(dx: f32) -> f32 {
+fn swipe_fresh_offset(dx: f32, slop: f32) -> f32 {
     if dx > 0.0 {
-        (dx - CONFIG_EDITOR_SWIPE_SLOP).max(0.0)
+        (dx - slop).max(0.0)
     } else if dx < 0.0 {
-        (dx + CONFIG_EDITOR_SWIPE_SLOP).min(0.0)
+        (dx + slop).min(0.0)
     } else {
         0.0
     }
@@ -4576,6 +4577,7 @@ impl ConfigEditor {
             swipe_scroll_state_id: None,
             swipe_locked_scroll_y: None,
             swipe_prewarm: 2,
+            swipe_slider_rects: Vec::new(),
             champions_resources: crate::il2cpp::sql::get_champions_resources(),
             champions_live_max_year: crate::il2cpp::sql::get_champions_live_max_year(),
             font_color_options: umamusume_enum_options(c"FontColorType"),
@@ -4590,7 +4592,7 @@ impl ConfigEditor {
         self.config.language = current_language;
     }
 
-    fn option_slider<Num: egui::emath::Numeric>(ui: &mut egui::Ui, label: &str, value: &mut Option<Num>, range: RangeInclusive<Num>) {
+    fn option_slider<Num: egui::emath::Numeric>(ui: &mut egui::Ui, slider_rects: &mut Vec<egui::Rect>, label: &str, value: &mut Option<Num>, range: RangeInclusive<Num>) {
         let mut checked = value.is_some();
         ui.label(label);
         ui.checkbox(&mut checked, t!("enable"));
@@ -4604,12 +4606,12 @@ impl ConfigEditor {
 
         if let Some(num) = value.as_mut() {
             ui.label("");
-            ui.add(egui::Slider::new(num, range));
+            slider_rects.push(ui.add(egui::Slider::new(num, range)).rect);
             ui.end_row();
         }
     }
 
-    fn run_options_grid(&self, config: &mut hachimi::Config, ui: &mut egui::Ui, tab: ConfigEditorTab, search: &str) {
+    fn run_options_grid(&self, config: &mut hachimi::Config, ui: &mut egui::Ui, tab: ConfigEditorTab, search: &str, slider_rects: &mut Vec<egui::Rect>) {
         let scale = get_scale(ui.ctx());
         ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
         let show_all = !search.is_empty();
@@ -4683,7 +4685,7 @@ impl ConfigEditor {
 
             if should_show_option(search, &t!("config_editor.gui_scale")) {
                 ui.label(t!("config_editor.gui_scale"));
-                ui.add(egui::Slider::new(&mut config.gui_scale, 0.25..=2.0).step_by(0.05));
+                slider_rects.push(ui.add(egui::Slider::new(&mut config.gui_scale, 0.25..=2.0).step_by(0.05)).rect);
                 ui.end_row();
             }
 
@@ -4702,7 +4704,7 @@ impl ConfigEditor {
 
                     if config.windows.enable_gui_landscape_ratio {
                         ui.label("");
-                        ui.add(egui::Slider::new(&mut config.windows.gui_landscape_ratio, 0.25..=1.0).step_by(0.05).fixed_decimals(2));
+                        slider_rects.push(ui.add(egui::Slider::new(&mut config.windows.gui_landscape_ratio, 0.25..=1.0).step_by(0.05).fixed_decimals(2)).rect);
                         ui.end_row();
                     }
                 }
@@ -4826,7 +4828,7 @@ impl ConfigEditor {
                     let mut minutes = (config.tl_auto_updater_interval_sec / 60) as i32;
                     ui.horizontal(|ui| {
                         ui.label(t!("minutes"));
-                        ui.add(egui::DragValue::new(&mut minutes).speed(1.0).range(1..=10080));
+                        slider_rects.push(ui.add(egui::DragValue::new(&mut minutes).speed(1.0).range(1..=10080)).rect);
                     });
                     config.tl_auto_updater_interval_sec = (minutes as u64) * 60;
                     ui.end_row();
@@ -4959,18 +4961,18 @@ impl ConfigEditor {
         // Graphics tab
         if show_all || tab == ConfigEditorTab::Graphics {
             if should_show_option(search, &t!("config_editor.target_fps")) {
-                Self::option_slider(ui, &t!("config_editor.target_fps"), &mut config.target_fps, 30..=690);
+                Self::option_slider(ui, slider_rects, &t!("config_editor.target_fps"), &mut config.target_fps, 30..=690);
             }
 
             if should_show_option(search, &t!("config_editor.virtual_resolution_multiplier")) {
                 ui.label(t!("config_editor.virtual_resolution_multiplier"));
-                ui.add(egui::Slider::new(&mut config.virtual_res_mult, 1.0..=4.0).step_by(0.1));
+                slider_rects.push(ui.add(egui::Slider::new(&mut config.virtual_res_mult, 1.0..=4.0).step_by(0.1)).rect);
                 ui.end_row();
             }
 
             if should_show_option(search, &t!("config_editor.ui_scale")) {
                 ui.label(t!("config_editor.ui_scale"));
-                ui.add(egui::Slider::new(&mut config.ui_scale, 0.1..=10.0).step_by(0.05));
+                slider_rects.push(ui.add(egui::Slider::new(&mut config.ui_scale, 0.1..=10.0).step_by(0.05)).rect);
                 ui.end_row();
             }
 
@@ -4999,13 +5001,13 @@ impl ConfigEditor {
 
             if should_show_option(search, &t!("config_editor.ui_animation_scale")) {
                 ui.label(t!("config_editor.ui_animation_scale"));
-                ui.add(egui::Slider::new(&mut config.ui_animation_scale, 0.1..=10.0).step_by(0.1));
+                slider_rects.push(ui.add(egui::Slider::new(&mut config.ui_animation_scale, 0.1..=10.0).step_by(0.1)).rect);
                 ui.end_row();
             }
 
             if should_show_option(search, &t!("config_editor.render_scale")) {
                 ui.label(t!("config_editor.render_scale"));
-                ui.add(egui::Slider::new(&mut config.render_scale, 0.1..=10.0).step_by(0.1));
+                slider_rects.push(ui.add(egui::Slider::new(&mut config.render_scale, 0.1..=10.0).step_by(0.1)).rect);
                 ui.end_row();
             }
 
@@ -5094,14 +5096,14 @@ impl ConfigEditor {
                         should_show_option(search, &t!("config_editor.freeform_ui_scale_auto_ratio"))
                     {
                         ui.label(t!("config_editor.freeform_ui_scale_auto_ratio"));
-                        ui.add(
+                        slider_rects.push(ui.add(
                             egui::Slider::new(
                                 &mut config.windows.freeform_ui_scale_auto_ratio,
                                 0.25..=3.0
                             )
                                 .step_by(0.05)
                                 .fixed_decimals(2)
-                        );
+                        ).rect);
                         ui.end_row();
                     }
                 }
@@ -5162,13 +5164,13 @@ impl ConfigEditor {
 
             if should_show_option(search, &t!("config_editor.story_choice_auto_select_delay")) {
                 ui.label(t!("config_editor.story_choice_auto_select_delay"));
-                ui.add(egui::Slider::new(&mut config.story_choice_auto_select_delay, 0.1..=10.0).step_by(0.05));
+                slider_rects.push(ui.add(egui::Slider::new(&mut config.story_choice_auto_select_delay, 0.1..=10.0).step_by(0.05)).rect);
                 ui.end_row();
             }
 
             if should_show_option(search, &t!("config_editor.story_text_speed_multiplier")) {
                 ui.label(t!("config_editor.story_text_speed_multiplier"));
-                ui.add(egui::Slider::new(&mut config.story_tcps_multiplier, 0.1..=10.0).step_by(0.1));
+                slider_rects.push(ui.add(egui::Slider::new(&mut config.story_tcps_multiplier, 0.1..=10.0).step_by(0.1)).rect);
                 ui.end_row();
             }
 
@@ -5407,27 +5409,27 @@ impl ConfigEditor {
             if should_show_option(search, &t!("config_editor.race_stat_hud_width_scale")) && matches!(Hachimi::instance().game.region, Region::Japan | Region::Global)
                 && config.race_stat_hud {
                 ui.label(t!("config_editor.race_stat_hud_width_scale"));
-                ui.add(egui::Slider::new(&mut config.race_stat_hud_width_scale,
+                slider_rects.push(ui.add(egui::Slider::new(&mut config.race_stat_hud_width_scale,
                     RACE_STAT_HUD_WIDTH_SCALE_MIN..=RACE_STAT_HUD_WIDTH_SCALE_MAX
-                ).step_by(0.05).fixed_decimals(2));
+                ).step_by(0.05).fixed_decimals(2)).rect);
                 ui.end_row();
             }
 
             if should_show_option(search, &t!("config_editor.race_stat_hud_height_scale")) && matches!(Hachimi::instance().game.region, Region::Japan | Region::Global)
                 && config.race_stat_hud {
                 ui.label(t!("config_editor.race_stat_hud_height_scale"));
-                ui.add(egui::Slider::new(&mut config.race_stat_hud_height_scale,
+                slider_rects.push(ui.add(egui::Slider::new(&mut config.race_stat_hud_height_scale,
                     RACE_STAT_HUD_HEIGHT_SCALE_MIN..=RACE_STAT_HUD_HEIGHT_SCALE_MAX
-                ).step_by(0.05).fixed_decimals(2));
+                ).step_by(0.05).fixed_decimals(2)).rect);
                 ui.end_row();
             }
 
             if should_show_option(search, &t!("config_editor.race_stat_hud_opacity_scale")) && matches!(Hachimi::instance().game.region, Region::Japan | Region::Global)
                 && config.race_stat_hud {
                 ui.label(t!("config_editor.race_stat_hud_opacity_scale"));
-                ui.add(egui::Slider::new(&mut config.race_stat_hud_opacity_scale,
+                slider_rects.push(ui.add(egui::Slider::new(&mut config.race_stat_hud_opacity_scale,
                     RACE_STAT_HUD_OPACITY_SCALE_MIN..=RACE_STAT_HUD_OPACITY_SCALE_MAX
-                ).step_by(0.05).fixed_decimals(2));
+                ).step_by(0.05).fixed_decimals(2)).rect);
                 ui.end_row();
             }
 
@@ -5514,7 +5516,7 @@ impl ConfigEditor {
                     Gui::run_combo(ui, "champions_live_resource_id", &mut config.champions_live_resource_id, &choices);
                     ui.end_row();
                     ui.label(t!("config_editor.champions_live_year"));
-                    ui.add(egui::DragValue::new(&mut config.champions_live_year).range(2022..=self.champions_live_max_year));
+                    slider_rects.push(ui.add(egui::DragValue::new(&mut config.champions_live_year).range(2022..=self.champions_live_max_year)).rect);
                     ui.end_row();
                 }
             }
@@ -5528,31 +5530,31 @@ impl ConfigEditor {
             if config.caption.caption_enable {
                 if should_show_option(search, &t!("config_editor.caption_lines_char_count")) {
                     ui.label(t!("config_editor.caption_lines_char_count"));
-                    ui.add(egui::Slider::new(&mut config.caption.caption_lines_char_count, 10..=100));
+                    slider_rects.push(ui.add(egui::Slider::new(&mut config.caption.caption_lines_char_count, 10..=100)).rect);
                     ui.end_row();
                 }
 
                 if should_show_option(search, &t!("config_editor.caption_font_size")) {
                     ui.label(t!("config_editor.caption_font_size"));
-                    ui.add(egui::Slider::new(&mut config.caption.caption_font_size, 10..=128));
+                    slider_rects.push(ui.add(egui::Slider::new(&mut config.caption.caption_font_size, 10..=128)).rect);
                     ui.end_row();
                 }
 
                 if should_show_option(search, &t!("config_editor.caption_pos_x")) {
                     ui.label(t!("config_editor.caption_pos_x"));
-                    ui.add(egui::Slider::new(&mut config.caption.caption_pos_x, -10.0..=10.0));
+                    slider_rects.push(ui.add(egui::Slider::new(&mut config.caption.caption_pos_x, -10.0..=10.0)).rect);
                     ui.end_row();
                 }
 
                 if should_show_option(search, &t!("config_editor.caption_pos_y")) {
                     ui.label(t!("config_editor.caption_pos_y"));
-                    ui.add(egui::Slider::new(&mut config.caption.caption_pos_y, -10.0..=10.0));
+                    slider_rects.push(ui.add(egui::Slider::new(&mut config.caption.caption_pos_y, -10.0..=10.0)).rect);
                     ui.end_row();
                 }
 
                 if should_show_option(search, &t!("config_editor.caption_bg_alpha")) {
                     ui.label(t!("config_editor.caption_bg_alpha"));
-                    ui.add(egui::Slider::new(&mut config.caption.caption_bg_alpha, 0.0..=1.0));
+                    slider_rects.push(ui.add(egui::Slider::new(&mut config.caption.caption_bg_alpha, 0.0..=1.0)).rect);
                     ui.end_row();
                 }
 
@@ -5690,6 +5692,7 @@ impl ConfigEditor {
         let mut body_rect_out = egui::Rect::NOTHING;
         let mut scroll_area_id_out: Option<egui::Id> = None;
         let mut scroll_state_id_out: Option<egui::Id> = None;
+        let mut slider_rects_out: Vec<egui::Rect> = Vec::new();
         ui.scope(|ui| {
             ui.set_width(ui.available_width());
             let body_rect = ui.max_rect();
@@ -5717,7 +5720,7 @@ impl ConfigEditor {
                     ..Default::default()
                 })
                 .show(&mut cur_ui, |ui| {
-                    self.options_page(ui, config, current_tab, scale, column_spacing);
+                    self.options_page(ui, config, current_tab, scale, column_spacing, &mut slider_rects_out);
                 });
             scroll_area_id_out = Some(out.id.with("area"));
             scroll_state_id_out = Some(out.id);
@@ -5740,7 +5743,7 @@ impl ConfigEditor {
                         ..Default::default()
                     })
                     .show(&mut tgt_ui, |ui| {
-                        self.options_page(ui, config, target_tab, scale, column_spacing);
+                        self.options_page(ui, config, target_tab, scale, column_spacing, &mut slider_rects_out);
                     });
                 drop(tgt_ui);
 
@@ -5773,7 +5776,7 @@ impl ConfigEditor {
                         ..Default::default()
                     })
                     .show(&mut prewarm_ui, |ui| {
-                        self.options_page(ui, config, prewarm_tab, scale, column_spacing);
+                        self.options_page(ui, config, prewarm_tab, scale, column_spacing, &mut Vec::new());
                     });
                 drop(prewarm_ui);
                 ui.set_clip_rect(restore_clip);
@@ -5783,9 +5786,10 @@ impl ConfigEditor {
         self.swipe_body_rect = Some(body_rect_out);
         self.swipe_scroll_area_id = scroll_area_id_out;
         self.swipe_scroll_state_id = scroll_state_id_out;
+        self.swipe_slider_rects = slider_rects_out;
     }
 
-    fn options_page(&self, ui: &mut egui::Ui, config: &mut hachimi::Config, tab: ConfigEditorTab, scale: f32, column_spacing: f32) {
+    fn options_page(&self, ui: &mut egui::Ui, config: &mut hachimi::Config, tab: ConfigEditorTab, scale: f32, column_spacing: f32, slider_rects: &mut Vec<egui::Rect>) {
         ui.set_width(ui.available_width());
         egui::Frame::NONE
         .inner_margin(egui::Margin::symmetric(8, 0))
@@ -5801,7 +5805,7 @@ impl ConfigEditor {
                 .spacing([column_spacing, 4.0 * scale])
                 .min_col_width(label_w)
                 .show(ui, |ui| {
-                    self.run_options_grid(config, ui, tab, &self.search_term);
+                    self.run_options_grid(config, ui, tab, &self.search_term, slider_rects);
                 });
         });
         #[cfg(target_os = "android")]
@@ -5816,7 +5820,7 @@ impl ConfigEditor {
     fn swipe_visual_offset(&self) -> f32 {
         if let Some(g) = self.swipe_gesture {
             if g.locked {
-                return g.base_offset + swipe_fresh_offset(g.last_pos.x - g.origin.x);
+                return g.base_offset + swipe_fresh_offset(g.last_pos.x - g.origin.x, g.slop);
             }
             return g.base_offset;
         }
@@ -5890,6 +5894,10 @@ impl ConfigEditor {
         }
     }
 
+    fn swipe_layer_id(&self, ctx: &egui::Context) -> egui::LayerId {
+        egui::LayerId::new(egui::Order::Middle, self.id.with(get_scale_salt(ctx).to_bits()))
+    }
+
     fn process_swipe(&mut self, ctx: &egui::Context) {
         let now = ctx.input(|i| i.time);
         if let Some(anim) = &mut self.swipe_anim {
@@ -5931,15 +5939,17 @@ impl ConfigEditor {
                     self.swipe_reset_scroll_kinetic(ctx);
                     let dx = g.last_pos.x - g.origin.x;
                     let raw_total = g.base_offset + dx;
-                    let visual = g.base_offset + swipe_fresh_offset(dx);
+                    let visual = g.base_offset + swipe_fresh_offset(dx, g.slop);
                     let width = self.swipe_body_rect.map_or(0.0, |r| r.width());
                     let commit = raw_total.abs() >= (width * 0.3).max(CONFIG_EDITOR_SWIPE_SLOP * 2.0)
-                        || velocity.x.abs() >= CONFIG_EDITOR_SWIPE_FLING;
+                        || velocity.x.abs() >= 800.0;
                     if commit && width > 0.0 {
                         self.swipe_commit_anim(ctx, raw_total, visual);
                     } else {
                         self.begin_swipe_anim_from(ctx, 0.0, visual);
                     }
+                } else if g.base_offset != 0.0 {
+                    self.begin_swipe_anim_from(ctx, 0.0, g.base_offset);
                 }
             }
         }
@@ -5954,14 +5964,23 @@ impl ConfigEditor {
                 }
             } else {
                 let in_body = self.swipe_body_rect.is_some_and(|r| latest.is_some_and(|p| r.contains(p)));
-                if in_body {
+                let owns_layer = latest.is_some_and(|p| ctx.layer_id_at(p) == Some(self.swipe_layer_id(ctx)));
+                if in_body && owns_layer {
                     let base = self.swipe_anim.map_or(0.0, |a| a.offset);
                     self.swipe_anim = None;
                     let pos = latest.unwrap_or_else(|| origin.unwrap_or(egui::Pos2::ZERO));
+                    let near_slider = self.swipe_slider_rects.iter()
+                        .any(|r| r.expand(14.0).contains(pos));
+                    let slop = if near_slider {
+                        54.0
+                    } else {
+                        CONFIG_EDITOR_SWIPE_SLOP
+                    };
                     self.swipe_gesture = Some(SwipeGesture {
                         origin: pos,
                         last_pos: pos,
                         base_offset: base,
+                        slop,
                         locked: false,
                         dead: false,
                     });
@@ -5979,7 +5998,7 @@ impl ConfigEditor {
                     let dy = g.last_pos.y - g.origin.y;
                     if dy.abs() >= CONFIG_EDITOR_SWIPE_SLOP && dy.abs() > dx.abs() {
                         g.dead = true;
-                    } else if dx.abs() >= CONFIG_EDITOR_SWIPE_SLOP && dx.abs() > dy.abs() {
+                    } else if dx.abs() >= g.slop && dx.abs() > dy.abs() {
                         let owner = ctx.interaction_snapshot(|i| i.dragged);
                         let free = match owner {
                             None => true,
@@ -6004,7 +6023,7 @@ impl ConfigEditor {
 
         if let Some(g) = self.swipe_gesture {
             if g.dead {
-                let visual = g.base_offset + swipe_fresh_offset(g.last_pos.x - g.origin.x);
+                let visual = g.base_offset + swipe_fresh_offset(g.last_pos.x - g.origin.x, g.slop);
                 self.swipe_gesture = None;
                 if visual != 0.0 {
                     self.begin_swipe_anim_from(ctx, 0.0, visual);
@@ -6113,7 +6132,7 @@ impl Window for ConfigEditor {
                                     .min_col_width(95.0 * scale)
                                     .spacing([40.0 * scale, 4.0 * scale])
                                     .show(ui, |ui| {
-                                        self.run_options_grid(&mut config, ui, self.current_tab, &self.search_term);
+                                        self.run_options_grid(&mut config, ui, self.current_tab, &self.search_term, &mut Vec::new());
                                     });
                                 });
                                 #[cfg(target_os = "android")]
