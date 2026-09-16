@@ -527,6 +527,13 @@ extern "system" fn wnd_proc(hwnd: HWND, umsg: c_uint, wparam: WPARAM, lparam: LP
                 Thread::main_thread().schedule(gui::toggle_race_stat_hud);
             }
 
+            if matches!(Hachimi::instance().game.region, Region::Japan | Region::Global) && Hachimi::instance().config.load().race_stat_hud {
+                if let Some(i) = Hachimi::instance().config.load().race_stat_hud_clones.iter()
+                    .position(|c| c.toggle_key == Some(current_key as i32)) {
+                    gui::toggle_race_stat_hud_clone(i);
+                }
+            }
+
             if current_key == Hachimi::instance().config.load().windows.race_playback_key
                 && Hachimi::instance().config.load().race_playback_key_enable {
                 Thread::main_thread().schedule(RaceManagerReplayBase::toggle_playback);

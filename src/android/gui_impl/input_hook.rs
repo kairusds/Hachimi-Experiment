@@ -169,6 +169,13 @@ extern "C" fn nativeInjectEvent(mut env: JNIEnv, obj: JObject, input_event: JObj
                     Thread::main_thread().schedule(gui::toggle_race_stat_hud);
                 }
 
+                if pressed && Hachimi::instance().config.load().race_stat_hud {
+                    if let Some(i) = Hachimi::instance().config.load().race_stat_hud_clones.iter()
+                        .position(|c| c.toggle_key == Some(key_code)) {
+                        gui::toggle_race_stat_hud_clone(i);
+                    }
+                }
+
                 if pressed && key_code == Hachimi::instance().config.load().android.race_playback_key
                     && Hachimi::instance().config.load().race_playback_key_enable {
                     Thread::main_thread().schedule(RaceManagerReplayBase::toggle_playback);
