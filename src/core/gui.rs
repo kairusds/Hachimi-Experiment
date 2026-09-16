@@ -4705,7 +4705,7 @@ struct ConfigEditor {
     swipe_scroll_state_id: Option<egui::Id>,
     swipe_locked_scroll_y: Option<f32>,
     swipe_prewarm: u8,
-    open_fade: Option<(f64, f32, u8)>,
+    swipe_prewarm_t: Option<f64>,
     champions_resources: Vec<String>,
     champions_live_max_year: i32,
     font_color_options: Vec<String>,
@@ -4819,8 +4819,8 @@ impl ConfigEditor {
             swipe_scroll_area_id: None,
             swipe_scroll_state_id: None,
             swipe_locked_scroll_y: None,
-            swipe_prewarm: 2,
-            open_fade: None,
+            swipe_prewarm: 5,
+            swipe_prewarm_t: None,
             champions_resources: crate::il2cpp::sql::get_champions_resources(),
             champions_live_max_year: crate::il2cpp::sql::get_champions_live_max_year(),
             font_color_options: umamusume_enum_options(c"FontColorType"),
@@ -5745,6 +5745,12 @@ impl ConfigEditor {
                 ui.end_row();
             }
 
+            if should_show_option(search, &t!("config_editor.race_play_others_cutins")) {
+                ui.label(t!("config_editor.race_play_others_cutins"));
+                ui.checkbox(&mut config.race_play_others_cutins, "");
+                ui.end_row();
+            }
+
             if should_show_option(search, &t!("config_editor.live_slider_always_show")) {
                 ui.label(t!("config_editor.live_slider_always_show"));
                 ui.checkbox(&mut config.live_slider_always_show, "");
@@ -6006,37 +6012,43 @@ impl ConfigEditor {
                 ui.set_clip_rect(restore_clip);
             }
 
-            if self.swipe_prewarm > 0 && clamped == 0.0 && self.search_term.is_empty() {
-                let prewarm_tab = if self.swipe_prewarm == 2 {
-                    current_tab.next()
-                } else {
-                    current_tab.prev()
-                };
-                let prewarm_x = if self.swipe_prewarm == 2 { width } else { -width };
-                let prewarm_rect = egui::Rect::from_min_size(
-                    body_rect.min + egui::vec2(prewarm_x, 0.0),
-                    body_rect.size(),
-                );
-                ui.set_clip_rect(restore_clip.intersect(body_rect));
-                let mut prewarm_ui = ui.new_child(
-                    egui::UiBuilder::new()
-                        .id(self.id.with("swipe_page").with(prewarm_tab.index() as u32))
-                        .max_rect(prewarm_rect)
-                        .layout(egui::Layout::top_down(egui::Align::Min)),
-                );
-                egui::ScrollArea::vertical()
-                    .id_salt(prewarm_tab.scroll_salt())
-                    .auto_shrink([false, false])
-                    .scroll_source(egui::containers::scroll_area::ScrollSource {
-                        drag: !swipe_scroll_lock,
-                        ..Default::default()
-                    })
-                    .show(&mut prewarm_ui, |ui| {
-                        self.options_page(ui, config, prewarm_tab, scale, column_spacing);
-                    });
-                drop(prewarm_ui);
-                ui.set_clip_rect(restore_clip);
-                self.swipe_prewarm -= 1;
+            if self.swipe_prewarm > 0 && clamped == 0.0 && self.search_term.is_empty() && self.swipe_gesture.is_none() {
+                let now = ui.ctx().input(|i| i.time);
+                if self.swipe_prewarm_t != Some(now) {
+                    if self.swipe_prewarm <= 2 {
+                        let prewarm_tab = if self.swipe_prewarm == 2 {
+                            current_tab.next()
+                        } else {
+                            current_tab.prev()
+                        };
+                        let prewarm_x = if self.swipe_prewarm == 2 { width } else { -width };
+                        let prewarm_rect = egui::Rect::from_min_size(
+                            body_rect.min + egui::vec2(prewarm_x, 0.0),
+                            body_rect.size(),
+                        );
+                        ui.set_clip_rect(restore_clip.intersect(body_rect));
+                        let mut prewarm_ui = ui.new_child(
+                            egui::UiBuilder::new()
+                                .id(self.id.with("swipe_page").with(prewarm_tab.index() as u32))
+                                .max_rect(prewarm_rect)
+                                .layout(egui::Layout::top_down(egui::Align::Min)),
+                        );
+                        egui::ScrollArea::vertical()
+                            .id_salt(prewarm_tab.scroll_salt())
+                            .auto_shrink([false, false])
+                            .scroll_source(egui::containers::scroll_area::ScrollSource {
+                                drag: !swipe_scroll_lock,
+                                ..Default::default()
+                            })
+                            .show(&mut prewarm_ui, |ui| {
+                                self.options_page(ui, config, prewarm_tab, scale, column_spacing);
+                            });
+                        drop(prewarm_ui);
+                        ui.set_clip_rect(restore_clip);
+                    }
+                    self.swipe_prewarm_t = Some(now);
+                    self.swipe_prewarm -= 1;
+                }
             }
         });
         self.swipe_body_rect = Some(body_rect_out);
@@ -6422,24 +6434,12 @@ impl Window for ConfigEditor {
             let content_rect = Self::content_rect(ctx, window_rect);
             let column_spacing = if portrait { 16.0 * scale } else { 40.0 * scale };
 
-            let open_fade = self.open_fade.get_or_insert((ctx.input(|i| i.time), ctx.style().animation_time, 0));
-            open_fade.2 = open_fade.2.saturating_add(1);
-            let fade_age = ctx.input(|i| (i.time - open_fade.0) as f32 + i.predicted_dt / 2.0);
-            let fade_progress = (open_fade.2 as f32 - 1.0) / 4.0;
-            if fade_progress >= 1.0 && fade_age >= open_fade.1 {
-                let base_animation_time = open_fade.1;
-                ctx.style_mut(|style| style.animation_time = base_animation_time);
-            } else {
-                ctx.request_repaint();
-                let fade_pace = if fade_progress <= 0.0 { f32::INFINITY } else { fade_age / fade_progress };
-                ctx.style_mut(|style| style.animation_time = fade_pace);
-            }
-
             new_window(ctx, self.id, t!("config_editor.title"))
             .title_bar(false)
             .pivot(egui::Align2::LEFT_TOP)
             .fixed_rect(content_rect)
             .constrain_to(window_rect)
+            .fade_in(false)
             .open(&mut open)
             .show(ctx, |ui| {
                 let builder = egui::UiBuilder::new()
@@ -6541,9 +6541,6 @@ impl Window for ConfigEditor {
 
         open &= open2;
         if !open {
-            if let Some((_, base_animation_time, _)) = self.open_fade.take() {
-                ctx.style_mut(|style| style.animation_time = base_animation_time);
-            }
             let config_locale = Hachimi::instance().config.load().language.locale_str();
             if config_locale != &*rust_i18n::locale() {
                 rust_i18n::set_locale(config_locale);

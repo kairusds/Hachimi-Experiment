@@ -1,9 +1,14 @@
-use crate::il2cpp::{
-    api::il2cpp_class_is_assignable_from,
-    ext::Il2CppObjectExt,
-    symbols::get_method_addr,
-    types::*
+use crate::{
+    core::Hachimi,
+    il2cpp::{
+        api::il2cpp_class_is_assignable_from,
+        ext::Il2CppObjectExt,
+        symbols::get_method_addr,
+        types::*
+    }
 };
+
+use super::{HorseRaceInfo, MasterSkillData, SkillBase};
 
 static mut CLASS: *mut Il2CppClass = 0 as _;
 pub fn class() -> *mut Il2CppClass {
@@ -36,8 +41,32 @@ def_method_wrapper_fn!(
     ability_time_status: *mut i32
 );
 
+type IsPlayableCutInFn = extern "C" fn(this: *mut Il2CppObject, info: *mut Il2CppObject, skill: *mut Il2CppObject, activate_type: i32) -> bool;
+pub extern "C" fn IsPlayableCutIn(this: *mut Il2CppObject, info: *mut Il2CppObject, skill: *mut Il2CppObject, activate_type: i32) -> bool {
+    if get_orig_fn!(IsPlayableCutIn, IsPlayableCutInFn)(this, info, skill, activate_type) {
+        return true;
+    }
+    if !Hachimi::instance().config.load().race_play_others_cutins {
+        return false;
+    }
+    if info.is_null() || skill.is_null() {
+        return false;
+    }
+    if HorseRaceInfo::IsPlayerHorse(info) {
+        return false;
+    }
+    let skill_master = SkillBase::get_SkillMaster(skill);
+    if skill_master.is_null() {
+        return false;
+    }
+    MasterSkillData::SkillData::IsUniqueSkill(skill_master)
+}
+
 pub fn init(umamusume: *const Il2CppImage) {
     get_class_or_return!(umamusume, Gallop, RaceEventPlayer);
+
+    let IsPlayableCutIn_addr = get_method_addr(RaceEventPlayer, c"IsPlayableCutIn", 3);
+    new_hook!(IsPlayableCutIn_addr, IsPlayableCutIn);
 
     unsafe {
         CLASS = RaceEventPlayer;
