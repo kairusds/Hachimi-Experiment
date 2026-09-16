@@ -709,7 +709,9 @@ pub struct RaceStatHudCloneConfig {
     #[serde(default)]
     pub selected_character: usize,
     #[serde(default)]
-    pub toggle_key: Option<i32>
+    pub toggle_key: Option<i32>,
+    #[serde(default)]
+    pub open: bool
 }
 
 impl RaceStatHudCloneConfig {

@@ -499,6 +499,7 @@ struct RaceStatHud {
     drag_pos: Option<(f32, f32)>,
     drag_travel: f32,
     drag_save_pending: bool,
+    open_save_pending: bool,
     entry_index: Option<usize>,
     toggle_key: Option<i32>,
     config: hachimi::Config,
@@ -527,6 +528,7 @@ impl RaceStatHud {
             drag_pos: None,
             drag_travel: 0.0,
             drag_save_pending: false,
+            open_save_pending: false,
             entry_index: None,
             toggle_key: None,
             config: (**Hachimi::instance().config.load()).clone(),
@@ -559,6 +561,7 @@ impl RaceStatHud {
             drag_pos,
             drag_travel: 0.0,
             drag_save_pending: false,
+            open_save_pending: false,
             entry_index: None,
             toggle_key: None,
             config: (**Hachimi::instance().config.load()).clone(),
@@ -613,29 +616,51 @@ impl RaceStatHud {
     }
 
     fn save_hud_state_config(&mut self) {
-        let live = (**Hachimi::instance().config.load()).clone();
+        let mut live = (**Hachimi::instance().config.load()).clone();
+        let persist_clones = live.race_stat_hud_persist_clones;
         let drag_save = live.race_stat_hud_draggable_save;
-        let entries: Vec<hachimi::RaceStatHudCloneConfig> = self.clones.iter().map(|c| {
-            let (drag_x, drag_y) = if drag_save { c.drag_pos.unwrap_or((-1.0, -1.0)) } else { (-1.0, -1.0) };
-            hachimi::RaceStatHudCloneConfig {
-                drag_x,
-                drag_y,
-                selected_character: c.selected_character,
-                toggle_key: c.toggle_key
+        let mut entries = if persist_clones {
+            std::mem::take(&mut live.race_stat_hud_clones)
+        } else {
+            Vec::new()
+        };
+        let mut clones_changed = false;
+        if persist_clones {
+            for c in self.clones.iter_mut() {
+                let (drag_x, drag_y) = if drag_save { c.drag_pos.unwrap_or((-1.0, -1.0)) } else { (-1.0, -1.0) };
+                let entry = hachimi::RaceStatHudCloneConfig {
+                    drag_x,
+                    drag_y,
+                    selected_character: c.selected_character,
+                    toggle_key: c.toggle_key,
+                    open: c.visible
+                };
+                match c.entry_index {
+                    Some(i) if i < entries.len() => {
+                        if entries[i] != entry {
+                            clones_changed = true;
+                        }
+                        entries[i] = entry;
+                    }
+                    _ => {
+                        entries.push(entry);
+                        c.entry_index = Some(entries.len() - 1);
+                        clones_changed = true;
+                    }
+                }
             }
-        }).collect();
+        }
         let selected_character = if live.race_stat_hud_persist_selected_index && self.selected_character_dirty {
             Some(self.selected_character)
         } else {
             live.race_stat_hud_selected_character
         };
-        let clones_changed = live.race_stat_hud_persist_clones && live.race_stat_hud_clones != entries;
         let selected_changed = live.race_stat_hud_selected_character != selected_character;
         if !clones_changed && !selected_changed {
             return;
         }
         let mut new_config = live;
-        if clones_changed {
+        if persist_clones {
             new_config.race_stat_hud_clones = entries;
         }
         new_config.race_stat_hud_selected_character = selected_character;
@@ -681,8 +706,13 @@ impl RaceStatHud {
 
         let clone_toggle_requested = TOGGLE_RACE_STAT_HUD_CLONE_REQUESTED.swap(usize::MAX, atomic::Ordering::AcqRel);
         if clone_toggle_requested != usize::MAX {
+            let mut toggled = false;
             if let Some(clone) = hud.clones.iter_mut().find(|c| c.entry_index == Some(clone_toggle_requested)) {
                 clone.visible = !clone.visible;
+                toggled = true;
+            }
+            if toggled {
+                hud.save_hud_state_config();
             }
         }
 
@@ -724,15 +754,19 @@ impl RaceStatHud {
         };
 
         if hud.clones.is_empty() && hud.config.race_stat_hud_persist_clones {
-            let entries: Vec<hachimi::RaceStatHudCloneConfig> = hud.config.race_stat_hud_clones.iter().take(18).copied().collect();
+            let entries: Vec<hachimi::RaceStatHudCloneConfig> = hud.config.race_stat_hud_clones.iter().copied().collect();
             let persist_selected = hud.config.race_stat_hud_persist_selected_index;
             let selected_default = hud.selected_character;
             let current_tab = hud.current_tab;
-            for (i, entry) in entries.into_iter().enumerate() {
+            let mut open_count = 0usize;
+            for (i, entry) in entries.iter().enumerate() {
+                let visible = entry.open && open_count < 18;
+                open_count += visible as usize;
                 let selected = if persist_selected { entry.selected_character } else { selected_default };
                 let pos = entry.drag_pos().or_else(|| Self::clamped_spawn_pos(game_view, panel, is_vertical, None, hud_scale, i));
                 let seq = RACE_STAT_HUD_CLONE_SEQ.fetch_add(1, atomic::Ordering::Relaxed);
                 let mut clone = RaceStatHud::new_clone(seq, selected, current_tab, pos);
+                clone.visible = visible;
                 clone.entry_index = Some(i);
                 clone.toggle_key = entry.toggle_key;
                 hud.clones.push(clone);
@@ -757,7 +791,8 @@ impl RaceStatHud {
                                 drag_x: -1.0,
                                 drag_y: -1.0,
                                 selected_character,
-                                toggle_key: Some(key)
+                                toggle_key: Some(key),
+                                open: true
                             });
                             hud.clones[idx].entry_index = Some(new_config.race_stat_hud_clones.len() - 1);
                         }
@@ -767,7 +802,7 @@ impl RaceStatHud {
             }
         }
 
-        let can_add_clone = hud.clones.len() < 18;
+        let can_add_clone = hud.clones.iter().filter(|c| c.visible).count() < 18;
 
         if !all_stats.is_empty() {
             hud.run_hud(ctx, screen, game_view, panel, hud_scale, toggle_button, can_add_clone, &all_stats, course_info.as_ref());
@@ -780,9 +815,19 @@ impl RaceStatHud {
         }
         hud.stats_buf = all_stats;
 
-        if hud.clones.iter().any(|c| c.drag_save_pending) {
+        if (hud.config.race_stat_hud_persist_selected_index && hud.selected_character_dirty)
+            || (hud.config.race_stat_hud_persist_clones && hud.clones.iter().any(|c| c.selected_character_dirty)) {
+            hud.save_hud_state_config();
+            hud.selected_character_dirty = false;
+            for c in hud.clones.iter_mut() {
+                c.selected_character_dirty = false;
+            }
+        }
+
+        if hud.clones.iter().any(|c| c.drag_save_pending || c.open_save_pending) {
             for c in hud.clones.iter_mut() {
                 c.drag_save_pending = false;
+                c.open_save_pending = false;
             }
             hud.save_hud_state_config();
         }
@@ -800,7 +845,7 @@ impl RaceStatHud {
             for c in hud.clones.iter_mut() {
                 c.spawn_clone = false;
             }
-            if hud.clones.len() < 18 {
+            if hud.clones.iter().filter(|c| c.visible).count() < 18 {
                 let pos = Self::clamped_spawn_pos(game_view, panel, is_vertical, parent_pos, hud_scale, hud.clones.len());
                 let seq = RACE_STAT_HUD_CLONE_SEQ.fetch_add(1, atomic::Ordering::Relaxed);
                 let mut clone = RaceStatHud::new_clone(seq, parent_selected, parent_tab, pos);
@@ -1172,6 +1217,7 @@ impl RaceStatHud {
 
                     if ui.add(btn).clicked() {
                         visible = false;
+                        self.open_save_pending = true;
                     }
                 } else if toggle_button {
                     let btn_size = 20.0 * scale;
@@ -1197,7 +1243,7 @@ impl RaceStatHud {
                     });
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                    if ui.button(" \u{f29c} ").clicked() {
+                    if !self.is_clone() && ui.button(" \u{f29c} ").clicked() {
                         thread::spawn(|| {
                             Gui::instance().unwrap()
                             .lock().unwrap()
@@ -4659,6 +4705,7 @@ struct ConfigEditor {
     swipe_scroll_state_id: Option<egui::Id>,
     swipe_locked_scroll_y: Option<f32>,
     swipe_prewarm: u8,
+    open_fade: Option<(f64, f32, u8)>,
     champions_resources: Vec<String>,
     champions_live_max_year: i32,
     font_color_options: Vec<String>,
@@ -4773,6 +4820,7 @@ impl ConfigEditor {
             swipe_scroll_state_id: None,
             swipe_locked_scroll_y: None,
             swipe_prewarm: 2,
+            open_fade: None,
             champions_resources: crate::il2cpp::sql::get_champions_resources(),
             champions_live_max_year: crate::il2cpp::sql::get_champions_live_max_year(),
             font_color_options: umamusume_enum_options(c"FontColorType"),
@@ -6374,12 +6422,24 @@ impl Window for ConfigEditor {
             let content_rect = Self::content_rect(ctx, window_rect);
             let column_spacing = if portrait { 16.0 * scale } else { 40.0 * scale };
 
+            let open_fade = self.open_fade.get_or_insert((ctx.input(|i| i.time), ctx.style().animation_time, 0));
+            open_fade.2 = open_fade.2.saturating_add(1);
+            let fade_age = ctx.input(|i| (i.time - open_fade.0) as f32 + i.predicted_dt / 2.0);
+            let fade_progress = (open_fade.2 as f32 - 1.0) / 4.0;
+            if fade_progress >= 1.0 && fade_age >= open_fade.1 {
+                let base_animation_time = open_fade.1;
+                ctx.style_mut(|style| style.animation_time = base_animation_time);
+            } else {
+                ctx.request_repaint();
+                let fade_pace = if fade_progress <= 0.0 { f32::INFINITY } else { fade_age / fade_progress };
+                ctx.style_mut(|style| style.animation_time = fade_pace);
+            }
+
             new_window(ctx, self.id, t!("config_editor.title"))
             .title_bar(false)
             .pivot(egui::Align2::LEFT_TOP)
             .fixed_rect(content_rect)
             .constrain_to(window_rect)
-            .fade_in(false)
             .open(&mut open)
             .show(ctx, |ui| {
                 let builder = egui::UiBuilder::new()
@@ -6481,6 +6541,9 @@ impl Window for ConfigEditor {
 
         open &= open2;
         if !open {
+            if let Some((_, base_animation_time, _)) = self.open_fade.take() {
+                ctx.style_mut(|style| style.animation_time = base_animation_time);
+            }
             let config_locale = Hachimi::instance().config.load().language.locale_str();
             if config_locale != &*rust_i18n::locale() {
                 rust_i18n::set_locale(config_locale);
