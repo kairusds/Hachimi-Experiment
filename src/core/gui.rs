@@ -6439,7 +6439,6 @@ impl Window for ConfigEditor {
             .pivot(egui::Align2::LEFT_TOP)
             .fixed_rect(content_rect)
             .constrain_to(window_rect)
-            .fade_in(false)
             .open(&mut open)
             .show(ctx, |ui| {
                 let builder = egui::UiBuilder::new()
