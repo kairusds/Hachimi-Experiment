@@ -46,7 +46,6 @@ def_method_wrapper_fn!(get_CompeteTopRemainTime, GET_COMPETETOPREMAINTIME_ADDR, 
 def_method_wrapper_fn!(get_CurOrder, GET_CURORDER_ADDR, i32, this: *mut Il2CppObject);
 def_method_wrapper_fn!(get_PrevOrder, GET_PREVORDER_ADDR, i32, this: *mut Il2CppObject);
 def_method_wrapper_fn!(IsFinished, ISFINISHED_ADDR, bool, this: *mut Il2CppObject);
-def_method_wrapper_fn!(IsPlayerHorse, IS_PLAYER_HORSE_ADDR, bool, this: *mut Il2CppObject);
 
 pub fn player_horse_index(horse_manager: *mut Il2CppObject, count: usize) -> usize {
     let player_idx = RaceHorseManagerBase::GetPlayerHorseIndex(horse_manager);
@@ -154,6 +153,5 @@ pub fn init(umamusume: *const Il2CppImage) {
         GET_CURORDER_ADDR = get_method_addr(HorseRaceInfo, c"get_CurOrder", 0);
         GET_PREVORDER_ADDR = get_method_addr(HorseRaceInfo, c"get_PrevOrder", 0);
         ISFINISHED_ADDR = get_method_addr(HorseRaceInfo, c"IsFinished", 0);
-        IS_PLAYER_HORSE_ADDR = get_method_addr(HorseRaceInfo, c"IsPlayerHorse", 0);
     }
 }

@@ -848,8 +848,6 @@ pub struct Config {
     pub race_playback_button: bool,
     #[serde(default)]
     pub race_playback_key_enable: bool,
-    #[serde(default)]
-    pub race_play_others_cutins: bool,
     #[serde(flatten)]
     pub caption: CaptionConfig,
     #[serde(default)]

@@ -246,7 +246,6 @@ config_editor:
   race_playback_button: "Race playback pause/resume button"
   race_playback_key_enable: "Enable race playback pause/resume keybind"
   race_playback_key: "Race playback pause/resume keybind"
-  race_play_others_cutins: "Play Unique skill cut-ins of others"
   live_slider_always_show: "Always Show Live Slider"
   live_playback_loop: "Loop Live Performances"
   champions_live_show_text: "Override Champions Meeting Live Text"

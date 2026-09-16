@@ -32,28 +32,3 @@ pub enum HorsePhase {
 impl_enum_eq!(Motivation);
 impl_enum_eq!(LaneType);
 impl_enum_eq!(HorsePhase);
-
-#[repr(i32)]
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub enum RaceType {
-    None = 0,
-    PvP = 1,
-    Tutorial = 2,
-    Story = 3,
-    StoryCondition = 4,
-    Champions = 5,
-    Single = 6,
-    SingleModeScenarioTeamRace = 7,
-    RoomMatch = 8,
-    Practice = 9,
-    Daily = 10,
-    TeamBuilding = 11,
-    Legend = 12,
-    ChallengeMatch = 13,
-    TeamStadium = 14,
-    Heroes = 16,
-    Ultimate = 17
-}
-
-impl_enum_eq!(RaceType);
-impl_enum_ord!(RaceType);

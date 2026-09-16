@@ -142,8 +142,6 @@ pub use temptation_mode::TemptationMode;
 
 pub mod SkillManager;
 pub mod SkillBase;
-pub mod MasterSkillData;
-pub mod RaceSkillCutInReserveCreator;
 pub mod HorseRaceInfoReplay;
 #[cfg(target_os = "windows")]
 mod PartsScheduleBookAutoPlayScreen;
@@ -319,8 +317,6 @@ pub fn init() {
     HorseRaceInfoReplay::init(image);
     SkillManager::init(image);
     SkillBase::init(image);
-    MasterSkillData::init(image);
-    RaceSkillCutInReserveCreator::init(image);
     CameraData::init(image);
     TweenAnimationTimelineComponent::init(image);
     TweenAnimationTimelineData::init(image);
