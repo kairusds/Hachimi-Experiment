@@ -4707,7 +4707,7 @@ impl Window for SimpleOkDialog {
 static CHAMPIONS_DATA_CACHE: Lazy<Mutex<Option<(Arc<Vec<String>>, i32)>>> =
     Lazy::new(|| Mutex::new(None));
 
-fn fetch_champions_data() {
+pub fn fetch_champions_data() {
     let resources = Arc::new(crate::il2cpp::sql::get_champions_resources());
     let year = crate::il2cpp::sql::get_champions_live_max_year();
     *CHAMPIONS_DATA_CACHE.lock().unwrap() = Some((resources, year));
@@ -4834,9 +4834,8 @@ impl ConfigEditor {
         if let Some((resources, year)) = champions_cached {
             champions_resources = resources;
             champions_live_max_year = year;
-        } else {
-            Thread::main_thread().schedule(fetch_champions_data);
         }
+
         ConfigEditor {
             last_ptr_config: Arc::as_ptr(&handle) as usize,
             config: (**Hachimi::instance().config.load()).clone(),

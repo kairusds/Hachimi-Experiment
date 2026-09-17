@@ -1,4 +1,4 @@
-use crate::{core::{Hachimi, game::Region}, il2cpp::{symbols::{IEnumerator, MoveNextFn, SingletonLike, get_method_addr}, types::*}};
+use crate::{core::{Hachimi, gui::fetch_champions_data, game::Region}, il2cpp::{symbols::{IEnumerator, MoveNextFn, SingletonLike, get_method_addr}, types::*}};
 #[cfg(target_os = "windows")]
 use crate::windows::free_camera::{self, CameraScene};
 #[cfg(target_os = "windows")]
@@ -65,6 +65,7 @@ pub fn on_game_initialized() {
     // GAME_INITIALIZED.store(true, Ordering::Relaxed);
     Hachimi::instance().init_skill_info();
     Hachimi::instance().init_skill_data_desc();
+    fetch_champions_data();
 
     #[cfg(target_os = "android")]
     crate::android::utils::set_audio_capture_policy_all();
