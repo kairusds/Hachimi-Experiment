@@ -500,7 +500,6 @@ struct RaceStatHud {
     drag_pos: Option<(f32, f32)>,
     drag_travel: f32,
     drag_save_pending: bool,
-    open_save_pending: bool,
     entry_index: Option<usize>,
     toggle_key: Option<i32>,
     config: hachimi::Config,
@@ -529,7 +528,6 @@ impl RaceStatHud {
             drag_pos: None,
             drag_travel: 0.0,
             drag_save_pending: false,
-            open_save_pending: false,
             entry_index: None,
             toggle_key: None,
             config: (**Hachimi::instance().config.load()).clone(),
@@ -562,7 +560,6 @@ impl RaceStatHud {
             drag_pos,
             drag_travel: 0.0,
             drag_save_pending: false,
-            open_save_pending: false,
             entry_index: None,
             toggle_key: None,
             config: (**Hachimi::instance().config.load()).clone(),
@@ -657,7 +654,8 @@ impl RaceStatHud {
             live.race_stat_hud_selected_character
         };
         let selected_changed = live.race_stat_hud_selected_character != selected_character;
-        if !clones_changed && !selected_changed {
+        let main_open_changed = live.race_stat_hud_main_open != self.visible;
+        if !clones_changed && !selected_changed && !main_open_changed {
             return;
         }
         let mut new_config = live;
@@ -665,6 +663,7 @@ impl RaceStatHud {
             new_config.race_stat_hud_clones = entries;
         }
         new_config.race_stat_hud_selected_character = selected_character;
+        new_config.race_stat_hud_main_open = self.visible;
         save_and_reload_config(new_config);
     }
 
@@ -707,13 +706,8 @@ impl RaceStatHud {
 
         let clone_toggle_requested = TOGGLE_RACE_STAT_HUD_CLONE_REQUESTED.swap(usize::MAX, atomic::Ordering::AcqRel);
         if clone_toggle_requested != usize::MAX {
-            let mut toggled = false;
             if let Some(clone) = hud.clones.iter_mut().find(|c| c.entry_index == Some(clone_toggle_requested)) {
                 clone.visible = !clone.visible;
-                toggled = true;
-            }
-            if toggled {
-                hud.save_hud_state_config();
             }
         }
 
@@ -729,6 +723,10 @@ impl RaceStatHud {
             hud.last_unused_skills.clear();
             hud.select_player_on_race_start = true;
             hud.selected_character_dirty = false;
+            if !hud.visible {
+                let main_open = hud.config.race_stat_hud_main_open;
+                hud.set_visible(main_open);
+            }
         }
         if !hud.elements_showing {
             return;
@@ -825,10 +823,9 @@ impl RaceStatHud {
             }
         }
 
-        if hud.clones.iter().any(|c| c.drag_save_pending || c.open_save_pending) {
+        if hud.clones.iter().any(|c| c.drag_save_pending) {
             for c in hud.clones.iter_mut() {
                 c.drag_save_pending = false;
-                c.open_save_pending = false;
             }
             hud.save_hud_state_config();
         }
@@ -855,7 +852,6 @@ impl RaceStatHud {
                 }
                 hud.clones.push(clone);
             }
-            hud.save_hud_state_config();
         }
 
         if toggle_button && !hud.visible {
@@ -1218,7 +1214,6 @@ impl RaceStatHud {
 
                     if ui.add(btn).clicked() {
                         visible = false;
-                        self.open_save_pending = true;
                     }
                 } else if toggle_button {
                     let btn_size = 20.0 * scale;
@@ -4709,6 +4704,15 @@ impl Window for SimpleOkDialog {
     }
 }
 
+static CHAMPIONS_DATA_CACHE: Lazy<Mutex<Option<(Arc<Vec<String>>, i32)>>> =
+    Lazy::new(|| Mutex::new(None));
+
+fn fetch_champions_data() {
+    let resources = Arc::new(crate::il2cpp::sql::get_champions_resources());
+    let year = crate::il2cpp::sql::get_champions_live_max_year();
+    *CHAMPIONS_DATA_CACHE.lock().unwrap() = Some((resources, year));
+}
+
 struct ConfigEditor {
     last_ptr_config: usize,
     config: hachimi::Config,
@@ -4722,9 +4726,7 @@ struct ConfigEditor {
     swipe_scroll_state_id: Option<egui::Id>,
     swipe_locked_scroll_y: Option<f32>,
     swipe_prewarm: u8,
-    swipe_prewarm_t: Option<f64>,
-    open_anim: Option<OpenAnim>,
-    champions_resources: Vec<String>,
+    champions_resources: Arc<Vec<String>>,
     champions_live_max_year: i32,
     font_color_options: Vec<String>,
     outline_size_options: Vec<String>,
@@ -4790,12 +4792,6 @@ struct SwipeGesture {
 }
 
 #[derive(Clone, Copy)]
-struct OpenAnim {
-    frame: u8,
-    t: Option<f64>,
-}
-
-#[derive(Clone, Copy)]
 struct SwipeAnim {
     offset: f32,
     from: f32,
@@ -4806,7 +4802,6 @@ struct SwipeAnim {
 }
 
 const CONFIG_EDITOR_SWIPE_SLOP: f32 = 18.0;
-const CONFIG_EDITOR_OPEN_ANIM_FRAMES: u8 = 12;
 
 fn swipe_anim_duration(from: f32, to: f32, width: f32) -> f32 {
     if width <= 0.0 {
@@ -4832,6 +4827,16 @@ fn should_show_option(search: &str, label: &str) -> bool {
 impl ConfigEditor {
     pub fn new() -> ConfigEditor {
         let handle = Hachimi::instance().config.load();
+        let mut champions_resources = Arc::new(Vec::new());
+        let mut champions_live_max_year = Utc::now().year();
+        let champions_cached = CHAMPIONS_DATA_CACHE.lock().unwrap().as_ref()
+            .map(|(resources, year)| (Arc::clone(resources), *year));
+        if let Some((resources, year)) = champions_cached {
+            champions_resources = resources;
+            champions_live_max_year = year;
+        } else {
+            Thread::main_thread().schedule(fetch_champions_data);
+        }
         ConfigEditor {
             last_ptr_config: Arc::as_ptr(&handle) as usize,
             config: (**Hachimi::instance().config.load()).clone(),
@@ -4845,10 +4850,8 @@ impl ConfigEditor {
             swipe_scroll_state_id: None,
             swipe_locked_scroll_y: None,
             swipe_prewarm: 2,
-            swipe_prewarm_t: None,
-            open_anim: Some(OpenAnim { frame: 0, t: None }),
-            champions_resources: crate::il2cpp::sql::get_champions_resources(),
-            champions_live_max_year: crate::il2cpp::sql::get_champions_live_max_year(),
+            champions_resources,
+            champions_live_max_year,
             font_color_options: umamusume_enum_options(c"FontColorType"),
             outline_size_options: umamusume_enum_options(c"OutlineSizeType"),
             outline_color_options: umamusume_enum_options(c"OutlineColorType"),
@@ -5918,6 +5921,16 @@ impl ConfigEditor {
         screen.height() > screen.width()
     }
 
+    fn content_rect(ctx: &egui::Context, window_rect: egui::Rect) -> egui::Rect {
+        let style = ctx.style();
+        let window_frame = egui::Frame::window(&style);
+        let frame_margin = window_frame.inner_margin.sum();
+        let frame_stroke = window_frame.stroke.width;
+        let chrome = frame_margin + egui::Vec2::splat(2.0 * frame_stroke);
+        let content_size = (window_rect.size() - chrome).max(egui::Vec2::ZERO);
+        egui::Rect::from_min_size(window_rect.min, content_size)
+    }
+
     fn editor_body(&mut self, ui: &mut egui::Ui, config: &mut hachimi::Config, scale: f32, column_spacing: f32, _label_frac: Option<f32>) {
         ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
         ui.horizontal(|ui| {
@@ -6022,43 +6035,37 @@ impl ConfigEditor {
                 ui.set_clip_rect(restore_clip);
             }
 
-            if self.swipe_prewarm > 0 && clamped == 0.0 && self.search_term.is_empty() && self.swipe_gesture.is_none() {
-                let now = ui.ctx().input(|i| i.time);
-                if self.swipe_prewarm_t != Some(now) {
-                    if self.swipe_prewarm <= 2 {
-                        let prewarm_tab = if self.swipe_prewarm == 2 {
-                            current_tab.next()
-                        } else {
-                            current_tab.prev()
-                        };
-                        let prewarm_x = if self.swipe_prewarm == 2 { width } else { -width };
-                        let prewarm_rect = egui::Rect::from_min_size(
-                            body_rect.min + egui::vec2(prewarm_x, 0.0),
-                            body_rect.size(),
-                        );
-                        ui.set_clip_rect(restore_clip.intersect(body_rect));
-                        let mut prewarm_ui = ui.new_child(
-                            egui::UiBuilder::new()
-                                .id(self.id.with("swipe_page").with(prewarm_tab.index() as u32))
-                                .max_rect(prewarm_rect)
-                                .layout(egui::Layout::top_down(egui::Align::Min)),
-                        );
-                        egui::ScrollArea::vertical()
-                            .id_salt(prewarm_tab.scroll_salt())
-                            .auto_shrink([false, false])
-                            .scroll_source(egui::containers::scroll_area::ScrollSource {
-                                drag: !swipe_scroll_lock,
-                                ..Default::default()
-                            })
-                            .show(&mut prewarm_ui, |ui| {
-                                self.options_page(ui, config, prewarm_tab, scale, column_spacing);
-                            });
-                        drop(prewarm_ui);
-                        ui.set_clip_rect(restore_clip);
-                    }
-                    self.swipe_prewarm_t = Some(now);
-                    self.swipe_prewarm -= 1;
-                }
+            if self.swipe_prewarm > 0 && clamped == 0.0 && self.search_term.is_empty() {
+                let prewarm_tab = if self.swipe_prewarm == 2 {
+                    current_tab.next()
+                } else {
+                    current_tab.prev()
+                };
+                let prewarm_x = if self.swipe_prewarm == 2 { width } else { -width };
+                let prewarm_rect = egui::Rect::from_min_size(
+                    body_rect.min + egui::vec2(prewarm_x, 0.0),
+                    body_rect.size(),
+                );
+                ui.set_clip_rect(restore_clip.intersect(body_rect));
+                let mut prewarm_ui = ui.new_child(
+                    egui::UiBuilder::new()
+                        .id(self.id.with("swipe_page").with(prewarm_tab.index() as u32))
+                        .max_rect(prewarm_rect)
+                        .layout(egui::Layout::top_down(egui::Align::Min)),
+                );
+                egui::ScrollArea::vertical()
+                    .id_salt(prewarm_tab.scroll_salt())
+                    .auto_shrink([false, false])
+                    .scroll_source(egui::containers::scroll_area::ScrollSource {
+                        drag: !swipe_scroll_lock,
+                        ..Default::default()
+                    })
+                    .show(&mut prewarm_ui, |ui| {
+                        self.options_page(ui, config, prewarm_tab, scale, column_spacing);
+                    });
+                drop(prewarm_ui);
+                ui.set_clip_rect(restore_clip);
+                self.swipe_prewarm -= 1;
             }
         });
         self.swipe_body_rect = Some(body_rect_out);
@@ -6441,105 +6448,79 @@ impl Window for ConfigEditor {
             } else {
                 Self::dialog_rect(screen, scale)
             };
+            let content_rect = Self::content_rect(ctx, window_rect);
             let column_spacing = if portrait { 16.0 * scale } else { 40.0 * scale };
 
             new_window(ctx, self.id, t!("config_editor.title"))
             .title_bar(false)
             .pivot(egui::Align2::LEFT_TOP)
-            .fixed_rect(window_rect)
+            .fixed_rect(content_rect)
             .constrain_to(window_rect)
-            .frame(egui::Frame::NONE)
             .fade_in(false)
             .open(&mut open)
             .show(ctx, |ui| {
-                let mut open_opacity = 1.0;
-                let mut open_anim_done = false;
-                let now = ui.ctx().input(|i| i.time);
-                if let Some(anim) = self.open_anim.as_mut() {
-                    if anim.t != Some(now) {
-                        anim.t = Some(now);
-                        anim.frame = anim.frame.saturating_add(1);
-                    }
+                let builder = egui::UiBuilder::new()
+                    .id(self.id)
+                    .layout(egui::Layout::top_down(egui::Align::Center).with_cross_justify(true));
 
-                    let progress = (anim.frame as f32 / CONFIG_EDITOR_OPEN_ANIM_FRAMES as f32).min(1.0);
-                    open_opacity = 1.0 - (1.0 - progress) * (1.0 - progress);
-                    open_anim_done = progress >= 1.0;
-                }
-
-                if open_opacity < 1.0 {
-                    ui.ctx().request_repaint();
-                }
-
-                if open_anim_done {
-                    self.open_anim = None;
-                }
-
-                ui.set_opacity(open_opacity);
-
-                egui::Frame::window(&ctx.style()).show(ui, |ui| {
-                    let builder = egui::UiBuilder::new()
-                        .id(self.id)
-                        .layout(egui::Layout::top_down(egui::Align::Center).with_cross_justify(true));
-
-                    ui.scope_builder(builder, |ui| {
-                        egui::TopBottomPanel::bottom(self.id.with("config_editor_footer"))
-                            .frame(egui::Frame::NONE)
-                            .show_inside(ui, |ui| {
-                                ui.separator();
-                                ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                                ui.with_layout(egui::Layout::left_to_right(egui::Align::Min).with_main_wrap(true), |ui| {
-                                    if ui.button(t!("config_editor.restore_defaults")).clicked() {
-                                        reset_clicked = true;
-                                    }
-
-                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
-                                        if ui.button(t!("cancel")).clicked() {
-                                            open2 = false;
-                                        }
-                                        if ui.button(t!("save")).clicked() {
-                                            save_clicked = true;
-                                            open2 = false;
-                                        }
-                                    });
-                                });
-                            });
-
-                        ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+                ui.scope_builder(builder, |ui| {
+                    egui::TopBottomPanel::bottom(self.id.with("config_editor_footer"))
+                        .frame(egui::Frame::NONE)
+                        .show_inside(ui, |ui| {
+                            ui.separator();
                             ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
-                            ui.horizontal(|ui| {
-                                ui.heading(t!("config_editor.title"));
-                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                    let bar_rect = ui.max_rect();
-                                    let button_size = egui::Vec2::splat(ui.spacing().icon_width);
-                                    let center = egui::Align2::RIGHT_CENTER
-                                        .align_size_within_rect(button_size, bar_rect)
-                                        .center();
-                                    let button_rect = egui::Rect::from_center_size(center, button_size)
-                                        .round_to_pixels(ui.pixels_per_point());
-                                    let close_id = ui.id().with("window_close_button");
-                                    let response = ui.interact(button_rect, close_id, egui::Sense::click());
-                                    response.widget_info(|| {
-                                        egui::WidgetInfo::labeled(
-                                            egui::WidgetType::Button,
-                                            ui.is_enabled(),
-                                            "Close window",
-                                        )
-                                    });
-                                    ui.expand_to_include_rect(response.rect);
-                                    let visuals = ui.style().interact(&response);
-                                    let rect = button_rect.shrink(2.0).expand(visuals.expansion);
-                                    let stroke = visuals.fg_stroke;
-                                    ui.painter().line_segment([rect.left_top(), rect.right_bottom()], stroke);
-                                    ui.painter().line_segment([rect.right_top(), rect.left_bottom()], stroke);
-                                    if response.clicked() {
+                            ui.with_layout(egui::Layout::left_to_right(egui::Align::Min).with_main_wrap(true), |ui| {
+                                if ui.button(t!("config_editor.restore_defaults")).clicked() {
+                                    reset_clicked = true;
+                                }
+
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Min), |ui| {
+                                    if ui.button(t!("cancel")).clicked() {
+                                        open2 = false;
+                                    }
+                                    if ui.button(t!("save")).clicked() {
+                                        save_clicked = true;
                                         open2 = false;
                                     }
                                 });
                             });
-                            ui.add_space(4.0);
-
-                            self.editor_body(ui, &mut config, scale, column_spacing, Some(0.45));
                         });
+
+                    ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+                        ui.style_mut().wrap_mode = Some(egui::TextWrapMode::Wrap);
+                        ui.horizontal(|ui| {
+                            ui.heading(t!("config_editor.title"));
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                let bar_rect = ui.max_rect();
+                                let button_size = egui::Vec2::splat(ui.spacing().icon_width);
+                                let center = egui::Align2::RIGHT_CENTER
+                                    .align_size_within_rect(button_size, bar_rect)
+                                    .center();
+                                let button_rect = egui::Rect::from_center_size(center, button_size)
+                                    .round_to_pixels(ui.pixels_per_point());
+                                let close_id = ui.id().with("window_close_button");
+                                let response = ui.interact(button_rect, close_id, egui::Sense::click());
+                                response.widget_info(|| {
+                                    egui::WidgetInfo::labeled(
+                                        egui::WidgetType::Button,
+                                        ui.is_enabled(),
+                                        "Close window",
+                                    )
+                                });
+                                ui.expand_to_include_rect(response.rect);
+                                let visuals = ui.style().interact(&response);
+                                let rect = button_rect.shrink(2.0).expand(visuals.expansion);
+                                let stroke = visuals.fg_stroke;
+                                ui.painter().line_segment([rect.left_top(), rect.right_bottom()], stroke);
+                                ui.painter().line_segment([rect.right_top(), rect.left_bottom()], stroke);
+                                if response.clicked() {
+                                    open2 = false;
+                                }
+                            });
+                        });
+                        ui.add_space(4.0);
+
+                        self.editor_body(ui, &mut config, scale, column_spacing, Some(0.45));
                     });
                 });
             });

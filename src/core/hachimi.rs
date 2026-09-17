@@ -827,6 +827,8 @@ pub struct Config {
     #[serde(default = "Config::default_race_stat_hud_drag_y")]
     pub race_stat_hud_drag_y: f32,
     #[serde(default)]
+    pub race_stat_hud_main_open: bool,
+    #[serde(default)]
     pub race_stat_hud_clones: Vec<RaceStatHudCloneConfig>,
     #[serde(default)]
     pub race_stat_hud_selected_character: Option<usize>,
