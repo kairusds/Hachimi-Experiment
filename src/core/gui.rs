@@ -5346,7 +5346,7 @@ impl ConfigEditor {
 
             #[cfg(target_os = "windows")]
             if should_show_option(search, &t!("config_editor.target_fps_unfocused")) {
-                Self::option_slider(ui, &t!("config_editor.target_fps_unfocused"), &mut config.windows.target_fps_unfocused, 10..=30);
+                Self::option_slider(ui, &t!("config_editor.target_fps_unfocused"), &mut config.windows.target_fps_unfocused, 1..=30);
             }
 
             if should_show_option(search, &t!("config_editor.virtual_resolution_multiplier")) {

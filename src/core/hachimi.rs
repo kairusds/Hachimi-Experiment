@@ -223,6 +223,8 @@ impl Hachimi {
         };
 
         new_config.language.set_locale();
+        #[cfg(target_os = "windows")]
+        self.target_fps_unfocused.store(new_config.windows.target_fps_unfocused.unwrap_or(-1), atomic::Ordering::Relaxed);
         self.config.store(Arc::new(new_config));
 
         if Hachimi::is_initialized() && self.hooking_finished.load(atomic::Ordering::Relaxed) {
@@ -243,6 +245,8 @@ impl Hachimi {
         self.save_config(&config)?;
 
         config.language.set_locale();
+        #[cfg(target_os = "windows")]
+        self.target_fps_unfocused.store(config.windows.target_fps_unfocused.unwrap_or(-1), atomic::Ordering::Relaxed);
         self.config.store(Arc::new(config));
 
         let new_config = self.config.load();
